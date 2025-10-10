@@ -36,6 +36,7 @@ export const swaggerDefinition = {
     },
   },
   tags: [
+    { name: "Health", description: "API health monitoring" },
     { name: "Authentication", description: "User authentication endpoints" },
     // {
     //   name: "Admin - Dashboard",
@@ -53,6 +54,9 @@ export const swaggerDefinition = {
       name: "Admin - Product Management",
       description: "Product management operations (Admin only)",
     },
-    { name: "Health", description: "API health monitoring" },
+    {
+      name: "Customer - Wishlist",
+      description: "Wishlist operations (Customer only)",
+    },
   ],
 };
