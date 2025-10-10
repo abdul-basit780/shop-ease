@@ -21,7 +21,7 @@ export const swaggerDefinition = {
       description: "Development server",
     },
     {
-      url: "https://docease.vercel.app",
+      url: "https://shop-ease-online-app.vercel.app",
       description: "Production server",
     },
   ],
@@ -42,10 +42,10 @@ export const swaggerDefinition = {
     //   name: "Admin - Dashboard",
     //   description: "Dashboard operations (Admin only)",
     // },
-    // {
-    //   name: "Admin - Customer Management",
-    //   description: "Customer management operations (Admin only)",
-    // },
+    {
+      name: "Admin - Customer Management",
+      description: "Customer management operations (Admin only)",
+    },
     {
       name: "Admin - Category Management",
       description: "Category management operations (Admin only)",
