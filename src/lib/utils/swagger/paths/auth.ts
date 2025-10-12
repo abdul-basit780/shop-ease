@@ -57,16 +57,20 @@ export const authPaths = {
                             type: "string",
                             enum: Object.values(UserRole),
                           },
-                          isActive: { type: "boolean" },
+                          isActive: {
+                            type: "boolean",
+                            description:
+                              "Account active status (customers only)",
+                          },
+                          isVerified: {
+                            type: "boolean",
+                            description:
+                              "Email verification status (customers only)",
+                          },
                         },
                       },
                       token: { type: "string" },
                       expiresIn: { type: "string", example: "7d" },
-                      isVerified: {
-                        type: "boolean",
-                        description:
-                          "Email verification status (customers only)",
-                      },
                     },
                   },
                 },
@@ -177,7 +181,17 @@ export const authPaths = {
                           email: { type: "string" },
                           phone: { type: "string" },
                           role: { type: "string", example: "CUSTOMER" },
-                          isActive: { type: "boolean", example: true },
+                          isActive: {
+                            type: "boolean",
+                            example: true,
+                            description:
+                              "Account active status (customers only)",
+                          },
+                          isVerified: {
+                            type: "boolean",
+                            description:
+                              "Email verification status (customers only)",
+                          },
                         },
                       },
                       token: { type: "string" },
@@ -518,7 +532,15 @@ export const authPaths = {
                             type: "string",
                             enum: Object.values(UserRole),
                           },
-                          isActive: { type: "boolean" },
+                          isActive: {
+                            type: "boolean",
+                            description: "Account active status (customers only)",
+                          },
+                          isVerified: {
+                            type: "boolean",
+                            description:
+                              "Email verification status (customers only)",
+                          },
                         },
                       },
                       success: { type: "boolean", example: true },

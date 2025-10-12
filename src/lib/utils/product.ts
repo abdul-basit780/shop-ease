@@ -16,6 +16,19 @@ export interface ProductResponse {
   updatedAt: Date;
 }
 
+export interface PublicProductResponse {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  img: string;
+  description: string;
+  categoryId: string;
+  categoryName?: string; // Optional, populated from category
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ProductRequest {
   name: string;
   price: number;
@@ -25,7 +38,7 @@ export interface ProductRequest {
   img?: string; // Optional in request, will be handled by file upload
 }
 
-// Helper function to build product response
+// Helper function to build product response (admin - includes deletedAt)
 export const buildProductResponse = (
   product: IProduct | any
 ): ProductResponse => {
@@ -36,9 +49,29 @@ export const buildProductResponse = (
     stock: product.stock,
     img: product.img,
     description: product.description,
-    categoryId: product.categoryId?.toString() || product.categoryId,
+    categoryId:
+      product.categoryId?._id?.toString() || product.categoryId?.toString(),
     categoryName: product.categoryId?.name || undefined, // If populated
     deletedAt: product.deletedAt,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt,
+  };
+};
+
+// Helper function to build public product response (excludes deletedAt)
+export const buildPublicProductResponse = (
+  product: IProduct | any
+): PublicProductResponse => {
+  return {
+    id: product._id.toString(),
+    name: product.name,
+    price: product.price,
+    stock: product.stock,
+    img: product.img,
+    description: product.description,
+    categoryId:
+      product.categoryId?._id?.toString() || product.categoryId?.toString(),
+    categoryName: product.categoryId?.name || undefined, // If populated
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };

@@ -10,7 +10,6 @@ import {
   handleAccountLocking,
   handleFailedLogin,
   handleSuccessfullLogin,
-  getCustomerVerificationStatus,
   validateRegistrationData,
   ICustomerRegistrationData,
   checkExistingUser,
@@ -22,9 +21,9 @@ import {
   generatePasswordResetUrl,
   verifyAuthToken,
 } from "../utils/auth";
-import { Gender, UserRole } from "../models/enums";
+import { UserRole } from "../models/enums";
 import { User } from "../models/User";
-import { Admin, IAdmin } from "../models/Admin";
+import { IAdmin } from "../models/Admin";
 import { Customer, ICustomer } from "../models/Customer";
 import { emailService } from "@/lib/services/EmailService";
 import { Address } from "../models/Address";
@@ -43,7 +42,6 @@ interface AuthResponse {
   user: ReturnType<typeof prepareUserResponse> | null;
   token: string;
   expiresIn: string;
-  isVerified: boolean;
   statusCode: number | undefined;
 }
 
@@ -74,7 +72,6 @@ export const login = async (req: NextApiRequest, res: NextApiResponse) => {
     user: null,
     token: "",
     expiresIn: "",
-    isVerified: false,
     statusCode: 401,
   };
 
@@ -130,16 +127,6 @@ export const login = async (req: NextApiRequest, res: NextApiResponse) => {
   // Generate JWT token
   const token = generateToken(user as IUser);
 
-  // Get verification status for customers
-  if (isCustomer) {
-    const isVerified = await getCustomerVerificationStatus(user as ICustomer);
-    loginResponse.isVerified = isVerified;
-  }
-
-  if (isAdmin) {
-    loginResponse.isVerified = true;
-  }
-
   loginResponse.success = true;
   loginResponse.message = "Login successful";
   loginResponse.user = prepareUserResponse(user as ICustomer | IAdmin);
@@ -159,7 +146,6 @@ export const register = async (req: NextApiRequest, res: NextApiResponse) => {
     user: null,
     token: "",
     expiresIn: "",
-    isVerified: false,
     statusCode: 500,
   };
 
@@ -268,7 +254,7 @@ export const changePassword = async (
 
   const changePasswordResponse: Omit<
     AuthResponse,
-    "user" | "token" | "expiresIn" | "isVerified"
+    "user" | "token" | "expiresIn"
   > = {
     success: false,
     message: "",
@@ -349,7 +335,7 @@ export const forgotPassword = async (
 
   const forgotPasswordResponse: Omit<
     AuthResponse,
-    "user" | "token" | "expiresIn" | "isVerified"
+    "user" | "token" | "expiresIn"
   > = {
     success: false,
     message: "",
@@ -464,7 +450,7 @@ export const resetPassword = async (
 
   const resetPasswordResponse: Omit<
     AuthResponse,
-    "user" | "token" | "expiresIn" | "isVerified"
+    "user" | "token" | "expiresIn"
   > = {
     success: false,
     message: "",
@@ -568,7 +554,7 @@ export const sendVerification = async (
 
   const sendVerificationResponse: Omit<
     AuthResponse,
-    "user" | "token" | "expiresIn" | "isVerified"
+    "user" | "token" | "expiresIn"
   > = {
     success: false,
     message: "",
@@ -640,7 +626,7 @@ export const verifyEmail = async (
 
   const verifyEmailResponse: Omit<
     AuthResponse,
-    "user" | "token" | "expiresIn" | "isVerified"
+    "user" | "token" | "expiresIn"
   > = {
     success: false,
     message: "",
@@ -736,7 +722,7 @@ export const verifyEmail = async (
 export const me = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   await connectToDatabase();
 
-  const meResponse: Omit<AuthResponse, "token" | "expiresIn" | "isVerified"> = {
+  const meResponse: Omit<AuthResponse, "token" | "expiresIn"> = {
     user: null,
     success: false,
     message: "",
@@ -760,9 +746,8 @@ export const me = async (req: AuthenticatedRequest, res: NextApiResponse) => {
     }
 
     // Verify JWT token
-    let decoded: any;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+      jwt.verify(token, process.env.JWT_SECRET as string);
     } catch (error) {
       meResponse.message = "Invalid or expired token";
       meResponse.statusCode = 401;

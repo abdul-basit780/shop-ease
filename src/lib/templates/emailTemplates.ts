@@ -1,169 +1,200 @@
 // lib/templates/emailTemplates.ts
-
 import { OrderStatus } from "../models/enums";
 import { OrderData } from "../services/EmailService";
 
-// Base email template wrapper
-const baseTemplate = (title: string, content: string): string => `
+// Simple email wrapper
+const wrap = (title: string, content: string): string => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${title}</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; }
-    .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-    .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-    .button { display: inline-block; background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 15px 0; }
-    .info-box { background-color: white; padding: 20px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #2563eb; }
-    .warning-box { background-color: #fef3c7; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f59e0b; }
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 40px auto; padding: 20px; }
+    .header { background: #2563eb; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .button { display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+    .box { background: white; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2563eb; }
     .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-    ul { padding-left: 20px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>${title}</h1>
-    </div>
-    <div class="content">
-      ${content}
-    </div>
-    <div class="footer">
-      <p>This is an automated message. Please do not reply to this email.</p>
-    </div>
-  </div>
+  <div class="header"><h1>${title}</h1></div>
+  <div class="content">${content}</div>
+  <div class="footer"><p>This is an automated email. Please do not reply.</p></div>
 </body>
 </html>
 `;
 
 export const emailTemplates = {
-  // Customer welcome email
-  customerWelcome: (data: { name: string; email: string; loginUrl: string }) => ({
-    subject: 'Welcome to ShopEase',
-    html: baseTemplate('Welcome to ShopEase', `
+  // Welcome email
+  customerWelcome: (data: {
+    name: string;
+    email: string;
+    loginUrl: string;
+  }) => ({
+    subject: "Welcome to ShopEase",
+    html: wrap(
+      "Welcome to ShopEase",
+      `
       <h2>Hello ${data.name}!</h2>
       <p>Thank you for registering with ShopEase. Your account has been successfully created.</p>
       
-      <div class="info-box">
-        <p><strong>Your account:</strong> ${data.email}</p>
-        <p><strong>Registration:</strong> ${new Date().toLocaleDateString()}</p>
+      <div class="box">
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>Registered:</strong> ${new Date().toLocaleDateString()}</p>
       </div>
 
-      <p>You can now place orders, manage your profile, and view your orders history.</p>
-      
-      <a href="${data.loginUrl}" class="button">Login to Your Account</a>
-    `),
-    text: `Welcome ${data.name}! Your account has been created. Login at: ${data.loginUrl}`
+      <a href="${data.loginUrl}" class="button">Login Now</a>
+    `
+    ),
+    text: `Welcome ${data.name}! Login at: ${data.loginUrl}`,
   }),
 
   // Order confirmation
   orderConfirmation: (data: OrderData) => ({
-    subject: `Order Confirmed - ${data.customerName} on ${data.orderId}`,
-    html: baseTemplate('✅ Order Confirmed', `
+    subject: `Order Confirmed #${data.orderId}`,
+    html: wrap(
+      "Order Confirmed",
+      `
       <h2>Hello ${data.customerName}!</h2>
       <p>Your order has been successfully placed.</p>
       
-      <div class="info-box">
-        <h3>Order Details</h3>
+      <div class="box">
         <p><strong>Order ID:</strong> ${data.orderId}</p>
+        <p><strong>Status:</strong> ${data.status}</p>
       </div>
-    `),
-    text: `Order confirmed`
+
+      <p>We'll send you updates as your order progresses.</p>
+    `
+    ),
+    text: `Order #${data.orderId} confirmed`,
   }),
 
+  // Admin order notification
   adminOrderConfirmation: (data: OrderData) => ({
-    subject: `Order Confirmed - ${data.customerName} on ${data.orderId}`,
-    html: baseTemplate('✅ Order Confirmed', `
-      <h2>Hello ${data.customerName}!</h2>
-      <p>An order has been successfully placed.</p>
-
-      <div class="info-box">
-        <h3>Order Details</h3>
+    subject: `New Order #${data.orderId}`,
+    html: wrap(
+      "New Order Received",
+      `
+      <h2>New Order Alert</h2>
+      <p>A new order has been placed by ${data.customerName}.</p>
+      
+      <div class="box">
         <p><strong>Order ID:</strong> ${data.orderId}</p>
+        <p><strong>Status:</strong> ${data.status}</p>
       </div>
-    `),
-    text: `Order confirmed`
+    `
+    ),
+    text: `New order #${data.orderId} from ${data.customerName}`,
   }),
 
   // Order cancellation
   orderCancellation: (data: OrderData, refundAmount?: number) => ({
-    subject: `Order Cancelled - ShopEase`,
-    html: baseTemplate('❌ Order Cancelled', `
+    subject: `Order Cancelled #${data.orderId}`,
+    html: wrap(
+      "Order Cancelled",
+      `
       <h2>Hello ${data.customerName}!</h2>
-      <p>Your order has been cancelled as requested.</p>
+      <p>Your order has been cancelled.</p>
       
-      <div class="info-box">
+      <div class="box">
         <p><strong>Order ID:</strong> ${data.orderId}</p>
+        ${
+          refundAmount ? `<p><strong>Refund:</strong> $${refundAmount}</p>` : ""
+        }
       </div>
 
-      ${refundAmount ? `
-      <div class="warning-box">
-        <h3>💰 Refund Information</h3>
-        <p>$${refundAmount} will be refunded to your original payment method within 3-5 business days.</p>
-      </div>
-      ` : ''}
-
-      <p>You can place a new order anytime through our platform.</p>
-    `),
-    text: `Order cancelled. ${refundAmount ? `Refund: $${refundAmount}` : ''}`
+      ${
+        refundAmount
+          ? "<p>Your refund will be processed within 3-5 business days.</p>"
+          : ""
+      }
+    `
+    ),
+    text: `Order #${data.orderId} cancelled. ${
+      refundAmount ? `Refund: $${refundAmount}` : ""
+    }`,
   }),
 
   // Email verification
-  emailVerification: (data: { name: string; verificationUrl: string; expiresIn: string }) => ({
-    subject: 'Please Verify Your Email Address',
-    html: baseTemplate('📧 Verify Your Email', `
+  emailVerification: (data: {
+    name: string;
+    verificationUrl: string;
+    expiresIn: string;
+  }) => ({
+    subject: "Verify Your Email",
+    html: wrap(
+      "Verify Your Email",
+      `
       <h2>Hello ${data.name}!</h2>
-      <p>Thank you for registering! Please verify your email address to complete your account setup.</p>
+      <p>Please verify your email address to activate your account.</p>
       
-      <a href="${data.verificationUrl}" class="button">Verify Email Address</a>
+      <a href="${data.verificationUrl}" class="button">Verify Email</a>
       
-      <p><strong>This link expires in ${data.expiresIn}.</strong></p>
-
-      <div class="warning-box">
-        <h3>⚠️ Important</h3>
-        <p>You must verify your email to place orders and access all features.</p>
+      <p><strong>Link expires in ${data.expiresIn}</strong></p>
+      
+      <div class="box">
+        <p>If the button doesn't work, copy this link:</p>
+        <p>${data.verificationUrl}</p>
       </div>
-
-      <p>If the button doesn't work, copy this link: ${data.verificationUrl}</p>
-    `),
-    text: `Please verify your email address: ${data.verificationUrl} (expires in ${data.expiresIn})`
+    `
+    ),
+    text: `Verify email: ${data.verificationUrl} (expires in ${data.expiresIn})`,
   }),
-  passwordReset: (data: { name: string; resetUrl: string; expiresIn: string }) => ({
-    subject: 'Password Reset Request - Action Required',
-    html: baseTemplate('🔒 Password Reset Request', `
+
+  // Password reset
+  passwordReset: (data: {
+    name: string;
+    resetUrl: string;
+    expiresIn: string;
+  }) => ({
+    subject: "Reset Your Password",
+    html: wrap(
+      "Password Reset",
+      `
       <h2>Hello ${data.name}!</h2>
       <p>We received a request to reset your password.</p>
       
       <a href="${data.resetUrl}" class="button">Reset Password</a>
       
-      <p><strong>This link expires in ${data.expiresIn}.</strong></p>
-
-      <div class="warning-box">
-        <h3>🛡️ Security Notice</h3>
-        <p>If you didn't request this, ignore this email. The link can only be used once.</p>
+      <p><strong>Link expires in ${data.expiresIn}</strong></p>
+      
+      <div class="box">
+        <p>⚠️ If you didn't request this, ignore this email.</p>
+        <p>If the button doesn't work, copy this link:</p>
+        <p>${data.resetUrl}</p>
       </div>
-
-      <p>If the button doesn't work, copy this link: ${data.resetUrl}</p>
-    `),
-    text: `Password reset requested. Visit: ${data.resetUrl} (expires in ${data.expiresIn})`
+    `
+    ),
+    text: `Reset password: ${data.resetUrl} (expires in ${data.expiresIn})`,
   }),
 
   // Order status update
   orderStatusUpdate: (data: OrderData) => ({
-    subject: `Order Update - ShopEase`,
-    html: baseTemplate('📋 Order Update', `
+    subject: `Order Update #${data.orderId}`,
+    html: wrap(
+      "Order Update",
+      `
       <h2>Hello ${data.customerName}!</h2>
       <p>Your order status has been updated.</p>
       
-      <div class="info-box">
+      <div class="box">
         <p><strong>Order ID:</strong> ${data.orderId}</p>
-        <p><strong>Status:</strong> ${data.status}</p>
+        <p><strong>New Status:</strong> ${data.status}</p>
       </div>
 
-      ${data.status === OrderStatus.COMPLETED ? '<p>Thank you for your visit! You can now provide feedback.</p>' : ''}
-    `),
-    text: `Order with ID ${data.orderId} updated to: ${data.status}`
-  })
+      ${
+        data.status === OrderStatus.COMPLETED
+          ? "<p>✅ Order completed! Thank you for your purchase.</p>"
+          : ""
+      }
+      ${
+        data.status === OrderStatus.SHIPPED
+          ? "<p>📦 Your order is on the way!</p>"
+          : ""
+      }
+    `
+    ),
+    text: `Order #${data.orderId} updated to: ${data.status}`,
+  }),
 };
