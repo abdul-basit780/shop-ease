@@ -1,4 +1,4 @@
-// enums.ts
+// lib/models/enums.ts
 export enum UserRole {
   ADMIN = "admin",
   CUSTOMER = "customer",
@@ -20,9 +20,10 @@ export enum DayOfWeek {
   SATURDAY = "Saturday",
 }
 
-
 export enum OrderStatus {
   PENDING = "pending",
+  PROCESSING = "processing",
+  SHIPPED = "shipped",
   COMPLETED = "completed",
   CANCELLED = "cancelled",
 }
@@ -30,9 +31,9 @@ export enum OrderStatus {
 export enum PaymentStatus {
   PENDING = "pending",
   COMPLETED = "completed",
-  FAILED = "failed",
   REFUNDED = "refunded",
   CANCELLED = "cancelled",
+  FAILED = "failed",
 }
 
 export enum PaymentMethod {

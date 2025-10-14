@@ -7,7 +7,7 @@ export interface IOrder extends Document {
   datetime: Date;
   status: OrderStatus;
   totalAmount: number;
-  products: Array<{ productId: mongoose.Types.ObjectId; quantity: number }>;
+  products: Array<{ productId: mongoose.Types.ObjectId; quantity: number, price: number, name: string, img: string }>;
   address: string;
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +27,9 @@ const OrderSchema = new Schema<IOrder>(
             required: true,
           },
           quantity: { type: Number, required: true, min: 1 },
+          price: { type: Number, required: true, min: 0 },
+          name: { type: String, required: true },
+          img: { type: String, required: true },
         },
       ],
       default: [],

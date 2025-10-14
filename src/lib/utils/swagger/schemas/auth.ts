@@ -17,7 +17,11 @@ export const authSchemas = {
       },
       isActive: {
         type: "boolean",
-        description: "Account active status",
+        description: "Account active status (customers only)",
+      },
+      isVerified: {
+        type: "boolean",
+        description: "Email verification status (customers only)",
       },
     },
   },
