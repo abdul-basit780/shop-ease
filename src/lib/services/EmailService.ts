@@ -2,7 +2,7 @@
 import nodemailer from "nodemailer";
 import { emailTemplates } from "../templates/emailTemplates";
 import { OrderStatus } from "../models/enums";
-// import { Resend } from "resend";
+import { Resend } from "resend";
 
 export interface OrderData {
   customerName: string;
@@ -11,30 +11,30 @@ export interface OrderData {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
-  // private resend: Resend;
+  // private transporter: nodemailer.Transporter;
+  private resend: Resend;
   private fromEmail: string;
   private fromName: string;
 
   constructor() {
     // Simple configuration
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER || "",
-        pass: process.env.SMTP_PASS || "",
-      },
-    });
+    // this.transporter = nodemailer.createTransport({
+    //   host: process.env.SMTP_HOST || "smtp.gmail.com",
+    //   port: parseInt(process.env.SMTP_PORT || "587"),
+    //   secure: false, // true for 465, false for other ports
+    //   auth: {
+    //     user: process.env.SMTP_USER || "",
+    //     pass: process.env.SMTP_PASS || "",
+    //   },
+    // });
 
-    // const apiKey = process.env.RESEND_API_KEY || "";
+    const apiKey = process.env.RESEND_API_KEY || "";
 
-    // if (!apiKey) {
-    //   console.warn("⚠️  RESEND_API_KEY not found in environment variables");
-    // }
+    if (!apiKey) {
+      console.warn("⚠️  RESEND_API_KEY not found in environment variables");
+    }
 
-    // this.resend = new Resend(apiKey);
+    this.resend = new Resend(apiKey);
 
     this.fromEmail = process.env.FROM_EMAIL || "noreply@shopease.com";
     this.fromName = process.env.FROM_NAME || "ShopEase";
@@ -48,26 +48,26 @@ class EmailService {
     text?: string
   ): Promise<boolean> {
     try {
-      await this.transporter.sendMail({
-        from: `"${this.fromName}" <${this.fromEmail}>`,
-        to,
-        subject,
-        html,
-        text,
-      });
-
-      // const { data, error } = await this.resend.emails.send({
-      //   from: `${this.fromName} <${this.fromEmail}>`,
-      //   to: [to],
+      // await this.transporter.sendMail({
+      //   from: `"${this.fromName}" <${this.fromEmail}>`,
+      //   to,
       //   subject,
       //   html,
       //   text,
       // });
 
-      // if (error) {
-      //   console.error("Resend API error:", error);
-      //   return false;
-      // }
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.fromName} <${this.fromEmail}>`,
+        to: [to],
+        subject,
+        html,
+        text,
+      });
+
+      if (error) {
+        console.error("Resend API error:", error);
+        return false;
+      }
 
       return true;
     } catch (error) {
@@ -148,22 +148,22 @@ class EmailService {
   // Test connection
   async testConnection(): Promise<boolean> {
     try {
-      await this.transporter.verify();
+      // await this.transporter.verify();
       console.log("✅ Email service connected");
-      // const testEmail = process.env.TEST_EMAIL || this.fromEmail;
-      // const { error } = await this.resend.emails.send({
-      //   from: `${this.fromName} <${this.fromEmail}>`,
-      //   to: [testEmail],
-      //   subject: "Resend Connection Test",
-      //   html: "<p>This is a test email to verify Resend integration.</p>",
-      // });
+      const testEmail = process.env.TEST_EMAIL || this.fromEmail;
+      const { error } = await this.resend.emails.send({
+        from: `${this.fromName} <${this.fromEmail}>`,
+        to: [testEmail],
+        subject: "Resend Connection Test",
+        html: "<p>This is a test email to verify Resend integration.</p>",
+      });
 
-      // if (error) {
-      //   console.error("❌ Resend connection failed:", error);
-      //   return false;
-      // }
+      if (error) {
+        console.error("❌ Resend connection failed:", error);
+        return false;
+      }
 
-      // console.log("✅ Resend connection verified");
+      console.log("✅ Resend connection verified");
       return true;
     } catch (error) {
       console.error("❌ Email service failed:", error);
