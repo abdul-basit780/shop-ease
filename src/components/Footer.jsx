@@ -26,10 +26,10 @@ export const Footer = () => {
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-3 mb-6 group">
               <div className="relative w-14 h-14 bg-gradient-to-br from-primary-600 via-purple-600 to-secondary-600 rounded-xl flex items-center justify-center transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-xl">
-                <span className="text-white font-extrabold text-2xl">E</span>
+                <span className="text-white font-extrabold text-2xl">SE</span>
               </div>
               <div>
-                <span className="text-2xl font-extrabold text-white">ShopHub</span>
+                <span className="text-2xl font-extrabold text-white">ShopEase</span>
                 <div className="text-xs text-gray-400 font-medium -mt-1">Smart Shopping Experience</div>
               </div>
             </div>
