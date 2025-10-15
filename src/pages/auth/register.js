@@ -93,54 +93,68 @@ export default function RegisterPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!validate()) {
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const response = await authService.register({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      dob: formData.dob,
+      phone: formData.phone,
+      gender: formData.gender,
+      address: formData.address,
+      occupation: formData.occupation,
+    });
     
-    if (!validate()) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const response = await authService.register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        dob: formData.dob,
-        phone: formData.phone,
-        gender: formData.gender,
-        address: formData.address,
-        occupation: formData.occupation,
+    if (response.success) {
+      toast.success('Account created successfully! 🎉', {
+        icon: '✨',
+        style: {
+          borderRadius: '12px',
+          background: '#10b981',
+          color: '#fff',
+        },
       });
       
-      if (response.success) {
-        toast.success('Account created successfully! 🎉', {
-          icon: '✨',
-          style: {
-            borderRadius: '12px',
-            background: '#10b981',
-            color: '#fff',
-          },
-        });
-        
-        setTimeout(() => {
-          router.push('/');
-        }, 1000);
-      } else {
-        toast.error(response.error || 'Registration failed', {
-          style: {
-            borderRadius: '12px',
-            background: '#ef4444',
-            color: '#fff',
-          },
-        });
+      // Wait for toast to show and events to propagate
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Navigate to home page
+      await router.push('/');
+      
+      // Dispatch event again after navigation to ensure navbar updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('userLoggedIn'));
       }
-    } catch (error) {
-      toast.error('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+    } else {
+      toast.error(response.error || 'Registration failed', {
+        style: {
+          borderRadius: '12px',
+          background: '#ef4444',
+          color: '#fff',
+        },
+      });
     }
-  };
+  } catch (error) {
+    console.error('Registration error:', error);
+    toast.error('An error occurred. Please try again.', {
+      style: {
+        borderRadius: '12px',
+        background: '#ef4444',
+        color: '#fff',
+      },
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const passwordStrength = () => {
     const password = formData.password;

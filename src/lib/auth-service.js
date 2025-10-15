@@ -8,10 +8,17 @@ export const authService = {
       
       if (response.success && response.data) {
         Cookies.set('auth_token', response.data.token, { expires: 7 });
+        
         if (typeof window !== 'undefined') {
           localStorage.setItem('user', JSON.stringify(response.data.user));
-          // Dispatch event to update navbar and other components
+          
+          // Dispatch event immediately
           window.dispatchEvent(new Event('userLoggedIn'));
+          
+          // Also dispatch with a slight delay to ensure all components are mounted
+          setTimeout(() => {
+            window.dispatchEvent(new Event('userLoggedIn'));
+          }, 100);
         }
       }
       
@@ -39,8 +46,14 @@ export const authService = {
         
         if (typeof window !== 'undefined' && userData) {
           localStorage.setItem('user', JSON.stringify(userData));
-          // Dispatch event to update navbar and other components
+          
+          // Dispatch event immediately
           window.dispatchEvent(new Event('userLoggedIn'));
+          
+          // Also dispatch with a slight delay to ensure all components are mounted
+          setTimeout(() => {
+            window.dispatchEvent(new Event('userLoggedIn'));
+          }, 100);
         }
       }
       
@@ -59,8 +72,10 @@ export const authService = {
       localStorage.removeItem('user');
       localStorage.removeItem('cart');
       localStorage.removeItem('wishlist');
+      
       // Dispatch event before redirect
       window.dispatchEvent(new Event('userLoggedOut'));
+      
       // Small delay to allow components to update
       setTimeout(() => {
         window.location.href = '/auth/login';
@@ -94,9 +109,9 @@ export const authService = {
 
   async resetPassword(token, newPassword) {
     try {
-      const response = await apiClient.post('/auth/reset-password', { 
-        token, 
-        newPassword 
+      const response = await apiClient.post('/auth/reset-password', {
+        token,
+        newPassword
       });
       return response;
     } catch (error) {
@@ -124,8 +139,13 @@ export const authService = {
 
   getCurrentUser() {
     if (typeof window === 'undefined') return null;
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
+    }
   },
 
   getToken() {

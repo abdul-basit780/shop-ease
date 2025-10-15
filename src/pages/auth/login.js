@@ -148,59 +148,63 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!validate()) {
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const response = await authService.login({
+      email: formData.email,
+      password: formData.password,
+    });
     
-    if (!validate()) {
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const response = await authService.login({
-        email: formData.email,
-        password: formData.password,
+    if (response.success) {
+      toast.success('Welcome back! 🎉', {
+        icon: '👋',
+        style: {
+          borderRadius: '12px',
+          background: '#10b981',
+          color: '#fff',
+        },
       });
       
-      if (response.success) {
-        toast.success('Welcome back! 🎉', {
-          icon: '👋',
-          style: {
-            borderRadius: '12px',
-            background: '#10b981',
-            color: '#fff',
-          },
-        });
-        
-        // Redirect based on user role
-        setTimeout(() => {
-          if (response.data.user.role === 'admin') {
-            router.push('/admin');
-          } else {
-            router.push('/');
-          }
-        }, 1000);
+      // Wait for the event to propagate and components to update
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Use router.push for better Next.js navigation
+      if (response.data.user.role === 'admin') {
+        await router.push('/admin');
       } else {
-        toast.error(response.error || 'Login failed', {
-          style: {
-            borderRadius: '12px',
-            background: '#ef4444',
-            color: '#fff',
-          },
-        });
+        await router.push('/');
       }
-    } catch (error) {
-      toast.error('An error occurred. Please try again.', {
+      
+      // Force a re-render by dispatching the event again after navigation starts
+      window.dispatchEvent(new Event('userLoggedIn'));
+    } else {
+      toast.error(response.error || 'Login failed', {
         style: {
           borderRadius: '12px',
           background: '#ef4444',
           color: '#fff',
         },
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (error) {
+    toast.error('An error occurred. Please try again.', {
+      style: {
+        borderRadius: '12px',
+        background: '#ef4444',
+        color: '#fff',
+      },
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
