@@ -205,7 +205,7 @@ export default function RegisterPage() {
                 {/* Logo */}
                 <div className="flex items-center justify-center lg:justify-start space-x-3 mb-8">
                   <div className="relative w-16 h-16 bg-gradient-to-br from-primary-600 via-purple-600 to-secondary-600 rounded-2xl flex items-center justify-center transform hover:rotate-12 transition-all duration-500 shadow-2xl">
-                    <span className="text-white font-extrabold text-3xl">E</span>
+                    <span className="text-white font-extrabold text-3xl">SE</span>
                   </div>
                   <div>
                     <h1 className="text-3xl font-extrabold text-gray-900">ShopEase</h1>

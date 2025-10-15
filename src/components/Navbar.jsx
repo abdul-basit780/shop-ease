@@ -174,9 +174,9 @@ export const Navbar = () => {
                     className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-blue-600 font-medium rounded-xl hover:bg-blue-50 transition-all duration-300 group"
                   >
                     <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-md group-hover:shadow-lg transition-shadow">
-                      {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                      {user?.name ? user?.name?.charAt(0).toUpperCase() : user?.email.charAt(0).toUpperCase()}
                     </div>
-                    <span className="hidden lg:block">{user.name || user.email.split('@')[0]}</span>
+                    <span className="hidden lg:block">{user?.name || user?.email.split('@')[0]}</span>
                   </button>
                   
                   {/* Dropdown Menu */}

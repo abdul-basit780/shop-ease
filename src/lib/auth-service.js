@@ -1,9 +1,11 @@
 import { apiClient } from './api-client';
 import Cookies from 'js-cookie';
+import { jwtDecode } from 'jwt-decode'; // Import jwt-decode
 
 export const authService = {
   async login(credentials) {
     try {
+      localStorage.removeItem('user')
       const response = await apiClient.post('/auth/login', credentials);
       
       if (response.success && response.data) {
@@ -33,6 +35,7 @@ export const authService = {
 
   async register(data) {
     try {
+      localStorage.removeItem('user')
       const response = await apiClient.post('/auth/register', data);
       
       // Handle nested success structure from your API
@@ -137,9 +140,32 @@ export const authService = {
     }
   },
 
+  // ✅ Check if token is valid (not expired)
+  isTokenValid(token) {
+    if (!token) return false;
+    try {
+      const decoded = jwtDecode(token);
+      // Check if token is not expired (exp is in seconds, Date.now() is in milliseconds)
+      return decoded.exp * 1000 > Date.now();
+    } catch (error) {
+      console.error("Invalid token:", error);
+      return false;
+    }
+  },
+
   getCurrentUser() {
     if (typeof window === 'undefined') return null;
+    
     try {
+      // First check if token is valid
+      const token = this.getToken();
+      if (!this.isTokenValid(token)) {
+        // Token is expired or invalid, clear storage
+        localStorage.removeItem('user');
+        Cookies.remove('auth_token');
+        return null;
+      }
+      
       const userStr = localStorage.getItem('user');
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
@@ -153,6 +179,7 @@ export const authService = {
   },
 
   isAuthenticated() {
-    return !!this.getToken();
+    const token = this.getToken();
+    return this.isTokenValid(token);
   },
 };
