@@ -90,12 +90,12 @@ export const Navbar = () => {
           {/* Logo with Animation */}
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative w-12 h-12 bg-gradient-to-br from-blue-600 via-purple-600 to-purple-700 rounded-xl flex items-center justify-center transform group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 shadow-lg group-hover:shadow-2xl">
-              <span className="text-white font-extrabold text-2xl">S</span>
+              <span className="text-white font-extrabold text-2xl">SE</span>
               <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 rounded-xl transition-opacity duration-500"></div>
             </div>
             <div>
               <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                ShopHub
+                ShopEase
               </span>
               <div className="text-xs text-gray-500 font-medium -mt-1">Smart Shopping</div>
             </div>

@@ -234,7 +234,7 @@ export default function LoginPage() {
                     <span className="text-white font-extrabold text-3xl">S</span>
                   </div>
                   <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900">ShopHub</h1>
+                    <h1 className="text-3xl font-extrabold text-gray-900">ShopEase</h1>
                     <p className="text-sm text-gray-600">Smart Shopping Experience</p>
                   </div>
                 </div>
