@@ -1,22 +1,25 @@
-import axios from 'axios';
-import Cookies from 'js-cookie';
+import axios from "axios";
+import Cookies from "js-cookie";
 
 class ApiClient {
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
+      baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       timeout: 10000,
     });
 
-    // Request interceptor to add auth token
+    // Request interceptor to add auth token only for protected routes
     this.client.interceptors.request.use(
       (config) => {
-        const token = Cookies.get('auth_token');
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Only add token for non-public endpoints
+        if (!config.url?.includes("/public/")) {
+          const token = Cookies.get("auth_token");
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
         return config;
       },
@@ -28,9 +31,9 @@ class ApiClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          Cookies.remove('auth_token');
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+          Cookies.remove("auth_token");
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
           }
         }
         return Promise.reject(error);
