@@ -97,6 +97,10 @@ export const swaggerDefinition = {
     {
       name: "Public - Products",
       description: "Public Product operations (all users)",
-    }
+    },
+    {
+      name: "Public - Recommendations",
+      description: "Public Recommendations operations (all users)",
+    },
   ],
 };

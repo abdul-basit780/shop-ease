@@ -1,4 +1,4 @@
-// pages/api/customer/recommendations/popular.ts
+// pages/api/public/recommendations/popular.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
   sendSuccess,
@@ -11,7 +11,7 @@ import {
   rateLimit,
   composeMiddleware,
 } from "../../../../lib/middleware/auth";
-import { getPopularProducts } from "../../../../lib/controllers/recommendation";
+import { getPopularProducts } from "../../../../lib/controllers/publicRecommendation";
 
 // GET: Get popular products
 const getPopularProductsHandler = async (
