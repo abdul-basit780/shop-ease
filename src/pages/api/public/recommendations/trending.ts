@@ -1,24 +1,24 @@
-// pages/api/customer/recommendations/similar/[id].ts
+// pages/api/public/recommendations/trending.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
   sendSuccess,
   sendError,
   asyncHandler,
   handleOptions,
-} from "../../../../../lib/utils/apiResponse";
+} from "../../../../lib/utils/apiResponse";
 import {
   allowMethods,
   rateLimit,
   composeMiddleware,
-} from "../../../../../lib/middleware/auth";
-import { getSimilarProducts } from "../../../../../lib/controllers/recommendation";
+} from "../../../../lib/middleware/auth";
+import { getTrendingProducts } from "../../../../lib/controllers/publicRecommendation";
 
-// GET: Get similar products
-const getSimilarProductsHandler = async (
+// GET: Get trending products
+const getTrendingProductsHandler = async (
   req: NextApiRequest,
   res: NextApiResponse
 ) => {
-  const response = await getSimilarProducts(req, res);
+  const response = await getTrendingProducts(req, res);
 
   if (!response.success) {
     return sendError(res, response.message, response.statusCode);
@@ -27,13 +27,13 @@ const getSimilarProductsHandler = async (
   return sendSuccess(res, response.data, response.message, response.statusCode);
 };
 
-const similarHandler = async (req: NextApiRequest, res: NextApiResponse) => {
+const trendingHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === "OPTIONS") {
     return handleOptions(res);
   }
 
   if (req.method === "GET") {
-    return getSimilarProductsHandler(req, res);
+    return getTrendingProductsHandler(req, res);
   }
 
   return sendError(res, "Method not allowed", 405);
@@ -44,6 +44,6 @@ export default asyncHandler(
   composeMiddleware(
     rateLimit(200, 15 * 60 * 1000), // 200 requests per 15 minutes
     allowMethods(["GET"]),
-    similarHandler
+    trendingHandler
   )
 );
