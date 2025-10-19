@@ -4,7 +4,7 @@ export const publicCategoryPaths = {
     get: {
       summary: "List all categories",
       description:
-        "Get all active categories with pagination and search. No authentication required. Public endpoint.",
+        "Get all active categories with pagination and search. Supports filtering by parent category. No authentication required. Public endpoint.",
       tags: ["Public - Categories"],
       parameters: [
         {
@@ -59,6 +59,16 @@ export const publicCategoryPaths = {
             example: "asc",
           },
         },
+        {
+          name: "parentId",
+          in: "query",
+          description:
+            "Filter by parent category ID (use 'null' or empty string for top-level categories)",
+          schema: {
+            type: "string",
+            example: "507f1f77bcf86cd799439011",
+          },
+        },
       ],
       responses: {
         "200": {
@@ -67,6 +77,62 @@ export const publicCategoryPaths = {
             "application/json": {
               schema: {
                 $ref: "#/components/schemas/PublicCategoriesListResponse",
+              },
+              examples: {
+                topLevelCategories: {
+                  summary: "Top-level categories",
+                  value: {
+                    success: true,
+                    message: "Categories retrieved successfully",
+                    data: {
+                      categories: [
+                        {
+                          id: "507f1f77bcf86cd799439011",
+                          name: "electronics",
+                          description: "Electronic devices and accessories",
+                          parentId: null,
+                          createdAt: "2024-01-01T00:00:00.000Z",
+                          updatedAt: "2024-01-01T00:00:00.000Z",
+                        },
+                      ],
+                      pagination: {
+                        page: 1,
+                        limit: 10,
+                        total: 1,
+                        totalPages: 1,
+                        hasNext: false,
+                        hasPrev: false,
+                      },
+                    },
+                  },
+                },
+                subcategories: {
+                  summary: "Subcategories of a parent",
+                  value: {
+                    success: true,
+                    message: "Categories retrieved successfully",
+                    data: {
+                      categories: [
+                        {
+                          id: "507f1f77bcf86cd799439012",
+                          name: "smartphones",
+                          description: "Mobile phones and accessories",
+                          parentId: "507f1f77bcf86cd799439011",
+                          createdAt: "2024-01-01T00:00:00.000Z",
+                          updatedAt: "2024-01-01T00:00:00.000Z",
+                        },
+                      ],
+                      pagination: {
+                        page: 1,
+                        limit: 10,
+                        total: 1,
+                        totalPages: 1,
+                        hasNext: false,
+                        hasPrev: false,
+                      },
+                    },
+                  },
+                },
               },
             },
           },

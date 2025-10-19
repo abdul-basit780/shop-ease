@@ -30,7 +30,6 @@ interface Response {
   statusCode: number | undefined;
 }
 
-// Get all categories (public - no auth required)
 export const listCategories = async (
   req: NextApiRequest,
   res: NextApiResponse
@@ -56,13 +55,20 @@ export const listCategories = async (
   const { pageNum, limitNum, skip, pagination } = calculatePagination(
     params.page,
     params.limit,
-    0 // Will be updated after count
+    0
   );
 
-  // Build filter - only show non-deleted categories for public
   const filter: any = { deletedAt: null };
 
-  // Add search filter if provided
+  // Support filtering by parentId
+  if (req.query.parentId !== undefined) {
+    if (req.query.parentId === "null" || req.query.parentId === "") {
+      filter.parentId = null;
+    } else if (isValidObjectId(req.query.parentId)) {
+      filter.parentId = req.query.parentId;
+    }
+  }
+
   if (params.search) {
     filter.$or = [
       { name: { $regex: params.search, $options: "i" } },
@@ -78,7 +84,6 @@ export const listCategories = async (
       Category.countDocuments(filter),
     ]);
 
-    // Recalculate pagination with actual total
     const finalPagination = calculatePagination(
       params.page,
       params.limit,
@@ -87,11 +92,14 @@ export const listCategories = async (
 
     const responseCategories = categories.map(buildPublicCategoryResponse);
 
+    const errorMessage = filter.parentId
+      ? "No subcategories found"
+      : "No categories found";
     categoryResponse.success = true;
     categoryResponse.message =
       categories.length > 0
         ? "Categories retrieved successfully"
-        : "No categories found";
+        : errorMessage;
     categoryResponse.categories = responseCategories;
     categoryResponse.pagination = finalPagination.pagination;
     categoryResponse.statusCode = 200;
@@ -105,7 +113,6 @@ export const listCategories = async (
   }
 };
 
-// Get single category by ID (public - no auth required)
 export const getCategory = async (
   req: NextApiRequest,
   res: NextApiResponse
@@ -134,7 +141,6 @@ export const getCategory = async (
   }
 
   try {
-    // Only show non-deleted categories for public
     const category = await Category.findOne({
       _id: id,
       deletedAt: null,
