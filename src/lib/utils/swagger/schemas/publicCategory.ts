@@ -1,6 +1,5 @@
 // lib/utils/swagger/schemas/publicCategory.ts
 export const publicCategorySchemas = {
-  // Public Category Response Schema (without deletedAt)
   PublicCategoryResponse: {
     type: "object",
     properties: {
@@ -19,6 +18,12 @@ export const publicCategorySchemas = {
         example: "Electronic devices and accessories",
         description: "Category description",
       },
+      parentId: {
+        type: "string",
+        nullable: true,
+        example: null,
+        description: "Parent category ID (null for top-level categories)",
+      },
       createdAt: {
         type: "string",
         format: "date-time",
@@ -34,7 +39,6 @@ export const publicCategorySchemas = {
     },
   },
 
-  // Public Categories List Response
   PublicCategoriesListResponse: {
     type: "object",
     properties: {
@@ -63,7 +67,6 @@ export const publicCategorySchemas = {
     },
   },
 
-  // Single Public Category Response
   SinglePublicCategoryResponse: {
     type: "object",
     properties: {
@@ -81,7 +84,6 @@ export const publicCategorySchemas = {
     },
   },
 
-  // Public Category Query Parameters
   PublicCategoryQueryParams: {
     type: "object",
     properties: {
@@ -116,10 +118,16 @@ export const publicCategorySchemas = {
         example: "asc",
         description: "Sort order (ascending or descending)",
       },
+      parentId: {
+        type: "string",
+        nullable: true,
+        example: "507f1f77bcf86cd799439011",
+        description:
+          "Filter by parent category ID (use 'null' for top-level categories)",
+      },
     },
   },
 
-  // Public Category Error Response
   PublicCategoryErrorResponse: {
     type: "object",
     properties: {

@@ -58,11 +58,20 @@ export const index = async (
   const { pageNum, limitNum, skip, pagination } = calculatePagination(
     params.page,
     params.limit,
-    0 // Will be updated after count
+    0
   );
 
-  // Build filter and sort objects (will exclude soft-deleted by default)
   const filter = buildMongoFilter(params);
+
+  // Support filtering by parentId
+  if (req.query.parentId !== undefined) {
+    if (req.query.parentId === "null" || req.query.parentId === "") {
+      filter.parentId = null;
+    } else if (isValidObjectId(req.query.parentId)) {
+      filter.parentId = req.query.parentId;
+    }
+  }
+
   const sort = buildMongoSort(params);
 
   try {
@@ -71,7 +80,6 @@ export const index = async (
       Category.countDocuments(filter),
     ]);
 
-    // Recalculate pagination with actual total
     const finalPagination = calculatePagination(
       params.page,
       params.limit,
@@ -110,7 +118,6 @@ export const store = async (
 
   const requestData: CategoryRequest = req.body;
 
-  // Validate request data
   const validationErrors = validateCategoryRequest(requestData);
   if (validationErrors.length > 0) {
     categoryResponse.message = validationErrors.join(", ");
@@ -119,22 +126,47 @@ export const store = async (
   }
 
   try {
-    // Duplicate checks (only check non-deleted categories)
+    // Validate parent category exists if parentId provided
+    if (requestData.parentId) {
+      if (!isValidObjectId(requestData.parentId)) {
+        categoryResponse.message = "Invalid parent category ID";
+        categoryResponse.statusCode = 400;
+        return categoryResponse;
+      }
+
+      const parentExists = await Category.findOne({
+        _id: requestData.parentId,
+        deletedAt: null,
+      });
+
+      if (!parentExists) {
+        categoryResponse.message = "Parent category not found";
+        categoryResponse.statusCode = 404;
+        return categoryResponse;
+      }
+    }
+
+    // Check for duplicate names within same parent
     const existingCategory = await Category.findOne({
       name: requestData.name.toLowerCase().trim(),
+      parentId: requestData.parentId || null,
       deletedAt: null,
     });
 
     if (existingCategory) {
-      categoryResponse.message = "Category already exists";
+      categoryResponse.message = requestData.parentId
+        ? "Subcategory with this name already exists in this category"
+        : "Category with this name already exists";
       categoryResponse.statusCode = 409;
       return categoryResponse;
     }
 
-    // Create category
-    const newCategory = await Category.create(requestData);
+    const newCategory = await Category.create({
+      name: requestData.name.toLowerCase().trim(),
+      description: requestData.description,
+      parentId: requestData.parentId || null,
+    });
 
-    // Build response
     const responseCategory = buildCategoryResponse(newCategory);
     categoryResponse.category = responseCategory;
     categoryResponse.success = true;
@@ -168,7 +200,6 @@ export const show = async (req: AuthenticatedRequest, res: NextApiResponse) => {
   }
 
   try {
-    // Only show non-deleted categories by default
     const category = await Category.findOne({
       _id: id,
       deletedAt: null,
@@ -217,7 +248,6 @@ export const update = async (
 
   const requestData: CategoryRequest = req.body;
 
-  // Validate request data
   const validationErrors = validateCategoryRequest(requestData);
   if (validationErrors.length > 0) {
     categoryResponse.message = validationErrors.join(", ");
@@ -226,7 +256,6 @@ export const update = async (
   }
 
   try {
-    // Find existing non-deleted category
     const existingCategory = await Category.findOne({
       _id: id,
       deletedAt: null,
@@ -238,30 +267,55 @@ export const update = async (
       return categoryResponse;
     }
 
-    // Check for duplicates if name is being updated (only non-deleted)
-    if (
-      requestData.name &&
-      requestData.name.toLowerCase().trim() !== existingCategory.name
-    ) {
-      const nameExists = await Category.findOne({
-        name: requestData.name.toLowerCase().trim(),
-        _id: { $ne: id },
+    // Validate parent category exists if parentId provided
+    if (requestData.parentId) {
+      if (!isValidObjectId(requestData.parentId)) {
+        categoryResponse.message = "Invalid parent category ID";
+        categoryResponse.statusCode = 400;
+        return categoryResponse;
+      }
+
+      // Prevent circular reference
+      if (requestData.parentId === id) {
+        categoryResponse.message = "Category cannot be its own parent";
+        categoryResponse.statusCode = 400;
+        return categoryResponse;
+      }
+
+      const parentExists = await Category.findOne({
+        _id: requestData.parentId,
         deletedAt: null,
       });
-      if (nameExists) {
-        categoryResponse.message = "Category name already exists";
-        categoryResponse.statusCode = 409;
+
+      if (!parentExists) {
+        categoryResponse.message = "Parent category not found";
+        categoryResponse.statusCode = 404;
         return categoryResponse;
       }
     }
 
-    // Prepare update data
+    // Check for duplicate names within same parent
+    const nameExists = await Category.findOne({
+      name: requestData.name.toLowerCase().trim(),
+      parentId: requestData.parentId || null,
+      _id: { $ne: id },
+      deletedAt: null,
+    });
+
+    if (nameExists) {
+      categoryResponse.message = requestData.parentId
+        ? "Subcategory with this name already exists in this category"
+        : "Category with this name already exists";
+      categoryResponse.statusCode = 409;
+      return categoryResponse;
+    }
+
     const updateData = {
-      name: requestData.name,
+      name: requestData.name.toLowerCase().trim(),
       description: requestData.description,
+      parentId: requestData.parentId || null,
     };
 
-    // Update category
     const updatedCategory = await Category.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
@@ -273,7 +327,6 @@ export const update = async (
       return categoryResponse;
     }
 
-    // Build response
     const responseCategory = buildCategoryResponse(updatedCategory);
     categoryResponse.category = responseCategory;
     categoryResponse.success = true;
@@ -326,7 +379,19 @@ export const destroy = async (
       return categoryResponse;
     }
 
-    // Soft delete: Set deletedAt timestamp instead of actually removing
+    // Check if category has subcategories
+    const hasSubcategories = await Category.findOne({
+      parentId: id,
+      deletedAt: null,
+    });
+
+    if (hasSubcategories) {
+      categoryResponse.message =
+        "Cannot delete category with subcategories. Delete subcategories first.";
+      categoryResponse.statusCode = 400;
+      return categoryResponse;
+    }
+
     await Category.findByIdAndUpdate(id, {
       deletedAt: new Date(),
     });
@@ -343,7 +408,6 @@ export const destroy = async (
   }
 };
 
-// Optional: Add restore function to restore soft-deleted categories
 export const restore = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
@@ -377,9 +441,25 @@ export const restore = async (
       return categoryResponse;
     }
 
-    // Check if a category with the same name exists among non-deleted ones
+    // Check if parent exists if category has parentId
+    if (category.parentId) {
+      const parentExists = await Category.findOne({
+        _id: category.parentId,
+        deletedAt: null,
+      });
+
+      if (!parentExists) {
+        categoryResponse.message =
+          "Cannot restore: parent category not found or deleted";
+        categoryResponse.statusCode = 400;
+        return categoryResponse;
+      }
+    }
+
+    // Check for duplicate names within same parent
     const existingCategory = await Category.findOne({
       name: category.name,
+      parentId: category.parentId,
       deletedAt: null,
       _id: { $ne: id },
     });
@@ -391,7 +471,6 @@ export const restore = async (
       return categoryResponse;
     }
 
-    // Restore the category
     category.deletedAt = null;
     await category.save();
 
@@ -409,7 +488,6 @@ export const restore = async (
   }
 };
 
-// Optional: Add permanent delete function for hard delete
 export const permanentDestroy = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
@@ -439,7 +517,15 @@ export const permanentDestroy = async (
       return categoryResponse;
     }
 
-    // Permanently delete the category
+    // Check for subcategories
+    const hasSubcategories = await Category.findOne({ parentId: id });
+
+    if (hasSubcategories) {
+      categoryResponse.message = "Cannot delete category with subcategories";
+      categoryResponse.statusCode = 400;
+      return categoryResponse;
+    }
+
     await Category.findByIdAndDelete(id);
 
     categoryResponse.success = true;

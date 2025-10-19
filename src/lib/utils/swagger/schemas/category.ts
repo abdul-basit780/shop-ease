@@ -1,6 +1,5 @@
 // lib/utils/swagger/schemas/category.ts
 export const categorySchemas = {
-  // Category Request Schema
   CategoryRequest: {
     type: "object",
     required: ["name", "description"],
@@ -10,7 +9,7 @@ export const categorySchemas = {
         minLength: 1,
         maxLength: 100,
         example: "Electronics",
-        description: "Category name (must be unique among active categories)",
+        description: "Category name (must be unique within parent category)",
       },
       description: {
         type: "string",
@@ -19,10 +18,15 @@ export const categorySchemas = {
         example: "Electronic devices and accessories",
         description: "Category description",
       },
+      parentId: {
+        type: "string",
+        nullable: true,
+        example: "507f1f77bcf86cd799439011",
+        description: "Parent category ID (null for top-level categories)",
+      },
     },
   },
 
-  // Category Response Schema
   CategoryResponse: {
     type: "object",
     properties: {
@@ -40,6 +44,12 @@ export const categorySchemas = {
         type: "string",
         example: "Electronic devices and accessories",
         description: "Category description",
+      },
+      parentId: {
+        type: "string",
+        nullable: true,
+        example: null,
+        description: "Parent category ID (null for top-level categories)",
       },
       deletedAt: {
         type: "string",
@@ -63,7 +73,6 @@ export const categorySchemas = {
     },
   },
 
-  // Pagination Info Schema
   PaginationInfo: {
     type: "object",
     properties: {
@@ -100,7 +109,6 @@ export const categorySchemas = {
     },
   },
 
-  // Categories List Response
   CategoriesListResponse: {
     type: "object",
     properties: {
@@ -129,7 +137,6 @@ export const categorySchemas = {
     },
   },
 
-  // Single Category Response
   SingleCategoryResponse: {
     type: "object",
     properties: {
@@ -147,7 +154,6 @@ export const categorySchemas = {
     },
   },
 
-  // Category Create Response
   CategoryCreateResponse: {
     type: "object",
     properties: {
@@ -165,7 +171,6 @@ export const categorySchemas = {
     },
   },
 
-  // Category Update Response
   CategoryUpdateResponse: {
     type: "object",
     properties: {
@@ -183,7 +188,6 @@ export const categorySchemas = {
     },
   },
 
-  // Category Delete Response
   CategoryDeleteResponse: {
     type: "object",
     properties: {
@@ -202,7 +206,6 @@ export const categorySchemas = {
     },
   },
 
-  // Category Restore Response
   CategoryRestoreResponse: {
     type: "object",
     properties: {
@@ -220,7 +223,6 @@ export const categorySchemas = {
     },
   },
 
-  // Category Error Response
   CategoryErrorResponse: {
     type: "object",
     properties: {
@@ -256,7 +258,6 @@ export const categorySchemas = {
     },
   },
 
-  // Category Query Parameters
   CategoryQueryParams: {
     type: "object",
     properties: {
@@ -297,10 +298,16 @@ export const categorySchemas = {
         example: false,
         description: "Include soft-deleted categories in results",
       },
+      parentId: {
+        type: "string",
+        nullable: true,
+        example: "507f1f77bcf86cd799439011",
+        description:
+          "Filter by parent category ID (use 'null' for top-level categories)",
+      },
     },
   },
 
-  // Bulk Category Operations (for future enhancement)
   BulkCategoryRequest: {
     type: "object",
     properties: {
