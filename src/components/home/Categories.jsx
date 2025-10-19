@@ -16,7 +16,6 @@ export default function Categories() {
     try {
       setIsLoading(true);
       const response = await apiClient.get('/api/public/categories');
-      console.log(response)
       if (response.success && response.data?.categories) {
         setCategories(response.data.categories);
       }
