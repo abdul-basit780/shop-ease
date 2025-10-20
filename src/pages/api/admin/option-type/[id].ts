@@ -1,4 +1,5 @@
-// pages/api/customer/wishlist/index.ts
+
+// pages/api/admin/option-type/[id].ts
 import type { NextApiResponse } from "next";
 import {
   sendSuccess,
@@ -8,24 +9,19 @@ import {
 } from "../../../../lib/utils/apiResponse";
 import {
   authenticate,
-  customerOnly,
+  adminOnly,
   allowMethods,
   rateLimit,
   composeMiddleware,
   AuthenticatedRequest,
 } from "../../../../lib/middleware/auth";
-import {
-  getWishlist,
-  addProduct,
-  removeProduct,
-} from "@/lib/controllers/wishlist";
+import { show, update, destroy } from "@/lib/controllers/optionType";
 
-// GET: Get customer's wishlist with products
-const getWishlistHandler = async (
+const getOptionTypeHandler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
 ) => {
-  const response = await getWishlist(req, res);
+  const response = await show(req, res);
 
   if (!response.success) {
     return sendError(res, response.message, response.statusCode);
@@ -33,18 +29,17 @@ const getWishlistHandler = async (
 
   return sendSuccess(
     res,
-    response.wishlist,
+    response.optionType,
     response.message,
     response.statusCode
   );
 };
 
-// POST: Add product to wishlist (or bulk add)
-const addToWishlistHandler = async (
+const updateOptionTypeHandler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
 ) => {
-  const response = await addProduct(req, res);
+  const response = await update(req, res);
 
   if (!response.success) {
     return sendError(res, response.message, response.statusCode);
@@ -52,32 +47,26 @@ const addToWishlistHandler = async (
 
   return sendSuccess(
     res,
-    response.wishlist,
+    response.optionType,
     response.message,
     response.statusCode
   );
 };
 
-// DELETE: Remove specific product from wishlist
-const removeProductHandler = async (
+const deleteOptionTypeHandler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
 ) => {
-  const response = await removeProduct(req, res);
+  const response = await destroy(req, res);
 
   if (!response.success) {
     return sendError(res, response.message, response.statusCode);
   }
 
-  return sendSuccess(
-    res,
-    response.wishlist,
-    response.message,
-    response.statusCode
-  );
+  return sendSuccess(res, null, response.message, response.statusCode);
 };
 
-const wishlistHandler = async (
+const optionTypeHandler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
 ) => {
@@ -87,23 +76,23 @@ const wishlistHandler = async (
 
   switch (req.method) {
     case "GET":
-      return getWishlistHandler(req, res);
-    case "POST":
-      return addToWishlistHandler(req, res);
+      return getOptionTypeHandler(req, res);
+    case "PUT":
+    case "PATCH":
+      return updateOptionTypeHandler(req, res);
     case "DELETE":
-      return removeProductHandler(req, res);
+      return deleteOptionTypeHandler(req, res);
     default:
       return sendError(res, "Method not allowed", 405);
   }
 };
 
-// Apply middleware and export
 export default asyncHandler(
   composeMiddleware(
-    rateLimit(200, 15 * 60 * 1000), // 200 requests per 15 minutes
-    allowMethods(["GET", "POST", "DELETE"]),
+    rateLimit(100, 15 * 60 * 1000),
+    allowMethods(["GET", "PUT", "PATCH", "DELETE"]),
     authenticate,
-    customerOnly,
-    wishlistHandler
+    adminOnly,
+    optionTypeHandler
   )
 );

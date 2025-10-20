@@ -55,6 +55,10 @@ export const swaggerDefinition = {
       description: "Product management operations (Admin only)",
     },
     {
+      name: "Admin - Product Options",
+      description: "Product options management operations (Admin only)",
+    },
+    {
       name: "Admin - Order Management",
       description: "Order management operations (Admin only)",
     },
@@ -101,6 +105,10 @@ export const swaggerDefinition = {
     {
       name: "Public - Recommendations",
       description: "Public Recommendations operations (all users)",
+    },
+    {
+      name: "Public - Navbar",
+      description: "Public Navbar operations (all users)",
     },
   ],
 };

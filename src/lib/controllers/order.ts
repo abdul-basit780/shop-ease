@@ -5,6 +5,8 @@ import { Order } from "../models/Order";
 import { Payment } from "../models/Payment";
 import { Cart } from "../models/Cart";
 import { Product } from "../models/Product";
+import { OptionValue } from "../models/OptionValue";
+import { OptionType } from "../models/OptionType";
 import { Address } from "../models/Address";
 import { User } from "../models/User";
 import connectToDatabase from "../db/mongodb";
@@ -93,9 +95,10 @@ export const createOrder = async (
       return orderResponse;
     }
 
-    // Get customer's cart
+    // Get customer's cart with populated products and selected options
     const cart = await Cart.findOne({ customerId })
       .populate("products.productId")
+      .populate("products.selectedOptions")
       .session(session);
 
     if (!cart || cart.products.length === 0) {
@@ -134,22 +137,62 @@ export const createOrder = async (
         return orderResponse;
       }
 
-      if (product.stock < item.quantity) {
+      // Calculate effective price and stock based on selected options
+      let effectivePrice = product.price;
+      let effectiveStock = product.stock;
+      const selectedOptionsData: Array<{
+        optionValueId: mongoose.Types.ObjectId;
+        optionTypeName: string;
+        value: string;
+        price: number;
+      }> = [];
+
+      if (item.selectedOptions && item.selectedOptions.length > 0) {
+        for (const optionValueRef of item.selectedOptions) {
+          const optionValue = optionValueRef as any; // Cast to any for populated document
+
+          if (!optionValue || optionValue.deletedAt) {
+            await session.abortTransaction();
+            orderResponse.message = `Selected option for ${product.name} is no longer available`;
+            orderResponse.statusCode = 400;
+            return orderResponse;
+          }
+
+          effectivePrice += optionValue.price;
+          effectiveStock = Math.min(effectiveStock, optionValue.stock);
+
+          // Get option type name
+          const optionType = await OptionType.findById(
+            optionValue.optionTypeId
+          ).session(session);
+
+          selectedOptionsData.push({
+            optionValueId: optionValue._id,
+            optionTypeName: optionType?.name || "",
+            value: optionValue.value,
+            price: optionValue.price,
+          });
+        }
+      }
+
+      if (effectiveStock < item.quantity) {
         await session.abortTransaction();
-        orderResponse.message = `${ORDER_MESSAGES.INSUFFICIENT_STOCK}. ${product.name} has only ${product.stock} in stock`;
+        orderResponse.message = `${ORDER_MESSAGES.INSUFFICIENT_STOCK}. ${product.name} has only ${effectiveStock} in stock`;
         orderResponse.statusCode = 400;
         return orderResponse;
       }
 
-      const subtotal = product.price * item.quantity;
+      const subtotal = effectivePrice * item.quantity;
       totalAmount += subtotal;
 
       orderProducts.push({
         productId: product._id,
         quantity: item.quantity,
-        price: product.price,
+        price: effectivePrice,
         name: product.name,
         img: product.img,
+        selectedOptions:
+          selectedOptionsData.length > 0 ? selectedOptionsData : undefined,
       });
 
       // Reduce product stock
@@ -158,6 +201,18 @@ export const createOrder = async (
         { $inc: { stock: -item.quantity } },
         { session }
       );
+
+      // Reduce option values stock if selected
+      if (item.selectedOptions && item.selectedOptions.length > 0) {
+        for (const optionValueRef of item.selectedOptions) {
+          const optionValue = optionValueRef as any;
+          await OptionValue.findByIdAndUpdate(
+            optionValue._id,
+            { $inc: { stock: -item.quantity } },
+            { session }
+          );
+        }
+      }
     }
 
     totalAmount = Math.round(totalAmount * 100) / 100;
@@ -496,13 +551,24 @@ export const cancelOrder = async (
       );
     }
 
-    // Restore product stock
+    // Restore product stock AND option values stock
     for (const item of order.products) {
       await Product.findByIdAndUpdate(
         item.productId,
         { $inc: { stock: item.quantity } },
         { session }
       );
+
+      // Restore option values stock if any were selected
+      if (item.selectedOptions && item.selectedOptions.length > 0) {
+        for (const option of item.selectedOptions) {
+          await OptionValue.findByIdAndUpdate(
+            option.optionValueId,
+            { $inc: { stock: item.quantity } },
+            { session }
+          );
+        }
+      }
     }
 
     // Update order status
