@@ -195,7 +195,7 @@ export const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-2">
             <Link 
-              href="/products" 
+              href="/customer/products" 
               className="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-all duration-300"
             >
               Products
@@ -314,7 +314,7 @@ export const Navbar = () => {
               <>
                 {/* Wishlist */}
                 <Link 
-                  href="/wishlist" 
+                  href="/customer/wishlist" 
                   className="relative p-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-300 group"
                 >
                   <Heart className="h-6 w-6 group-hover:scale-110 transition-transform" />
@@ -459,7 +459,7 @@ export const Navbar = () => {
 
             <div className="space-y-1">
               <Link 
-                href="/products" 
+                href="/customer/products" 
                 className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -497,7 +497,7 @@ export const Navbar = () => {
               {user ? (
                 <>
                   <Link 
-                    href="/wishlist" 
+                    href="/customer/wishlist" 
                     className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >

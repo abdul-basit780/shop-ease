@@ -83,9 +83,16 @@ class ApiClient {
     }
   }
 
-  async delete(url, config) {
+   async delete(url, data) {
     try {
-      const response = await this.client.delete(url, config);
+      const token = Cookies.get("auth_token");
+      const response = await this.client.get(url, {
+        params: data,
+        headers: {
+          method: "DELETE",
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
+      });
       return response.data;
     } catch (error) {
       console.error('API Error:', error.message);
