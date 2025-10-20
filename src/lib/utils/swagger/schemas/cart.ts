@@ -11,19 +11,20 @@ export const cartSchemas = {
       },
       name: {
         type: "string",
-        example: "Gaming Laptop",
+        example: "T-Shirt",
         description: "Product name",
       },
       price: {
         type: "number",
         format: "float",
-        example: 1299.99,
-        description: "Product price per unit",
+        example: 34.99,
+        description: "Effective price (base price + selected options prices)",
       },
       stock: {
         type: "integer",
-        example: 15,
-        description: "Available stock quantity",
+        example: 50,
+        description:
+          "Available stock (minimum of base stock and option stocks)",
       },
       img: {
         type: "string",
@@ -32,7 +33,7 @@ export const cartSchemas = {
       },
       description: {
         type: "string",
-        example: "High-performance gaming laptop with RTX 4060",
+        example: "Comfortable cotton t-shirt",
         description: "Product description",
       },
       categoryId: {
@@ -42,7 +43,7 @@ export const cartSchemas = {
       },
       categoryName: {
         type: "string",
-        example: "Electronics",
+        example: "Clothing",
         description: "Category name (populated from category)",
       },
       quantity: {
@@ -52,11 +53,41 @@ export const cartSchemas = {
         example: 2,
         description: "Quantity in cart",
       },
+      selectedOptions: {
+        type: "array",
+        description: "Selected option values for this cart item",
+        items: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              example: "507f1f77bcf86cd799439013",
+              description: "Option value ID",
+            },
+            optionTypeName: {
+              type: "string",
+              example: "size",
+              description: "Option type name",
+            },
+            value: {
+              type: "string",
+              example: "m",
+              description: "Option value",
+            },
+            price: {
+              type: "number",
+              format: "float",
+              example: 5.0,
+              description: "Additional price for this option",
+            },
+          },
+        },
+      },
       subtotal: {
         type: "number",
         format: "float",
-        example: 2599.98,
-        description: "Subtotal for this item (price × quantity)",
+        example: 69.98,
+        description: "Subtotal for this item (effective price × quantity)",
       },
       isAvailable: {
         type: "boolean",
@@ -88,13 +119,15 @@ export const cartSchemas = {
       count: {
         type: "integer",
         example: 3,
-        description: "Total number of unique products in cart",
+        description:
+          "Total number of unique product+option combinations in cart",
       },
       totalAmount: {
         type: "number",
         format: "float",
-        example: 4599.97,
-        description: "Total amount for all available products in cart",
+        example: 209.97,
+        description:
+          "Total amount for all available products in cart (includes option prices)",
       },
       createdAt: {
         type: "string",
@@ -128,6 +161,13 @@ export const cartSchemas = {
         example: 2,
         description: "Quantity to add (1-999)",
       },
+      selectedOptions: {
+        type: "array",
+        items: { type: "string" },
+        example: ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439014"],
+        description:
+          "Array of option value IDs to select (e.g., Size: M, Color: Red)",
+      },
     },
   },
 
@@ -143,13 +183,30 @@ export const cartSchemas = {
         example: 5,
         description: "New quantity (1-999)",
       },
+      selectedOptions: {
+        type: "array",
+        items: { type: "string" },
+        example: ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439014"],
+        description:
+          "Array of option value IDs (must match the cart item being updated)",
+      },
     },
   },
 
   // Remove from Cart Request Schema
   RemoveFromCartRequest: {
     type: "object",
-    description: "No body required - productId is in the URL path",
+    properties: {
+      selectedOptions: {
+        type: "array",
+        items: { type: "string" },
+        example: ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439014"],
+        description:
+          "Array of option value IDs (must match the cart item being removed)",
+      },
+    },
+    description:
+      "productId is in the URL path. selectedOptions identifies which variant to remove.",
   },
 
   // Get Cart Response
@@ -251,6 +308,7 @@ export const cartSchemas = {
               "Product ID is required",
               "Quantity must be at least 1",
               "Insufficient stock available. Available: 5, Requested: 10",
+              "Selected option does not belong to this product",
             ],
             description: "Detailed error messages or validation errors",
           },

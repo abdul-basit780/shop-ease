@@ -1,6 +1,5 @@
 // lib/utils/swagger/schemas/publicProduct.ts
 export const publicProductSchemas = {
-  // Public Product Response Schema (without deletedAt)
   PublicProductResponse: {
     type: "object",
     properties: {
@@ -11,19 +10,19 @@ export const publicProductSchemas = {
       },
       name: {
         type: "string",
-        example: "Gaming Laptop",
+        example: "T-Shirt",
         description: "Product name",
       },
       price: {
         type: "number",
         format: "float",
-        example: 1299.99,
-        description: "Product price",
+        example: 29.99,
+        description: "Product base price",
       },
       stock: {
         type: "integer",
-        example: 15,
-        description: "Available stock quantity",
+        example: 100,
+        description: "Base product stock",
       },
       img: {
         type: "string",
@@ -32,7 +31,7 @@ export const publicProductSchemas = {
       },
       description: {
         type: "string",
-        example: "High-performance gaming laptop with RTX 4060",
+        example: "Comfortable cotton t-shirt",
         description: "Product description",
       },
       categoryId: {
@@ -42,8 +41,57 @@ export const publicProductSchemas = {
       },
       categoryName: {
         type: "string",
-        example: "Electronics",
+        example: "Clothing",
         description: "Category name (populated from category)",
+      },
+      optionTypes: {
+        type: "array",
+        description: "Available option types for this product",
+        items: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              example: "507f1f77bcf86cd799439012",
+              description: "Option type ID",
+            },
+            name: {
+              type: "string",
+              example: "size",
+              description: "Option type name",
+            },
+            values: {
+              type: "array",
+              description: "Available values for this option type",
+              items: {
+                type: "object",
+                properties: {
+                  id: {
+                    type: "string",
+                    example: "507f1f77bcf86cd799439013",
+                    description: "Option value ID",
+                  },
+                  value: {
+                    type: "string",
+                    example: "m",
+                    description: "Option value",
+                  },
+                  price: {
+                    type: "number",
+                    format: "float",
+                    example: 0,
+                    description: "Additional price for this option",
+                  },
+                  stock: {
+                    type: "integer",
+                    example: 50,
+                    description: "Stock for this option",
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       createdAt: {
         type: "string",
@@ -78,7 +126,7 @@ export const publicProductSchemas = {
           products: {
             type: "array",
             items: { $ref: "#/components/schemas/PublicProductResponse" },
-            description: "Array of product objects",
+            description: "Array of product objects with option types",
           },
           pagination: {
             $ref: "#/components/schemas/PaginationInfo",
@@ -125,7 +173,7 @@ export const publicProductSchemas = {
       },
       search: {
         type: "string",
-        example: "laptop",
+        example: "shirt",
         description: "Search term to filter products by name or description",
       },
       categoryId: {
@@ -135,20 +183,19 @@ export const publicProductSchemas = {
       },
       minPrice: {
         type: "string",
-        example: "100",
+        example: "10",
         description: "Minimum price filter",
       },
       maxPrice: {
         type: "string",
-        example: "1000",
+        example: "100",
         description: "Maximum price filter",
       },
       inStock: {
         type: "string",
         enum: ["true", "false"],
         example: "true",
-        description:
-          "Filter by stock availability (true = in stock, false = out of stock)",
+        description: "Filter by stock availability",
       },
       sortBy: {
         type: "string",

@@ -1,6 +1,8 @@
 // lib/controllers/publicProduct.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import { Product } from "../models/Product";
+import { OptionType } from "../models/OptionType";
+import { OptionValue } from "../models/OptionValue";
 import connectToDatabase from "../db/mongodb";
 import { isValidObjectId } from "mongoose";
 import { buildPaginationParams, calculatePagination } from "../utils/common";
@@ -9,10 +11,23 @@ import {
   PublicProductResponse,
 } from "../utils/product";
 
+interface PublicProductWithOptions extends PublicProductResponse {
+  optionTypes?: Array<{
+    id: string;
+    name: string;
+    values: Array<{
+      id: string;
+      value: string;
+      price: number;
+      stock: number;
+    }>;
+  }>;
+}
+
 interface Response {
   success: boolean;
   message: string;
-  products?: PublicProductResponse[];
+  products?: PublicProductWithOptions[];
   pagination?: {
     page: number;
     limit: number;
@@ -21,11 +36,10 @@ interface Response {
     hasNext: boolean;
     hasPrev: boolean;
   };
-  product?: PublicProductResponse;
+  product?: PublicProductWithOptions;
   statusCode: number | undefined;
 }
 
-// Get all products (public - no auth required)
 export const listProducts = async (
   req: NextApiRequest,
   res: NextApiResponse
@@ -54,10 +68,8 @@ export const listProducts = async (
     0
   );
 
-  // Build filter - only show non-deleted products
   const filter: any = { deletedAt: null };
 
-  // Filter by category
   if (req.query.categoryId) {
     if (!isValidObjectId(req.query.categoryId)) {
       productResponse.message = "Invalid category ID";
@@ -67,14 +79,14 @@ export const listProducts = async (
     filter.categoryId = req.query.categoryId;
   }
 
-  // Filter by stock availability
+  // Stock filter
   if (req.query.inStock === "true") {
     filter.stock = { $gt: 0 };
   } else if (req.query.inStock === "false") {
     filter.stock = 0;
   }
 
-  // Price range filters
+  // Price range filter
   if (req.query.minPrice || req.query.maxPrice) {
     filter.price = {};
     if (req.query.minPrice) {
@@ -91,7 +103,6 @@ export const listProducts = async (
     }
   }
 
-  // Search filter
   if (params.search) {
     filter.$or = [
       { name: { $regex: params.search, $options: "i" } },
@@ -99,7 +110,6 @@ export const listProducts = async (
     ];
   }
 
-  // Build sort
   const sortBy = (req.query.sortBy as string) || "name";
   const sortOrder = (req.query.sortOrder as string) || "asc";
   const sort: any = {};
@@ -116,18 +126,58 @@ export const listProducts = async (
       Product.countDocuments(filter),
     ]);
 
-    // Recalculate pagination with actual total
     const finalPagination = calculatePagination(
       params.page,
       params.limit,
       total
     );
 
-    const responseProducts = products.map(buildPublicProductResponse);
+    // Build response with option types and values
+    const responseProducts: PublicProductWithOptions[] = await Promise.all(
+      products.map(async (product) => {
+        const baseProduct = buildPublicProductResponse(product);
+
+        // Fetch option types for this product
+        const optionTypes = await OptionType.find({
+          productId: product._id,
+          deletedAt: null,
+        }).sort({ name: 1 });
+
+        if (optionTypes.length > 0) {
+          // Fetch option values for all option types
+          const optionTypeIds = optionTypes.map((ot) => ot._id);
+          const optionValues = await OptionValue.find({
+            optionTypeId: { $in: optionTypeIds },
+            deletedAt: null,
+          }).sort({ value: 1 });
+
+          // Group option values by option type
+          const optionTypesData = optionTypes.map((ot) => ({
+            id: ot._id.toString(),
+            name: ot.name,
+            values: optionValues
+              .filter((ov) => ov.optionTypeId.toString() === ot._id.toString())
+              .map((ov) => ({
+                id: ov._id.toString(),
+                value: ov.value,
+                price: ov.price,
+                stock: ov.stock,
+              })),
+          }));
+
+          return {
+            ...baseProduct,
+            optionTypes: optionTypesData,
+          };
+        }
+
+        return baseProduct;
+      })
+    );
 
     productResponse.success = true;
     productResponse.message =
-      products.length > 0
+      responseProducts.length > 0
         ? "Products retrieved successfully"
         : "No products found";
     productResponse.products = responseProducts;
@@ -143,7 +193,6 @@ export const listProducts = async (
   }
 };
 
-// Get single product by ID (public - no auth required)
 export const getProduct = async (req: NextApiRequest, res: NextApiResponse) => {
   await connectToDatabase();
 
@@ -169,7 +218,6 @@ export const getProduct = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    // Only show non-deleted products for public
     const product = await Product.findOne({
       _id: id,
       deletedAt: null,
@@ -181,7 +229,37 @@ export const getProduct = async (req: NextApiRequest, res: NextApiResponse) => {
       return productResponse;
     }
 
-    const responseProduct = buildPublicProductResponse(product);
+    const baseProduct = buildPublicProductResponse(product);
+    let responseProduct: PublicProductWithOptions = { ...baseProduct };
+
+    // Fetch option types for this product
+    const optionTypes = await OptionType.find({
+      productId: product._id,
+      deletedAt: null,
+    }).sort({ name: 1 });
+
+    if (optionTypes.length > 0) {
+      // Fetch option values for all option types
+      const optionTypeIds = optionTypes.map((ot) => ot._id);
+      const optionValues = await OptionValue.find({
+        optionTypeId: { $in: optionTypeIds },
+        deletedAt: null,
+      }).sort({ value: 1 });
+
+      // Group option values by option type
+      responseProduct.optionTypes = optionTypes.map((ot) => ({
+        id: ot._id.toString(),
+        name: ot.name,
+        values: optionValues
+          .filter((ov) => ov.optionTypeId.toString() === ot._id.toString())
+          .map((ov) => ({
+            id: ov._id.toString(),
+            value: ov.value,
+            price: ov.price,
+            stock: ov.stock,
+          })),
+      }));
+    }
 
     productResponse.product = responseProduct;
     productResponse.success = true;

@@ -3,6 +3,8 @@ import { NextApiResponse } from "next";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { Cart } from "../models/Cart";
 import { Product } from "../models/Product";
+import { OptionValue } from "../models/OptionValue";
+import { OptionType } from "../models/OptionType";
 import connectToDatabase from "../db/mongodb";
 import mongoose from "mongoose";
 import {
@@ -51,6 +53,7 @@ export const getCart = async (
           select: "name",
         },
       })
+      .populate("products.selectedOptions")
       .exec();
 
     if (!cart) {
@@ -62,7 +65,7 @@ export const getCart = async (
     }
 
     // Build full response with product details
-    const fullResponse = buildCartResponse(cart);
+    const fullResponse = await buildCartResponse(cart);
 
     cartResponse.cart = fullResponse;
     cartResponse.success = true;
@@ -95,7 +98,7 @@ export const addProduct = async (
     statusCode: 500,
   };
 
-  const { productId, quantity }: AddToCartRequest = req.body;
+  const { productId, quantity, selectedOptions }: AddToCartRequest = req.body;
 
   // Validate request
   const validationErrors = validateAddToCart(productId, quantity);
@@ -120,8 +123,49 @@ export const addProduct = async (
       return cartResponse;
     }
 
+    // Validate and check stock for selected options
+    let availableStock = product.stock;
+    let effectivePrice = product.price;
+    const optionValueIds: mongoose.Types.ObjectId[] = [];
+
+    if (selectedOptions && selectedOptions.length > 0) {
+      // Validate all selected options exist and belong to this product
+      for (const optionId of selectedOptions) {
+        if (!mongoose.Types.ObjectId.isValid(optionId)) {
+          cartResponse.message = `Invalid option value ID: ${optionId}`;
+          cartResponse.statusCode = 400;
+          return cartResponse;
+        }
+
+        const optionValue = await OptionValue.findOne({
+          _id: optionId,
+          deletedAt: null,
+        }).populate("optionTypeId");
+
+        if (!optionValue) {
+          cartResponse.message = `Option value not found: ${optionId}`;
+          cartResponse.statusCode = 404;
+          return cartResponse;
+        }
+
+        // Verify option belongs to this product
+        const optionType = optionValue.optionTypeId as any;
+        if (optionType.productId.toString() !== productId) {
+          cartResponse.message =
+            "Selected option does not belong to this product";
+          cartResponse.statusCode = 400;
+          return cartResponse;
+        }
+
+        // Use option's stock and add to price
+        availableStock = Math.min(availableStock, optionValue.stock);
+        effectivePrice += optionValue.price;
+        optionValueIds.push(new mongoose.Types.ObjectId(optionId));
+      }
+    }
+
     // Check stock availability
-    if (product.stock === 0) {
+    if (availableStock === 0) {
       cartResponse.message = CART_MESSAGES.PRODUCT_OUT_OF_STOCK;
       cartResponse.statusCode = 400;
       return cartResponse;
@@ -130,36 +174,46 @@ export const addProduct = async (
     // Get or create cart
     let cart = await Cart.findOne({ customerId });
 
-    const existingQuantity = cart ? getCartItemQuantity(cart, productId) : 0;
+    const existingQuantity = cart
+      ? getCartItemQuantity(cart, productId, optionValueIds)
+      : 0;
     const newTotalQuantity = existingQuantity + quantity;
 
-    if (newTotalQuantity > product.stock) {
-      cartResponse.message = `${CART_MESSAGES.INSUFFICIENT_STOCK}. Available: ${product.stock}, Requested: ${newTotalQuantity}`;
+    if (newTotalQuantity > availableStock) {
+      cartResponse.message = `${CART_MESSAGES.INSUFFICIENT_STOCK}. Available: ${availableStock}, Requested: ${newTotalQuantity}`;
       cartResponse.statusCode = 400;
       return cartResponse;
     }
 
-    // If product already in cart, update quantity
-    if (cart && isProductInCart(cart, productId)) {
-      const updatedCart = await Cart.findOneAndUpdate(
-        {
-          customerId,
-          "products.productId": new mongoose.Types.ObjectId(productId),
-        },
-        {
-          $inc: { "products.$.quantity": quantity },
-          $set: { totalAmount: 0 }, // Will be recalculated in response
-        },
-        { new: true }
-      ).populate({
-        path: "products.productId",
-        populate: {
-          path: "categoryId",
-          select: "name",
-        },
-      });
+    // Check if this exact product+options combination exists in cart
+    const existingItemIndex = cart?.products.findIndex((item) => {
+      if (item.productId.toString() !== productId) return false;
 
-      cartResponse.cart = buildCartResponse(updatedCart!);
+      const itemOptions = (item.selectedOptions || [])
+        .map((id) => id.toString())
+        .sort();
+      const newOptions = optionValueIds.map((id) => id.toString()).sort();
+
+      return JSON.stringify(itemOptions) === JSON.stringify(newOptions);
+    });
+
+    if (cart && existingItemIndex !== undefined && existingItemIndex >= 0) {
+      // Update existing item quantity
+      cart.products[existingItemIndex].quantity += quantity;
+      await cart.save();
+
+      await cart.populate([
+        {
+          path: "products.productId",
+          populate: {
+            path: "categoryId",
+            select: "name",
+          },
+        },
+        { path: "products.selectedOptions" },
+      ]);
+
+      cartResponse.cart = await buildCartResponse(cart);
       cartResponse.success = true;
       cartResponse.message = CART_MESSAGES.PRODUCT_UPDATED;
       cartResponse.statusCode = 200;
@@ -174,6 +228,8 @@ export const addProduct = async (
           products: {
             productId: new mongoose.Types.ObjectId(productId),
             quantity,
+            selectedOptions:
+              optionValueIds.length > 0 ? optionValueIds : undefined,
           },
         },
         $set: { totalAmount: 0 }, // Will be recalculated in response
@@ -183,15 +239,18 @@ export const addProduct = async (
         new: true,
         setDefaultsOnInsert: true,
       }
-    ).populate({
-      path: "products.productId",
-      populate: {
-        path: "categoryId",
-        select: "name",
+    ).populate([
+      {
+        path: "products.productId",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
       },
-    });
+      { path: "products.selectedOptions" },
+    ]);
 
-    cartResponse.cart = buildCartResponse(updatedCart);
+    cartResponse.cart = await buildCartResponse(updatedCart);
     cartResponse.success = true;
     cartResponse.message = CART_MESSAGES.PRODUCT_ADDED;
     cartResponse.statusCode = 200;
@@ -221,7 +280,7 @@ export const updateProduct = async (
 
   // productId comes from path parameter (set in route handler)
   const productId = req.body.productId as string;
-  const { quantity }: UpdateCartItemRequest = req.body;
+  const { quantity, selectedOptions }: UpdateCartItemRequest = req.body;
 
   // Validate request
   const productIdErrors = validateProductId(productId);
@@ -237,10 +296,27 @@ export const updateProduct = async (
   try {
     const customerId = new mongoose.Types.ObjectId(req.user.userId);
 
-    // Check if cart exists and product is in cart
+    // Check if cart exists
     const cart = await Cart.findOne({ customerId });
 
-    if (!cart || !isProductInCart(cart, productId)) {
+    if (!cart) {
+      cartResponse.message = CART_MESSAGES.PRODUCT_NOT_IN_CART;
+      cartResponse.statusCode = 404;
+      return cartResponse;
+    }
+
+    // Find the specific cart item
+    const optionIds = (selectedOptions || []).map((id) => id.toString()).sort();
+    const itemIndex = cart.products.findIndex((item) => {
+      if (item.productId.toString() !== productId) return false;
+
+      const itemOptions = (item.selectedOptions || [])
+        .map((id) => id.toString())
+        .sort();
+      return JSON.stringify(itemOptions) === JSON.stringify(optionIds);
+    });
+
+    if (itemIndex === -1) {
       cartResponse.message = CART_MESSAGES.PRODUCT_NOT_IN_CART;
       cartResponse.statusCode = 404;
       return cartResponse;
@@ -258,35 +334,49 @@ export const updateProduct = async (
       return cartResponse;
     }
 
+    // Calculate available stock
+    let availableStock = product.stock;
+
+    if (selectedOptions && selectedOptions.length > 0) {
+      for (const optionId of selectedOptions) {
+        const optionValue = await OptionValue.findOne({
+          _id: optionId,
+          deletedAt: null,
+        });
+
+        if (!optionValue) {
+          cartResponse.message = `Option value not found: ${optionId}`;
+          cartResponse.statusCode = 404;
+          return cartResponse;
+        }
+
+        availableStock = Math.min(availableStock, optionValue.stock);
+      }
+    }
+
     // Check stock availability
-    if (quantity > product.stock) {
-      cartResponse.message = `${CART_MESSAGES.INSUFFICIENT_STOCK}. Available: ${product.stock}, Requested: ${quantity}`;
+    if (quantity > availableStock) {
+      cartResponse.message = `${CART_MESSAGES.INSUFFICIENT_STOCK}. Available: ${availableStock}, Requested: ${quantity}`;
       cartResponse.statusCode = 400;
       return cartResponse;
     }
 
     // Update quantity
-    const updatedCart = await Cart.findOneAndUpdate(
+    cart.products[itemIndex].quantity = quantity;
+    await cart.save();
+
+    await cart.populate([
       {
-        customerId,
-        "products.productId": new mongoose.Types.ObjectId(productId),
-      },
-      {
-        $set: {
-          "products.$.quantity": quantity,
-          totalAmount: 0, // Will be recalculated in response
+        path: "products.productId",
+        populate: {
+          path: "categoryId",
+          select: "name",
         },
       },
-      { new: true }
-    ).populate({
-      path: "products.productId",
-      populate: {
-        path: "categoryId",
-        select: "name",
-      },
-    });
+      { path: "products.selectedOptions" },
+    ]);
 
-    cartResponse.cart = buildCartResponse(updatedCart!);
+    cartResponse.cart = await buildCartResponse(cart);
     cartResponse.success = true;
     cartResponse.message = CART_MESSAGES.PRODUCT_UPDATED;
     cartResponse.statusCode = 200;
@@ -316,6 +406,7 @@ export const removeProduct = async (
 
   // productId comes from path parameter (set in route handler)
   const productId = req.body.productId as string;
+  const { selectedOptions } = req.body;
 
   // Validate product ID
   const validationErrors = validateProductId(productId);
@@ -331,33 +422,47 @@ export const removeProduct = async (
     // Check if product is in cart
     const cart = await Cart.findOne({ customerId });
 
-    if (!cart || !isProductInCart(cart, productId)) {
+    if (!cart) {
+      cartResponse.message = CART_MESSAGES.PRODUCT_NOT_IN_CART;
+      cartResponse.statusCode = 404;
+      return cartResponse;
+    }
+
+    // Find the specific cart item
+    const optionIds = (selectedOptions || [])
+      .map((id: string) => id.toString())
+      .sort();
+    const itemIndex = cart.products.findIndex((item) => {
+      if (item.productId.toString() !== productId) return false;
+
+      const itemOptions = (item.selectedOptions || [])
+        .map((id) => id.toString())
+        .sort();
+      return JSON.stringify(itemOptions) === JSON.stringify(optionIds);
+    });
+
+    if (itemIndex === -1) {
       cartResponse.message = CART_MESSAGES.PRODUCT_NOT_IN_CART;
       cartResponse.statusCode = 404;
       return cartResponse;
     }
 
     // Remove product from cart
-    const updatedCart = await Cart.findOneAndUpdate(
-      { customerId },
-      {
-        $pull: {
-          products: {
-            productId: new mongoose.Types.ObjectId(productId),
-          },
-        },
-        $set: { totalAmount: 0 }, // Will be recalculated in response
-      },
-      { new: true }
-    ).populate({
-      path: "products.productId",
-      populate: {
-        path: "categoryId",
-        select: "name",
-      },
-    });
+    cart.products.splice(itemIndex, 1);
+    await cart.save();
 
-    cartResponse.cart = buildCartResponse(updatedCart!);
+    await cart.populate([
+      {
+        path: "products.productId",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      },
+      { path: "products.selectedOptions" },
+    ]);
+
+    cartResponse.cart = await buildCartResponse(cart);
     cartResponse.success = true;
     cartResponse.message = CART_MESSAGES.PRODUCT_REMOVED;
     cartResponse.statusCode = 200;

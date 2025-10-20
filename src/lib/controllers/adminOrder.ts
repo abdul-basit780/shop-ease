@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { Order } from "../models/Order";
 import { Payment } from "../models/Payment";
 import { Product } from "../models/Product";
-import { User } from "../models/User";
+import { OptionValue } from "../models/OptionValue";
 import connectToDatabase from "../db/mongodb";
 import mongoose from "mongoose";
 import {
@@ -471,13 +471,24 @@ export const adminCancelOrder = async (
       );
     }
 
-    // Restore product stock
+    // Restore product stock AND option values stock
     for (const item of order.products) {
       await Product.findByIdAndUpdate(
         item.productId,
         { $inc: { stock: item.quantity } },
         { session }
       );
+
+      // Restore option values stock if any were selected
+      if (item.selectedOptions && item.selectedOptions.length > 0) {
+        for (const option of item.selectedOptions) {
+          await OptionValue.findByIdAndUpdate(
+            option.optionValueId,
+            { $inc: { stock: item.quantity } },
+            { session }
+          );
+        }
+      }
     }
 
     // Update order status

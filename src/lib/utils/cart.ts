@@ -1,6 +1,7 @@
 // lib/utils/cart.ts
 import { ICart } from "../models/Cart";
 import { isValidObjectId } from "mongoose";
+import mongoose from "mongoose";
 
 export interface CartProductResponse {
   productId: string;
@@ -12,6 +13,12 @@ export interface CartProductResponse {
   categoryId: string;
   categoryName?: string;
   quantity: number;
+  selectedOptions?: Array<{
+    id: string;
+    optionTypeName: string;
+    value: string;
+    price: number;
+  }>;
   subtotal: number;
   isAvailable: boolean;
 }
@@ -29,42 +36,76 @@ export interface CartResponse {
 export interface AddToCartRequest {
   productId: string;
   quantity: number;
+  selectedOptions?: string[]; // Array of OptionValue IDs
 }
 
 export interface UpdateCartItemRequest {
   quantity: number;
+  selectedOptions?: string[]; // Array of OptionValue IDs
 }
 
 // Helper function to build cart response with populated products
-export const buildCartResponse = (cart: any): CartResponse => {
+export const buildCartResponse = async (cart: any): Promise<CartResponse> => {
   let totalAmount = 0;
 
-  const products: CartProductResponse[] = cart.products
-    .filter((item: any) => item.productId) // Filter out any null products (deleted)
-    .map((item: any) => {
-      const product = item.productId as any; // Populated product
-      const isAvailable = product.stock > 0 && !product.deletedAt;
-      const subtotal = product.price * item.quantity;
+  const products: CartProductResponse[] = await Promise.all(
+    cart.products
+      .filter((item: any) => item.productId) // Filter out any null products (deleted)
+      .map(async (item: any) => {
+        const product = item.productId as any; // Populated product
 
-      if (isAvailable) {
-        totalAmount += subtotal;
-      }
+        let effectivePrice = product.price;
+        let effectiveStock = product.stock;
+        const selectedOptionsData: Array<{
+          id: string;
+          optionTypeName: string;
+          value: string;
+          price: number;
+        }> = [];
 
-      return {
-        productId: product._id.toString(),
-        name: product.name,
-        price: product.price,
-        stock: product.stock,
-        img: product.img,
-        description: product.description,
-        categoryId:
-          product.categoryId?._id?.toString() || product.categoryId?.toString(),
-        categoryName: product.categoryId?.name,
-        quantity: item.quantity,
-        subtotal: Math.round(subtotal * 100) / 100,
-        isAvailable,
-      };
-    });
+        // Calculate price and stock based on selected options
+        if (item.selectedOptions && item.selectedOptions.length > 0) {
+          for (const optionValue of item.selectedOptions) {
+            if (optionValue && optionValue._id) {
+              effectivePrice += optionValue.price;
+              effectiveStock = Math.min(effectiveStock, optionValue.stock);
+
+              selectedOptionsData.push({
+                id: optionValue._id.toString(),
+                optionTypeName: optionValue.optionTypeId?.name || "",
+                value: optionValue.value,
+                price: optionValue.price,
+              });
+            }
+          }
+        }
+
+        const isAvailable = effectiveStock > 0 && !product.deletedAt;
+        const subtotal = effectivePrice * item.quantity;
+
+        if (isAvailable) {
+          totalAmount += subtotal;
+        }
+
+        return {
+          productId: product._id.toString(),
+          name: product.name,
+          price: effectivePrice,
+          stock: effectiveStock,
+          img: product.img,
+          description: product.description,
+          categoryId:
+            product.categoryId?._id?.toString() ||
+            product.categoryId?.toString(),
+          categoryName: product.categoryId?.name,
+          quantity: item.quantity,
+          selectedOptions:
+            selectedOptionsData.length > 0 ? selectedOptionsData : undefined,
+          subtotal: Math.round(subtotal * 100) / 100,
+          isAvailable,
+        };
+      })
+  );
 
   return {
     id: cart._id.toString(),
@@ -122,16 +163,49 @@ export const validateAddToCart = (
   return errors;
 };
 
-// Check if product is in cart
-export const isProductInCart = (cart: ICart, productId: string): boolean => {
-  return cart.products.some((item) => item.productId.toString() === productId);
+// Check if product is in cart (now considering options)
+export const isProductInCart = (
+  cart: ICart,
+  productId: string,
+  selectedOptions?: mongoose.Types.ObjectId[]
+): boolean => {
+  return cart.products.some((item) => {
+    if (item.productId.toString() !== productId) return false;
+
+    if (!selectedOptions || selectedOptions.length === 0) {
+      return !item.selectedOptions || item.selectedOptions.length === 0;
+    }
+
+    const itemOptions = (item.selectedOptions || [])
+      .map((id) => id.toString())
+      .sort();
+    const newOptions = selectedOptions.map((id) => id.toString()).sort();
+
+    return JSON.stringify(itemOptions) === JSON.stringify(newOptions);
+  });
 };
 
-// Get cart item quantity
-export const getCartItemQuantity = (cart: ICart, productId: string): number => {
-  const item = cart.products.find(
-    (item) => item.productId.toString() === productId
-  );
+// Get cart item quantity (considering options)
+export const getCartItemQuantity = (
+  cart: ICart,
+  productId: string,
+  selectedOptions?: mongoose.Types.ObjectId[]
+): number => {
+  const item = cart.products.find((item) => {
+    if (item.productId.toString() !== productId) return false;
+
+    if (!selectedOptions || selectedOptions.length === 0) {
+      return !item.selectedOptions || item.selectedOptions.length === 0;
+    }
+
+    const itemOptions = (item.selectedOptions || [])
+      .map((id) => id.toString())
+      .sort();
+    const newOptions = selectedOptions.map((id) => id.toString()).sort();
+
+    return JSON.stringify(itemOptions) === JSON.stringify(newOptions);
+  });
+
   return item ? item.quantity : 0;
 };
 

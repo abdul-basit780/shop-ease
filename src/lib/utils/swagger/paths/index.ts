@@ -16,6 +16,8 @@ import { adminOrderPaths } from "./adminOrder";
 import { adminDashboardPaths } from "./adminDashboard";
 import { recommendationPaths } from "./recommendation";
 import { publicRecommendationPaths } from "./publicRecommendation";
+import { navbarPaths } from "./navbar";
+import { optionPaths } from "./option";
 
 export const paths = {
   ...authPaths,
@@ -36,4 +38,6 @@ export const paths = {
   ...adminDashboardPaths,
   ...recommendationPaths,
   ...publicRecommendationPaths,
+  ...navbarPaths,
+  ...optionPaths,
 };

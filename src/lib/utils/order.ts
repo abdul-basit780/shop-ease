@@ -8,6 +8,12 @@ export interface OrderProductResponse {
   price: number;
   quantity: number;
   img: string;
+  selectedOptions?: Array<{
+    optionValueId: string;
+    optionTypeName: string;
+    value: string;
+    price: number;
+  }>;
   subtotal: number;
 }
 
@@ -37,14 +43,27 @@ export interface CreateOrderRequest {
 
 // Build order response
 export const buildOrderResponse = (order: any, payment: any): OrderResponse => {
-  const products: OrderProductResponse[] = order.products.map((item: any) => ({
-    productId: item.productId.toString(),
-    name: item.name,
-    price: item.price,
-    quantity: item.quantity,
-    img: item.img,
-    subtotal: Math.round(item.price * item.quantity * 100) / 100,
-  }));
+  const products: OrderProductResponse[] = order.products.map((item: any) => {
+    const baseSubtotal = item.price * item.quantity;
+
+    const selectedOptions = item.selectedOptions?.map((opt: any) => ({
+      optionValueId: opt.optionValueId.toString(),
+      optionTypeName: opt.optionTypeName,
+      value: opt.value,
+      price: opt.price,
+    }));
+
+    return {
+      productId: item.productId.toString(),
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      img: item.img,
+      selectedOptions:
+        selectedOptions?.length > 0 ? selectedOptions : undefined,
+      subtotal: Math.round(baseSubtotal * 100) / 100,
+    };
+  });
 
   // Order can be cancelled if it's PENDING or PROCESSING
   const canCancel =

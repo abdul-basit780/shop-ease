@@ -4,7 +4,7 @@ export const cartPaths = {
     get: {
       summary: "Get customer cart",
       description:
-        "Get the authenticated customer's cart with all products populated. Returns empty cart if none exists. Customer only.",
+        "Get the authenticated customer's cart with all products and selected options populated. Returns empty cart if none exists. Customer only.",
       tags: ["Customer - Cart"],
       security: [{ bearerAuth: [] }],
       responses: {
@@ -26,7 +26,7 @@ export const cartPaths = {
     post: {
       summary: "Add product to cart",
       description:
-        "Add a product to the customer's cart with specified quantity. If product already exists in cart, the quantity will be incremented. Product must exist, not be deleted, and have sufficient stock. Customer only.",
+        "Add a product to the customer's cart with specified quantity and optional selected options. If the same product+options combination already exists in cart, the quantity will be incremented. Product must exist, not be deleted, and have sufficient stock. Customer only.",
       tags: ["Customer - Cart"],
       security: [{ bearerAuth: [] }],
       requestBody: {
@@ -34,6 +34,26 @@ export const cartPaths = {
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/AddToCartRequest" },
+            examples: {
+              withoutOptions: {
+                summary: "Simple product without options",
+                value: {
+                  productId: "507f1f77bcf86cd799439011",
+                  quantity: 2,
+                },
+              },
+              withOptions: {
+                summary: "Product with selected options",
+                value: {
+                  productId: "507f1f77bcf86cd799439011",
+                  quantity: 1,
+                  selectedOptions: [
+                    "507f1f77bcf86cd799439013",
+                    "507f1f77bcf86cd799439014",
+                  ],
+                },
+              },
+            },
           },
         },
       },
@@ -48,7 +68,7 @@ export const cartPaths = {
         },
         "400": {
           description:
-            "Invalid request (validation error, insufficient stock, or product out of stock)",
+            "Invalid request (validation error, insufficient stock, product out of stock, or invalid option)",
           content: {
             "application/json": {
               schema: { $ref: "#/components/schemas/CartErrorResponse" },
@@ -56,7 +76,9 @@ export const cartPaths = {
           },
         },
         "401": { description: "Unauthorized" },
-        "404": { description: "Product not found or has been deleted" },
+        "404": {
+          description: "Product not found, deleted, or option value not found",
+        },
         "429": {
           description: "Rate limit exceeded (200 requests per 15 minutes)",
         },
@@ -68,7 +90,7 @@ export const cartPaths = {
     put: {
       summary: "Update cart item quantity",
       description:
-        "Update the quantity of a product in the cart. Product must exist in cart and new quantity must not exceed available stock. Customer only.",
+        "Update the quantity of a specific product+options combination in the cart. Product must exist in cart with matching options and new quantity must not exceed available stock. Customer only.",
       tags: ["Customer - Cart"],
       security: [{ bearerAuth: [] }],
       parameters: [
@@ -88,15 +110,23 @@ export const cartPaths = {
         content: {
           "application/json": {
             schema: {
-              type: "object",
-              required: ["quantity"],
-              properties: {
-                quantity: {
-                  type: "integer",
-                  minimum: 1,
-                  maximum: 999,
-                  example: 5,
-                  description: "New quantity (1-999)",
+              $ref: "#/components/schemas/UpdateCartItemRequest",
+            },
+            examples: {
+              withoutOptions: {
+                summary: "Update simple product",
+                value: {
+                  quantity: 5,
+                },
+              },
+              withOptions: {
+                summary: "Update product with options",
+                value: {
+                  quantity: 3,
+                  selectedOptions: [
+                    "507f1f77bcf86cd799439013",
+                    "507f1f77bcf86cd799439014",
+                  ],
                 },
               },
             },
@@ -114,7 +144,7 @@ export const cartPaths = {
         },
         "400": {
           description:
-            "Invalid request (validation error or insufficient stock)",
+            "Invalid request (validation error, insufficient stock, or invalid option)",
           content: {
             "application/json": {
               schema: { $ref: "#/components/schemas/CartErrorResponse" },
@@ -122,7 +152,10 @@ export const cartPaths = {
           },
         },
         "401": { description: "Unauthorized" },
-        "404": { description: "Product not found in cart or has been deleted" },
+        "404": {
+          description:
+            "Product not found in cart with specified options, or has been deleted",
+        },
         "429": {
           description: "Rate limit exceeded (200 requests per 15 minutes)",
         },
@@ -132,7 +165,7 @@ export const cartPaths = {
     delete: {
       summary: "Remove product from cart",
       description:
-        "Remove a product from the customer's cart. Product must exist in cart. Customer only.",
+        "Remove a specific product+options combination from the customer's cart. Product with matching options must exist in cart. Customer only.",
       tags: ["Customer - Cart"],
       security: [{ bearerAuth: [] }],
       parameters: [
@@ -147,6 +180,30 @@ export const cartPaths = {
           },
         },
       ],
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/RemoveFromCartRequest",
+            },
+            examples: {
+              withoutOptions: {
+                summary: "Remove simple product",
+                value: {},
+              },
+              withOptions: {
+                summary: "Remove product with specific options",
+                value: {
+                  selectedOptions: [
+                    "507f1f77bcf86cd799439013",
+                    "507f1f77bcf86cd799439014",
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
       responses: {
         "200": {
           description: "Product removed from cart",
@@ -167,7 +224,9 @@ export const cartPaths = {
           },
         },
         "401": { description: "Unauthorized" },
-        "404": { description: "Product is not in cart" },
+        "404": {
+          description: "Product with specified options is not in cart",
+        },
         "429": {
           description: "Rate limit exceeded (200 requests per 15 minutes)",
         },

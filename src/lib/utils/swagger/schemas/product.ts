@@ -18,12 +18,13 @@ export const productSchemas = {
         type: "number",
         format: "float",
         example: 1299.99,
-        description: "Product price",
+        description: "Product base price",
       },
       stock: {
         type: "integer",
         example: 15,
-        description: "Available stock quantity",
+        description:
+          "Available stock quantity (base stock, may be overridden by option values)",
       },
       img: {
         type: "string",
@@ -67,7 +68,7 @@ export const productSchemas = {
     },
   },
 
-  // Product Create Request Schema (for documentation)
+  // Product Create Request Schema
   ProductCreateRequest: {
     type: "object",
     required: ["name", "price", "stock", "description", "categoryId", "image"],
@@ -85,14 +86,14 @@ export const productSchemas = {
         minimum: 0,
         maximum: 999999.99,
         example: 1299.99,
-        description: "Product price",
+        description: "Product base price",
       },
       stock: {
         type: "integer",
         minimum: 0,
         maximum: 999999,
         example: 15,
-        description: "Available stock quantity",
+        description: "Base stock quantity (can be overridden by option values)",
       },
       description: {
         type: "string",
@@ -131,14 +132,14 @@ export const productSchemas = {
         minimum: 0,
         maximum: 999999.99,
         example: 1199.99,
-        description: "Product price",
+        description: "Product base price",
       },
       stock: {
         type: "integer",
         minimum: 0,
         maximum: 999999,
         example: 10,
-        description: "Available stock quantity",
+        description: "Base stock quantity",
       },
       description: {
         type: "string",
@@ -411,40 +412,6 @@ export const productSchemas = {
     },
   },
 
-  // Bulk Product Operations (for future enhancement)
-  BulkProductRequest: {
-    type: "object",
-    properties: {
-      productIds: {
-        type: "array",
-        items: { type: "string" },
-        example: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"],
-        description: "Array of product IDs for bulk operations",
-      },
-      operation: {
-        type: "string",
-        enum: ["delete", "restore", "permanent-delete", "update-category"],
-        example: "delete",
-        description: "Bulk operation type",
-      },
-      data: {
-        type: "object",
-        properties: {
-          categoryId: {
-            type: "string",
-            example: "507f1f77bcf86cd799439013",
-            description: "New category ID for bulk category update",
-          },
-          stock: {
-            type: "integer",
-            example: 0,
-            description: "Set stock for all products",
-          },
-        },
-      },
-    },
-  },
-
   // Stock Update Request
   StockUpdateRequest: {
     type: "object",
@@ -456,36 +423,6 @@ export const productSchemas = {
         maximum: 999999,
         example: 25,
         description: "New stock quantity",
-      },
-      adjustment: {
-        type: "boolean",
-        default: false,
-        description:
-          "If true, stock value is added/subtracted from current stock",
-      },
-    },
-  },
-
-  // Price Update Request
-  PriceUpdateRequest: {
-    type: "object",
-    required: ["price"],
-    properties: {
-      price: {
-        type: "number",
-        format: "float",
-        minimum: 0,
-        maximum: 999999.99,
-        example: 899.99,
-        description: "New price",
-      },
-      discountPercentage: {
-        type: "number",
-        format: "float",
-        minimum: 0,
-        maximum: 100,
-        example: 10,
-        description: "Apply discount percentage to current price",
       },
     },
   },
