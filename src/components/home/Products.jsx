@@ -79,7 +79,7 @@ export default function Products() {
     try {
       setIsLoading(true);
       const response = await apiClient.get('/api/public/products');
-      
+      console.log('products',response)
       if (response.success && response.data?.products) {
         setProducts(response.data.products.slice(0, 8));
       }
