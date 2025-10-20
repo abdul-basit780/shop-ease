@@ -123,6 +123,69 @@ export const addProduct = async (
       return cartResponse;
     }
 
+    // Check if product has option types
+    const productOptionTypes = await OptionType.find({
+      productId: product._id,
+      deletedAt: null,
+    });
+
+    // If product has options, selectedOptions must be provided
+    if (productOptionTypes.length > 0) {
+      if (!selectedOptions || selectedOptions.length === 0) {
+        cartResponse.message = `This product requires option selection. Please select: ${productOptionTypes
+          .map((ot: any) => ot.name)
+          .join(", ")}`;
+        cartResponse.statusCode = 400;
+        return cartResponse;
+      }
+
+      // Validate that all required option types are selected
+      const selectedOptionTypes = new Set<string>();
+      for (const optionId of selectedOptions) {
+        const optionValue = await OptionValue.findOne({
+          _id: optionId,
+          deletedAt: null,
+        }).populate("optionTypeId");
+
+        if (!optionValue) {
+          cartResponse.message = `Option value not found: ${optionId}`;
+          cartResponse.statusCode = 404;
+          return cartResponse;
+        }
+
+        const optionType = optionValue.optionTypeId as any;
+        selectedOptionTypes.add(optionType._id.toString());
+      }
+
+      // Check if all option types are selected (at least one value per type)
+      const missingOptionTypes = productOptionTypes.filter(
+        (ot: any) => !selectedOptionTypes.has(ot._id.toString())
+      );
+
+      if (missingOptionTypes.length > 0) {
+        cartResponse.message = `Missing required options: ${missingOptionTypes
+          .map((ot: any) => ot.name)
+          .join(", ")}`;
+        cartResponse.statusCode = 400;
+        return cartResponse;
+      }
+    } else {
+      // If product has no options, selectedOptions should not be provided
+      if (selectedOptions && selectedOptions.length > 0) {
+        cartResponse.message =
+          "This product does not have options. Please add without selecting options.";
+        cartResponse.statusCode = 400;
+        return cartResponse;
+      }
+    }
+
+    // Check stock availability
+    if (product.stock === 0) {
+      cartResponse.message = CART_MESSAGES.PRODUCT_OUT_OF_STOCK;
+      cartResponse.statusCode = 400;
+      return cartResponse;
+    }
+
     // Validate and check stock for selected options
     let availableStock = product.stock;
     let effectivePrice = product.price;
@@ -164,7 +227,7 @@ export const addProduct = async (
       }
     }
 
-    // Check stock availability
+    // Check stock availability with effective stock
     if (availableStock === 0) {
       cartResponse.message = CART_MESSAGES.PRODUCT_OUT_OF_STOCK;
       cartResponse.statusCode = 400;
@@ -426,6 +489,33 @@ export const removeProduct = async (
       cartResponse.message = CART_MESSAGES.PRODUCT_NOT_IN_CART;
       cartResponse.statusCode = 404;
       return cartResponse;
+    }
+
+    // Check if product has option types
+    const product = await Product.findOne({
+      _id: productId,
+      deletedAt: null,
+    });
+
+    if (!product) {
+      cartResponse.message = CART_MESSAGES.PRODUCT_NOT_FOUND;
+      cartResponse.statusCode = 404;
+      return cartResponse;
+    }
+
+    const productOptionTypes = await OptionType.find({
+      productId: product._id,
+      deletedAt: null,
+    });
+
+    // If product has options, selectedOptions must be provided
+    if (productOptionTypes.length > 0) {
+      if (!selectedOptions || selectedOptions.length === 0) {
+        cartResponse.message =
+          "This product has options. Please specify which option combination to remove by providing selectedOptions in the request body.";
+        cartResponse.statusCode = 400;
+        return cartResponse;
+      }
     }
 
     // Find the specific cart item
