@@ -19,6 +19,8 @@ import {
   Upload,
   RefreshCw,
   AlertCircle,
+  AlertTriangle,
+  CheckCircle,
   X,
   Menu,
   Settings,
@@ -27,7 +29,8 @@ import {
   Users,
   ShoppingBag,
   MessageSquare,
-  Tag
+  Tag,
+  DollarSign
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
 
@@ -61,7 +64,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -70,13 +73,13 @@ const AdminLayout = ({ children, title, subtitle }) => {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:left-0 flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
             <div>
@@ -103,7 +106,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
                   href={item.href}
                   className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                     item.current
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
@@ -143,7 +146,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64 flex-1 flex flex-col min-h-screen">
+      <div className="ml-0 lg:ml-64 flex-1 flex flex-col min-h-screen">
         {/* Top navigation */}
         <div className="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
@@ -186,7 +189,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
 // Card Component
 const Card = ({ children, className = '', ...props }) => {
   return (
-    <div className={`bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden ${className}`} {...props}>
+    <div className={`bg-white rounded-2xl shadow-2xl border-0 backdrop-blur-sm bg-white/90 overflow-hidden ${className}`} {...props}>
       {children}
     </div>
   );
@@ -221,11 +224,11 @@ const Button = ({
   const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
-    primary: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl focus:ring-blue-500',
+    primary: 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white hover:from-primary-700 hover:to-secondary-700 shadow-lg hover:shadow-xl focus:ring-primary-500',
     secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-300',
     success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500',
+    outline: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white focus:ring-primary-500',
   };
   
   const sizes = {
@@ -249,9 +252,11 @@ const Button = ({
 };
 
 // Product Card Component
-const ProductCard = ({ product, onEdit, onDelete, onView }) => {
+const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected }) => {
   return (
-    <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+    <Card className={`hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${
+      isSelected ? 'ring-2 ring-primary-500 bg-primary-50' : ''
+    }`}>
       <div className="relative">
         <div className="aspect-w-16 aspect-h-9 bg-gray-200 rounded-t-2xl overflow-hidden">
           {product.image ? (
@@ -265,6 +270,14 @@ const ProductCard = ({ product, onEdit, onDelete, onView }) => {
               <Package className="h-12 w-12 text-gray-400" />
             </div>
           )}
+        </div>
+        <div className="absolute top-3 left-3">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onSelect(product._id)}
+            className="w-5 h-5 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
+          />
         </div>
         <div className="absolute top-3 right-3">
           <div className="bg-white rounded-full p-2 shadow-lg">
@@ -336,6 +349,205 @@ const ProductCard = ({ product, onEdit, onDelete, onView }) => {
   );
 };
 
+// Enhanced Product Analytics Component
+const ProductAnalytics = ({ products }) => {
+  const totalProducts = products.length;
+  const inStockProducts = products.filter(p => p.stock > 0).length;
+  const outOfStockProducts = products.filter(p => p.stock === 0).length;
+  const lowStockProducts = products.filter(p => p.stock > 0 && p.stock <= 10).length;
+  const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <CardBody>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-600">Total Products</p>
+              <p className="text-3xl font-bold text-blue-900">{totalProducts}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+              <Package className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <CardBody>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-green-600">In Stock</p>
+              <p className="text-3xl font-bold text-green-900">{inStockProducts}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+        <CardBody>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-yellow-600">Low Stock</p>
+              <p className="text-3xl font-bold text-yellow-900">{lowStockProducts}</p>
+            </div>
+            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+              <AlertTriangle className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <CardBody>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-purple-600">Total Value</p>
+              <p className="text-3xl font-bold text-purple-900">${totalValue.toFixed(2)}</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-white" />
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+};
+
+// Enhanced Filter Component
+const EnhancedFilters = ({ 
+  searchTerm, 
+  setSearchTerm, 
+  selectedCategory, 
+  setSelectedCategory, 
+  priceRange, 
+  setPriceRange,
+  stockStatus,
+  setStockStatus,
+  sortBy,
+  setSortBy
+}) => {
+  return (
+    <Card className="mb-6 animate-fade-in-up">
+      <CardBody>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Category Filter */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="">All Categories</option>
+            <option value="electronics">Electronics</option>
+            <option value="clothing">Clothing</option>
+            <option value="books">Books</option>
+            <option value="home">Home & Garden</option>
+          </select>
+
+          {/* Price Range */}
+          <select
+            value={priceRange}
+            onChange={(e) => setPriceRange(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="">All Prices</option>
+            <option value="0-50">$0 - $50</option>
+            <option value="50-100">$50 - $100</option>
+            <option value="100-500">$100 - $500</option>
+            <option value="500+">$500+</option>
+          </select>
+
+          {/* Stock Status */}
+          <select
+            value={stockStatus}
+            onChange={(e) => setStockStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="">All Stock</option>
+            <option value="in-stock">In Stock</option>
+            <option value="low-stock">Low Stock</option>
+            <option value="out-of-stock">Out of Stock</option>
+          </select>
+
+          {/* Sort By */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="name">Sort by Name</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="stock-low">Stock: Low to High</option>
+            <option value="stock-high">Stock: High to Low</option>
+            <option value="date-new">Date: Newest First</option>
+            <option value="date-old">Date: Oldest First</option>
+          </select>
+        </div>
+      </CardBody>
+    </Card>
+  );
+};
+
+// Bulk Actions Component
+const BulkActions = ({ selectedProducts, onBulkDelete, onBulkEdit, onBulkExport }) => {
+  if (selectedProducts.length === 0) return null;
+
+  return (
+    <Card className="mb-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
+      <CardBody>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <span className="text-sm font-medium text-primary-700">
+              {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBulkEdit}
+            >
+              <Edit className="h-4 w-4" />
+              Bulk Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBulkExport}
+            >
+              <Download className="h-4 w-4" />
+              Export Selected
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={onBulkDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  );
+};
+
 // Main Products Component
 export default function ProductsPage() {
   const router = useRouter();
@@ -345,8 +557,12 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [priceRange, setPriceRange] = useState('');
+  const [stockStatus, setStockStatus] = useState('');
+  const [sortBy, setSortBy] = useState('name');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedProducts, setSelectedProducts] = useState([]);
 
   const fetchProducts = async () => {
     try {
@@ -414,6 +630,47 @@ export default function ProductsPage() {
     fetchProducts();
   };
 
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
+      try {
+        const deletePromises = selectedProducts.map(productId => 
+          apiClient.delete(`/admin/product/${productId}`)
+        );
+        await Promise.all(deletePromises);
+        toast.success(`${selectedProducts.length} products deleted successfully`);
+        setSelectedProducts([]);
+        fetchProducts();
+      } catch (error) {
+        console.error('Error deleting products:', error);
+        toast.error('Failed to delete some products');
+      }
+    }
+  };
+
+  const handleBulkEdit = () => {
+    toast.info('Bulk edit feature coming soon!');
+  };
+
+  const handleBulkExport = () => {
+    toast.info('Bulk export feature coming soon!');
+  };
+
+  const handleProductSelect = (productId) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProducts.length === products.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(products.map(p => p._id));
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout title="Products" subtitle="Loading your product catalog...">
@@ -443,7 +700,7 @@ export default function ProductsPage() {
           </Button>
           <Button variant="secondary">
             <Download className="h-4 w-4" />
-            Export
+            Export All
           </Button>
           <Button variant="secondary">
             <Upload className="h-4 w-4" />
@@ -458,64 +715,59 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Filters and Search */}
-      <Card className="mb-6">
-        <CardBody>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+      {/* Product Analytics */}
+      <ProductAnalytics products={products} />
 
-            {/* Filters */}
-            <div className="flex items-center space-x-4">
-              {/* Category Filter */}
-              <select
-                value={selectedCategory}
-                onChange={(e) => handleCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Categories</option>
-                <option value="electronics">Electronics</option>
-                <option value="clothing">Clothing</option>
-                <option value="books">Books</option>
-                <option value="home">Home & Garden</option>
-              </select>
+      {/* Enhanced Filters */}
+      <EnhancedFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+        stockStatus={stockStatus}
+        setStockStatus={setStockStatus}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+      />
 
-              {/* View Mode Toggle */}
-              <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'grid' 
-                      ? 'bg-white text-blue-600 shadow-sm' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <Grid className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-white text-blue-600 shadow-sm' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <List className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === 'grid' 
+                ? 'bg-white text-primary-600 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Grid className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === 'list' 
+                ? 'bg-white text-primary-600 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="text-sm text-gray-600">
+          {products.length} product{products.length !== 1 ? 's' : ''} found
+        </div>
+      </div>
+
+      {/* Bulk Actions */}
+      <BulkActions
+        selectedProducts={selectedProducts}
+        onBulkDelete={handleBulkDelete}
+        onBulkEdit={handleBulkEdit}
+        onBulkExport={handleBulkExport}
+      />
 
       {/* Products Grid/List */}
       {products.length === 0 ? (
@@ -542,7 +794,7 @@ export default function ProductsPage() {
       ) : (
         <>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 animate-fade-in-up animation-delay-200">
               {products.map((product) => (
                 <ProductCard
                   key={product._id}
@@ -550,6 +802,8 @@ export default function ProductsPage() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onView={handleView}
+                  onSelect={handleProductSelect}
+                  isSelected={selectedProducts.includes(product._id)}
                 />
               ))}
             </div>
@@ -560,6 +814,14 @@ export default function ProductsPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <input
+                            type="checkbox"
+                            checked={selectedProducts.length === products.length && products.length > 0}
+                            onChange={handleSelectAll}
+                            className="w-4 h-4 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
+                          />
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Product
                         </th>
@@ -582,7 +844,17 @@ export default function ProductsPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {products.map((product) => (
-                        <tr key={product._id} className="hover:bg-gray-50">
+                        <tr key={product._id} className={`hover:bg-gray-50 ${
+                          selectedProducts.includes(product._id) ? 'bg-primary-50' : ''
+                        }`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedProducts.includes(product._id)}
+                              onChange={() => handleProductSelect(product._id)}
+                              className="w-4 h-4 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
+                            />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-12 w-12">

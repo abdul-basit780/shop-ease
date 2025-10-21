@@ -55,7 +55,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -64,13 +64,13 @@ const AdminLayout = ({ children, title, subtitle }) => {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:left-0 flex flex-col ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
             <div>
@@ -97,7 +97,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
                   href={item.href}
                   className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
                     item.current
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white shadow-lg'
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
@@ -137,7 +137,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64 flex-1 flex flex-col min-h-screen">
+      <div className="ml-0 lg:ml-64 flex-1 flex flex-col min-h-screen">
         {/* Top navigation */}
         <div className="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
@@ -384,57 +384,61 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Enhanced Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.total || 0}</p>
+                  <p className="text-sm font-medium text-blue-600">Total Orders</p>
+                  <p className="text-3xl font-bold text-blue-900">{stats.total || 0}</p>
+                  <p className="text-xs text-blue-600 mt-1">All time</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <ShoppingBag className="h-6 w-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                  <ShoppingBag className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-600">{stats.pending || 0}</p>
+                  <p className="text-sm font-medium text-yellow-600">Pending</p>
+                  <p className="text-3xl font-bold text-yellow-900">{stats.pending || 0}</p>
+                  <p className="text-xs text-yellow-600 mt-1">Needs attention</p>
                 </div>
-                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-yellow-600" />
+                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Completed</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.completed || 0}</p>
+                  <p className="text-sm font-medium text-green-600">Completed</p>
+                  <p className="text-3xl font-bold text-green-900">{stats.completed || 0}</p>
+                  <p className="text-xs text-green-600 mt-1">Successfully delivered</p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-3xl font-bold text-gray-900">${stats.revenue || 0}</p>
+                  <p className="text-sm font-medium text-purple-600">Total Revenue</p>
+                  <p className="text-3xl font-bold text-purple-900">${stats.revenue || 0}</p>
+                  <p className="text-xs text-purple-600 mt-1">Lifetime earnings</p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-green-600" />
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardBody>
