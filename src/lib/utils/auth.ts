@@ -187,12 +187,12 @@ export const verifyAuthToken = (token: string): JWTPayload | null => {
 
 // URL generators
 export const generatePasswordResetUrl = (token: string): string => {
-  const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+  const base = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
   return `${base}/auth/reset-password?token=${token}`;
 };
 
 export const generateEmailVerificationUrl = (token: string): string => {
-  const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+  const base = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
   return `${base}/auth/verify-email?token=${token}`;
 };
 
@@ -582,10 +582,11 @@ export const checkExistingUser = async (email: string) => {
 
 export const sendWelcomeEmail = async (customer: any) => {
   try {
+    const baseUrl = process.env.NEXT_PUBLIC_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const emailSent = await emailService.sendCustomerWelcome({
       name: customer.name,
       email: customer.email,
-      loginUrl: process.env.NEXT_PUBLIC_URL + "/auth/login",
+      loginUrl: baseUrl + "/auth/login",
     });
 
     if (!emailSent) {

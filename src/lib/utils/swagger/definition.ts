@@ -17,12 +17,8 @@ export const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://localhost:3000",
-      description: "Development server",
-    },
-    {
-      url: "https://shop-ease-online-app.vercel.app",
-      description: "Production server",
+      url: process.env.NEXT_PUBLIC_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
+      description: process.env.NODE_ENV === 'production' ? "Production server" : "Development server",
     },
   ],
   components: {

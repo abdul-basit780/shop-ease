@@ -61,19 +61,13 @@ const CardBody = ({ children, className = '', ...props }) => {
   );
 };
 
-// Mock auth service - replace with your actual implementation
+import { apiClient } from '../../lib/api-client';
+
+// Auth service using the centralized API client
 const authService = {
   async login(credentials) {
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-      
-      const data = await response.json();
+      const data = await apiClient.post('/auth/login', credentials);
       
       // Handle nested data structure from your API
       if (data.success && data.data) {
@@ -102,7 +96,7 @@ const authService = {
     } catch (error) {
       return {
         success: false,
-        error: 'Network error. Please try again.'
+        error: error.response?.data?.message || 'Network error. Please try again.'
       };
     }
   }
