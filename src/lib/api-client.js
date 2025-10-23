@@ -4,7 +4,7 @@ import Cookies from "js-cookie";
 class ApiClient {
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_URL,
+      baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
       headers: {
         "Content-Type": "application/json",
       },

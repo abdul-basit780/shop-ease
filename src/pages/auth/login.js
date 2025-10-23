@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Mail, Lock, Eye, EyeOff, ShoppingBag, Sparkles, CheckCircle } from 'lucide-react';
+import { apiClient } from '../../lib/api-client';
 
 // Layout Component
 const Layout = ({ children }) => {
@@ -60,8 +61,6 @@ const CardBody = ({ children, className = '', ...props }) => {
     </div>
   );
 };
-
-import { apiClient } from '../../lib/api-client';
 
 // Auth service using the centralized API client
 const authService = {
