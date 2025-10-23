@@ -1,112 +1,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
+import { authService } from '@/lib/auth-service';
 import toast from 'react-hot-toast';
 import { Mail, Lock, Eye, EyeOff, ShoppingBag, Sparkles, CheckCircle } from 'lucide-react';
-
-// Layout Component
-const Layout = ({ children }) => {
-  return <div className="min-h-screen bg-gray-50">{children}</div>;
-};
-
-// Button Component
-const Button = ({ 
-  children, 
-  variant = 'primary', 
-  size = 'md', 
-  className = '', 
-  disabled = false,
-  isLoading = false,
-  ...props 
-}) => {
-  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  
-  const variants = {
-    primary: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl focus:ring-blue-500',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500',
-    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-300',
-  };
-  
-  const sizes = {
-    sm: 'px-4 py-2 text-sm gap-2',
-    md: 'px-6 py-3 text-base gap-2',
-    lg: 'px-8 py-4 text-lg gap-3',
-  };
-  
-  return (
-    <button
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
-      disabled={disabled || isLoading}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
-
-// Card Components
-const Card = ({ children, className = '', ...props }) => {
-  return (
-    <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${className}`} {...props}>
-      {children}
-    </div>
-  );
-};
-
-const CardBody = ({ children, className = '', ...props }) => {
-  return (
-    <div className={`p-6 ${className}`} {...props}>
-      {children}
-    </div>
-  );
-};
-
-// Mock auth service - replace with your actual implementation
-const authService = {
-  async login(credentials) {
-    try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-      
-      const data = await response.json();
-      
-      // Handle nested data structure from your API
-      if (data.success && data.data) {
-        const token = data.data.token;
-        const user = data.data.user;
-        
-        if (token) {
-          // Store token in cookie or localStorage
-          document.cookie = `auth_token=${token}; max-age=${7 * 24 * 60 * 60}; path=/`;
-          localStorage.setItem('user', JSON.stringify(user));
-        }
-        
-        return {
-          success: true,
-          data: {
-            user,
-            token
-          }
-        };
-      }
-      
-      return {
-        success: false,
-        error: data.message || 'Login failed'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: 'Network error. Please try again.'
-      };
-    }
-  }
-};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -148,63 +47,67 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!validate()) {
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    const response = await authService.login({
-      email: formData.email,
-      password: formData.password,
-    });
+    e.preventDefault();
     
-    if (response.success) {
-      toast.success('Welcome back! 🎉', {
-        icon: '👋',
-        style: {
-          borderRadius: '12px',
-          background: '#10b981',
-          color: '#fff',
-        },
+    if (!validate()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await authService.login({
+        email: formData.email,
+        password: formData.password,
       });
       
-      // Wait for the event to propagate and components to update
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Use router.push for better Next.js navigation
-      if (response?.data?.user?.role === 'admin') {
-        await router.push('/admin');
+      if (response.success) {
+        toast.success('Welcome back! 🎉', {
+          icon: '👋',
+          style: {
+            borderRadius: '12px',
+            background: '#10b981',
+            color: '#fff',
+          },
+        });
+        
+        // Wait for toast to show and events to propagate
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Navigate based on user role
+        const user = authService.getCurrentUser();
+        if (user?.role === 'admin') {
+          await router.push('/admin');
+        } else {
+          await router.push('/');
+        }
+        
+        // Dispatch event again after navigation to ensure navbar updates
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('userLoggedIn'));
+        }
       } else {
-        await router.push('/');
+        toast.error(response.error || 'Login failed', {
+          style: {
+            borderRadius: '12px',
+            background: '#ef4444',
+            color: '#fff',
+          },
+        });
       }
-      
-      // Force a re-render by dispatching the event again after navigation starts
-      window.dispatchEvent(new Event('userLoggedIn'));
-    } else {
-      toast.error(response.error || 'Login failed', {
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('An error occurred. Please try again.', {
         style: {
           borderRadius: '12px',
           background: '#ef4444',
           color: '#fff',
         },
       });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    toast.error('An error occurred. Please try again.', {
-      style: {
-        borderRadius: '12px',
-        background: '#ef4444',
-        color: '#fff',
-      },
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
