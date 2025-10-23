@@ -266,7 +266,7 @@ If you encounter any issues or have questions:
 - [ ] Caching strategies
 - [ ] Database indexing
 - [ ] CDN integration
-- [ ] Progressive Web App (PWA)
+- [ ] Progressive Web App
 
 ---
 
