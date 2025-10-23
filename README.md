@@ -64,7 +64,6 @@ A modern, full-stack e-commerce platform built with Next.js, featuring AI-powere
 - **Swagger** - API documentation
 
 ### Development Tools
-- **ESLint** - Code linting
 - **PostCSS** - CSS processing
 - **Autoprefixer** - CSS vendor prefixes
 
