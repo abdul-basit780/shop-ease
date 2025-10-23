@@ -1,44 +1,71 @@
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Package, AlertCircle } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
-import { authService } from '@/lib/auth-service';
-import toast from 'react-hot-toast';
+import { useState, useEffect,useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import {
+  ShoppingCart,
+  Trash2,
+  Plus,
+  Minus,
+  ArrowRight,
+  Package,
+  AlertCircle,
+} from "lucide-react";
+import { apiClient } from "@/lib/api-client";
+import { authService } from "@/lib/auth-service";
+import toast from "react-hot-toast";
 
 export default function Cart() {
   const router = useRouter();
   const [cart, setCart] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItems, setUpdatingItems] = useState(new Set());
+  const hasCheckedAuth = useRef(false);
 
   useEffect(() => {
+    if (hasCheckedAuth.current) return;
+    hasCheckedAuth.current = true;
+
     if (!authService.isAuthenticated()) {
-      router.push('/auth/login?returnUrl=/cart');
+      router.push("/auth/login?returnUrl=/cart");
+      return;
+    }
+
+    // Add role check - redirect admins
+    const user = authService.getCurrentUser();
+    if (user?.role === "admin") {
+      toast.error("This page is only accessible to customers", {
+        icon: "🚫",
+        duration: 1000,
+      });
+
+      // Redirect after 1 second
+      setTimeout(() => {
+        router.push("/admin");
+      }, 1000);
       return;
     }
 
     fetchCart();
-    
+
     const handleCartUpdate = () => {
       fetchCart();
     };
-    
-    window.addEventListener('cartUpdated', handleCartUpdate);
-    return () => window.removeEventListener('cartUpdated', handleCartUpdate);
-  }, []);
+
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
+  }, [router]);
 
   const fetchCart = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/api/customer/cart');
-      
+      const response = await apiClient.get("/api/customer/cart");
+
       if (response.success && response.data) {
         setCart(response.data);
       }
     } catch (error) {
-      console.error('Error fetching cart:', error);
-      toast.error('Failed to load cart');
+      console.error("Error fetching cart:", error);
+      toast.error("Failed to load cart");
       setCart({ products: [], totalAmount: 0, count: 0 });
     } finally {
       setIsLoading(false);
@@ -47,26 +74,27 @@ export default function Cart() {
 
   const updateQuantity = async (cartId, productId, newQuantity) => {
     if (newQuantity < 1) return;
-    
-    setUpdatingItems(prev => new Set(prev).add(productId));
-    
+
+    setUpdatingItems((prev) => new Set(prev).add(productId));
+
     try {
       const response = await apiClient.put(`/api/customer/cart/${cartId}`, {
         productId,
-        quantity: newQuantity
+        quantity: newQuantity,
       });
-      
+
       if (response.success && response.data) {
         setCart(response.data);
-        toast.success('Quantity updated');
-        window.dispatchEvent(new Event('cartUpdated'));
+        toast.success("Quantity updated");
+        window.dispatchEvent(new Event("cartUpdated"));
       }
     } catch (error) {
-      console.error('Error updating quantity:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update quantity';
+      console.error("Error updating quantity:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to update quantity";
       toast.error(errorMessage);
     } finally {
-      setUpdatingItems(prev => {
+      setUpdatingItems((prev) => {
         const newSet = new Set(prev);
         newSet.delete(productId);
         return newSet;
@@ -75,24 +103,27 @@ export default function Cart() {
   };
 
   const removeItem = async (productId) => {
-    setUpdatingItems(prev => new Set(prev).add(productId));
-    
+    setUpdatingItems((prev) => new Set(prev).add(productId));
+
     try {
-      const response = await apiClient.delete(`/api/customer/cart/${productId}`);
-      console.log('cart del',response)
+      const response = await apiClient.delete(
+        `/api/customer/cart/${productId}`
+      );
+      console.log("cart del", response);
       if (response.success) {
         setCart(response.data);
-        toast.success('Item removed from cart', {
-          icon: '🗑️',
+        toast.success("Item removed from cart", {
+          icon: "🗑️",
         });
-        window.dispatchEvent(new Event('cartUpdated'));
+        window.dispatchEvent(new Event("cartUpdated"));
       }
     } catch (error) {
-      console.error('Error removing item:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to remove item';
+      console.error("Error removing item:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to remove item";
       toast.error(errorMessage);
     } finally {
-      setUpdatingItems(prev => {
+      setUpdatingItems((prev) => {
         const newSet = new Set(prev);
         newSet.delete(productId);
         return newSet;
@@ -101,7 +132,7 @@ export default function Cart() {
   };
 
   const handleCheckout = () => {
-    router.push('/checkout');
+    router.push("/checkout");
   };
 
   if (isLoading) {
@@ -126,8 +157,12 @@ export default function Cart() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center py-16">
             <ShoppingCart className="h-24 w-24 text-gray-300 mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Your Cart is Empty</h2>
-            <p className="text-gray-600 mb-8">Add some products to get started!</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Your Cart is Empty
+            </h2>
+            <p className="text-gray-600 mb-8">
+              Add some products to get started!
+            </p>
             <Link href="/products">
               <button className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-xl transition-all transform hover:scale-105">
                 Browse Products
@@ -147,8 +182,12 @@ export default function Cart() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Shopping Cart</h1>
-          <p className="text-gray-600">{cart.count} {cart.count === 1 ? 'item' : 'items'} in your cart</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Shopping Cart
+          </h1>
+          <p className="text-gray-600">
+            {cart.count} {cart.count === 1 ? "item" : "items"} in your cart
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -170,14 +209,14 @@ export default function Cart() {
                           alt={item.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextElementSibling.style.display = 'flex';
+                            e.target.style.display = "none";
+                            e.target.nextElementSibling.style.display = "flex";
                           }}
                         />
                       ) : null}
-                      <div 
+                      <div
                         className="w-full h-full flex items-center justify-center"
-                        style={{ display: item.img ? 'none' : 'flex' }}
+                        style={{ display: item.img ? "none" : "flex" }}
                       >
                         <Package className="h-12 w-12 text-gray-400" />
                       </div>
@@ -215,14 +254,18 @@ export default function Cart() {
                     {!item.isAvailable && (
                       <div className="flex items-center gap-2 mb-3 text-red-600 text-sm bg-red-50 p-2 rounded-lg">
                         <AlertCircle className="h-4 w-4" />
-                        <span className="font-semibold">Currently unavailable</span>
+                        <span className="font-semibold">
+                          Currently unavailable
+                        </span>
                       </div>
                     )}
 
                     {item.isAvailable && item.stock < 5 && (
                       <div className="flex items-center gap-2 mb-3 text-orange-600 text-sm bg-orange-50 p-2 rounded-lg">
                         <AlertCircle className="h-4 w-4" />
-                        <span className="font-semibold">Only {item.stock} left in stock</span>
+                        <span className="font-semibold">
+                          Only {item.stock} left in stock
+                        </span>
                       </div>
                     )}
 
@@ -230,8 +273,17 @@ export default function Cart() {
                       {/* Quantity Controls */}
                       <div className="flex items-center border-2 border-gray-300 rounded-lg overflow-hidden">
                         <button
-                          onClick={() => updateQuantity(cart.id, item.productId, item.quantity - 1)}
-                          disabled={item.quantity <= 1 || updatingItems.has(item.productId)}
+                          onClick={() =>
+                            updateQuantity(
+                              cart.id,
+                              item.productId,
+                              item.quantity - 1
+                            )
+                          }
+                          disabled={
+                            item.quantity <= 1 ||
+                            updatingItems.has(item.productId)
+                          }
                           className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Minus className="h-4 w-4" />
@@ -240,8 +292,17 @@ export default function Cart() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(cart.id, item.productId, item.quantity + 1)}
-                          disabled={item.quantity >= item.stock || updatingItems.has(item.productId)}
+                          onClick={() =>
+                            updateQuantity(
+                              cart.id,
+                              item.productId,
+                              item.quantity + 1
+                            )
+                          }
+                          disabled={
+                            item.quantity >= item.stock ||
+                            updatingItems.has(item.productId)
+                          }
                           className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-4 w-4" />
@@ -267,26 +328,37 @@ export default function Cart() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
-              
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                Order Summary
+              </h2>
+
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-gray-600">
-                  <span>Subtotal ({cart.count} {cart.count === 1 ? 'item' : 'items'})</span>
-                  <span className="font-semibold">${cart.totalAmount.toFixed(2)}</span>
+                  <span>
+                    Subtotal ({cart.count} {cart.count === 1 ? "item" : "items"}
+                    )
+                  </span>
+                  <span className="font-semibold">
+                    ${cart.totalAmount.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
-                  <span className={`font-semibold ${shippingCost === 0 ? 'text-green-600' : ''}`}>
-                    {shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}
+                  <span
+                    className={`font-semibold ${
+                      shippingCost === 0 ? "text-green-600" : ""
+                    }`}
+                  >
+                    {shippingCost === 0
+                      ? "FREE"
+                      : `$${shippingCost.toFixed(2)}`}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Tax (estimated)</span>
-                  <span className="font-semibold">
-                    ${taxAmount.toFixed(2)}
-                  </span>
+                  <span className="font-semibold">${taxAmount.toFixed(2)}</span>
                 </div>
-                
+
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between text-lg font-bold text-gray-900">
                     <span>Total</span>
@@ -299,13 +371,17 @@ export default function Cart() {
 
               {cart.totalAmount < 50 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-                  💡 Add <span className="font-bold">${(50 - cart.totalAmount).toFixed(2)}</span> more for FREE shipping!
+                  💡 Add{" "}
+                  <span className="font-bold">
+                    ${(50 - cart.totalAmount).toFixed(2)}
+                  </span>{" "}
+                  more for FREE shipping!
                 </div>
               )}
 
               <button
                 onClick={handleCheckout}
-                disabled={cart.products.some(p => !p.isAvailable)}
+                disabled={cart.products.some((p) => !p.isAvailable)}
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
               >
                 <span>Proceed to Checkout</span>

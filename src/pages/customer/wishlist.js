@@ -1,23 +1,50 @@
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { Heart, ShoppingCart, Trash2, Eye, ArrowLeft, Package, Sparkles } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
-import { authService } from '@/lib/auth-service';
-import toast from 'react-hot-toast';
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import {
+  Heart,
+  ShoppingCart,
+  Trash2,
+  Eye,
+  ArrowLeft,
+  Package,
+  Sparkles,
+} from "lucide-react";
+import { apiClient } from "@/lib/api-client";
+import { authService } from "@/lib/auth-service";
+import toast from "react-hot-toast";
 
 export default function WishlistPage() {
   const router = useRouter();
   const [wishlist, setWishlist] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [removingId, setRemovingId] = useState(null);
+  const hasCheckedAuth = useRef(false);
 
   useEffect(() => {
+    if (hasCheckedAuth.current) return;
+    hasCheckedAuth.current = true;
+
     if (!authService.isAuthenticated()) {
-      toast.error('Please login to view your wishlist', {
-        icon: '🔒',
+      toast.error("Please login to view your wishlist", {
+        icon: "🔒",
       });
-      router.push('/auth/login?returnUrl=/wishlist');
+      router.push("/auth/login?returnUrl=/wishlist");
+      return;
+    }
+
+    // Add role check - redirect admins
+    const user = authService.getCurrentUser();
+    if (user?.role === "admin") {
+      toast.error("This page is only accessible to customers", {
+        icon: "🚫",
+        duration: 1000,
+      });
+
+      // Redirect after 1 second
+      setTimeout(() => {
+        router.push("/admin");
+      }, 1000);
       return;
     }
 
@@ -27,72 +54,82 @@ export default function WishlistPage() {
   const fetchWishlist = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/api/customer/wishlist');
-         console.log('wish page',response)
+      const response = await apiClient.get("/api/customer/wishlist");
+      console.log("wish page", response);
       if (response.success && response.data) {
         setWishlist(response.data);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('wishlist', JSON.stringify(response.data.products || []));
-          window.dispatchEvent(new Event('wishlistUpdated'));
+        if (typeof window !== "undefined") {
+          localStorage.setItem(
+            "wishlist",
+            JSON.stringify(response.data.products || [])
+          );
+          window.dispatchEvent(new Event("wishlistUpdated"));
         }
       }
     } catch (error) {
-      console.error('Error fetching wishlist:', error);
-      toast.error('Failed to load wishlist');
+      console.error("Error fetching wishlist:", error);
+      toast.error("Failed to load wishlist");
     } finally {
       setIsLoading(false);
     }
   };
 
-const handleRemoveFromWishlist = async (productId) => {
+  const handleRemoveFromWishlist = async (productId) => {
     setRemovingId(productId);
-    
+
     try {
-      const response = await apiClient.delete('/api/customer/wishlist', { 
-        productId 
+      const response = await apiClient.delete("/api/customer/wishlist", {
+        productId,
       });
-      
+
       if (response.success) {
         // Update localStorage with the new wishlist from response
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
           const updatedProducts = response.wishlist?.products || [];
-          localStorage.setItem('wishlist', JSON.stringify(updatedProducts));
+          localStorage.setItem("wishlist", JSON.stringify(updatedProducts));
         }
-        
+
         // Update wishlist state with response data
         if (response.wishlist) {
           setWishlist(response.wishlist);
         } else {
           // Fallback: manually update state if no wishlist in response
-          setWishlist(prev => {
+          setWishlist((prev) => {
             if (!prev) return prev;
-            const productToRemove = prev.products.find(p => p.productId === productId);
+            const productToRemove = prev.products.find(
+              (p) => p.productId === productId
+            );
             return {
               ...prev,
-              products: prev.products.filter(p => p.productId !== productId),
+              products: prev.products.filter((p) => p.productId !== productId),
               count: Math.max(0, prev.count - 1),
-              totalValue: Math.max(0, prev.totalValue - (productToRemove?.price || 0))
+              totalValue: Math.max(
+                0,
+                prev.totalValue - (productToRemove?.price || 0)
+              ),
             };
           });
         }
-        
-        toast.success('Removed from wishlist', {
-          icon: '🗑️',
+
+        toast.success("Removed from wishlist", {
+          icon: "🗑️",
           style: {
-            borderRadius: '12px',
-            background: '#10b981',
-            color: '#fff',
+            borderRadius: "12px",
+            background: "#10b981",
+            color: "#fff",
           },
         });
-        
+
         // Dispatch event to update home page
-        window.dispatchEvent(new Event('wishlistUpdated'));
+        window.dispatchEvent(new Event("wishlistUpdated"));
       } else {
-        toast.error(response.error || response.message || 'Failed to remove item');
+        toast.error(
+          response.error || response.message || "Failed to remove item"
+        );
       }
     } catch (error) {
-      console.error('Error removing from wishlist:', error);
-      toast.error('Failed to remove item');
+      console.error("Error removing from wishlist:", error);
+      toast.error("Failed to remove item");
     } finally {
       setRemovingId(null);
     }
@@ -100,16 +137,16 @@ const handleRemoveFromWishlist = async (productId) => {
 
   const handleAddToCart = async (product) => {
     try {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const existingItem = cart.find(item => item.id === product.productId);
-      
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const existingItem = cart.find((item) => item.id === product.productId);
+
       if (existingItem) {
         existingItem.quantity += 1;
-        toast.success('Quantity updated in cart!', {
-          icon: '🛒',
+        toast.success("Quantity updated in cart!", {
+          icon: "🛒",
         });
       } else {
-        cart.push({ 
+        cart.push({
           id: product.productId,
           name: product.name,
           price: product.price,
@@ -117,18 +154,18 @@ const handleRemoveFromWishlist = async (productId) => {
           stock: product.stock,
           description: product.description,
           categoryName: product.categoryName,
-          quantity: 1 
+          quantity: 1,
         });
-        toast.success('Added to cart!', {
-          icon: '🛒',
+        toast.success("Added to cart!", {
+          icon: "🛒",
         });
       }
-      
-      localStorage.setItem('cart', JSON.stringify(cart));
-      window.dispatchEvent(new Event('cartUpdated'));
+
+      localStorage.setItem("cart", JSON.stringify(cart));
+      window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart');
+      console.error("Error adding to cart:", error);
+      toast.error("Failed to add to cart");
     }
   };
 
@@ -162,14 +199,14 @@ const handleRemoveFromWishlist = async (productId) => {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8 animate-fade-in">
-          <Link 
+          <Link
             href="/"
             className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-4 group"
           >
             <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Back to Shopping
           </Link>
-          
+
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -180,7 +217,8 @@ const handleRemoveFromWishlist = async (productId) => {
                   My Wishlist
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  {wishlist?.count || 0} {wishlist?.count === 1 ? 'item' : 'items'} saved
+                  {wishlist?.count || 0}{" "}
+                  {wishlist?.count === 1 ? "item" : "items"} saved
                   {wishlist?.totalValue > 0 && (
                     <span className="ml-2 text-blue-600 font-semibold">
                       • Total: ${wishlist.totalValue.toFixed(2)}
@@ -207,15 +245,15 @@ const handleRemoveFromWishlist = async (productId) => {
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
+                        e.target.style.display = "none";
+                        e.target.nextElementSibling.style.display = "flex";
                       }}
                     />
                   ) : null}
-                  
-                  <div 
+
+                  <div
                     className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"
-                    style={{ display: product.img ? 'none' : 'flex' }}
+                    style={{ display: product.img ? "none" : "flex" }}
                   >
                     <Package className="h-16 w-16 text-gray-400" />
                   </div>
@@ -251,7 +289,7 @@ const handleRemoveFromWishlist = async (productId) => {
                     )}
                   </button>
 
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                     <div className="absolute bottom-4 left-4 right-4 pointer-events-auto">
                       <Link href={`/products/${product.productId}`}>
                         <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all shadow-lg">
@@ -279,10 +317,11 @@ const handleRemoveFromWishlist = async (productId) => {
                   )}
 
                   <p className="text-xs text-gray-500 mb-4">
-                    Added {new Date(product.addedAt).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric',
-                      year: 'numeric'
+                    Added{" "}
+                    {new Date(product.addedAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
                     })}
                   </p>
 
@@ -326,7 +365,8 @@ const handleRemoveFromWishlist = async (productId) => {
               Your Wishlist is Empty
             </h2>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Start adding products you love to your wishlist. They'll be saved here for later!
+              Start adding products you love to your wishlist. They'll be saved
+              here for later!
             </p>
             <Link href="/customer/all-products">
               <button className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transform hover:scale-105 transition-all">
@@ -345,8 +385,11 @@ const handleRemoveFromWishlist = async (productId) => {
                   💝 Your Wishlist Summary
                 </h3>
                 <p className="text-gray-600">
-                  {wishlist.count} {wishlist.count === 1 ? 'item' : 'items'} • 
-                  Total value: <span className="font-bold text-blue-600">${wishlist.totalValue.toFixed(2)}</span>
+                  {wishlist.count} {wishlist.count === 1 ? "item" : "items"} •
+                  Total value:{" "}
+                  <span className="font-bold text-blue-600">
+                    ${wishlist.totalValue.toFixed(2)}
+                  </span>
                 </p>
               </div>
               <div className="mt-4 md:mt-0 flex gap-3">
