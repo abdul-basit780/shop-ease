@@ -44,7 +44,7 @@ export default function WishlistPage() {
     }
   };
 
-  const handleRemoveFromWishlist = async (productId) => {
+const handleRemoveFromWishlist = async (productId) => {
     setRemovingId(productId);
     
     try {
@@ -53,24 +53,28 @@ export default function WishlistPage() {
       });
       
       if (response.success) {
-        // Remove from localStorage
+        // Update localStorage with the new wishlist from response
         if (typeof window !== 'undefined') {
-          const storedWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-          const updatedWishlist = storedWishlist.filter(item => item.productId !== productId);
-          localStorage.setItem('wishlist', JSON.stringify(updatedWishlist));
+          const updatedProducts = response.wishlist?.products || [];
+          localStorage.setItem('wishlist', JSON.stringify(updatedProducts));
         }
         
-        // Update wishlist state
-        setWishlist(prev => {
-          if (!prev) return prev;
-          const productToRemove = prev.products.find(p => p.productId === productId);
-          return {
-            ...prev,
-            products: prev.products.filter(p => p.productId !== productId),
-            count: Math.max(0, prev.count - 1),
-            totalValue: Math.max(0, prev.totalValue - (productToRemove?.price || 0))
-          };
-        });
+        // Update wishlist state with response data
+        if (response.wishlist) {
+          setWishlist(response.wishlist);
+        } else {
+          // Fallback: manually update state if no wishlist in response
+          setWishlist(prev => {
+            if (!prev) return prev;
+            const productToRemove = prev.products.find(p => p.productId === productId);
+            return {
+              ...prev,
+              products: prev.products.filter(p => p.productId !== productId),
+              count: Math.max(0, prev.count - 1),
+              totalValue: Math.max(0, prev.totalValue - (productToRemove?.price || 0))
+            };
+          });
+        }
         
         toast.success('Removed from wishlist', {
           icon: '🗑️',
@@ -84,7 +88,7 @@ export default function WishlistPage() {
         // Dispatch event to update home page
         window.dispatchEvent(new Event('wishlistUpdated'));
       } else {
-        toast.error(response.error || 'Failed to remove item');
+        toast.error(response.error || response.message || 'Failed to remove item');
       }
     } catch (error) {
       console.error('Error removing from wishlist:', error);
@@ -324,7 +328,7 @@ export default function WishlistPage() {
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
               Start adding products you love to your wishlist. They'll be saved here for later!
             </p>
-            <Link href="/products">
+            <Link href="/customer/all-products">
               <button className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transform hover:scale-105 transition-all">
                 <Sparkles className="h-5 w-5 mr-2" />
                 Discover Products

@@ -8,7 +8,7 @@ class ApiClient {
       headers: {
         "Content-Type": "application/json",
       },
-      timeout: 10000,
+      timeout: 30000,
     });
 
     // Request interceptor to add auth token only for protected routes
@@ -46,11 +46,11 @@ class ApiClient {
       const response = await this.client.get(url, config);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error.message);
+      console.error("API Error:", error.message);
       return {
         success: false,
-        error: error.response?.data?.message || error.message || 'API Error',
-        data: null
+        error: error.response?.data?.message || error.message || "API Error",
+        data: null,
       };
     }
   }
@@ -60,11 +60,11 @@ class ApiClient {
       const response = await this.client.post(url, data, config);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error.message);
+      console.error("API Error:", error.message);
       return {
         success: false,
-        error: error.response?.data?.message || error.message || 'API Error',
-        data: null
+        error: error.response?.data?.message || error.message || "API Error",
+        data: null,
       };
     }
   }
@@ -74,46 +74,66 @@ class ApiClient {
       const response = await this.client.put(url, data, config);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error.message);
+      console.error("API Error:", error.message);
       return {
         success: false,
-        error: error.response?.data?.message || error.message || 'API Error',
-        data: null
+        error: error.response?.data?.message || error.message || "API Error",
+        data: null,
       };
     }
   }
 
-   async delete(url, data) {
-    try {
-      const token = Cookies.get("auth_token");
-      const response = await this.client.get(url, {
-        params: data,
-        headers: {
-          method: "DELETE",
-          ...(token && { Authorization: `Bearer ${token}` })
-        }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('API Error:', error.message);
-      return {
-        success: false,
-        error: error.response?.data?.message || error.message || 'API Error',
-        data: null
-      };
+  async delete(url, data) {
+  try {
+    const token = Cookies.get("auth_token");
+    
+    console.log('DELETE Request:', {
+      fullUrl: `${this.client.defaults.baseURL}${url}`,
+      hasToken: !!token
+    });
+    
+    // Try using fetch instead of axios temporarily
+    const fullUrl = url.startsWith('http') ? url : `${this.client.defaults.baseURL}${url}`;
+    
+    const fetchOptions = {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` })
+      }
+    };
+    
+    // Only add body if data exists (for wishlist)
+    if (data) {
+      fetchOptions.body = JSON.stringify(data);
     }
+    
+    const response = await fetch(fullUrl, fetchOptions);
+    const result = await response.json();
+    
+    console.log('DELETE Response:', result);
+    return result;
+    
+  } catch (error) {
+    console.error('DELETE Error:', error);
+    return {
+      success: false,
+      error: error.message || 'API Error',
+      data: null
+    };
   }
+}
 
   async patch(url, data, config) {
     try {
       const response = await this.client.patch(url, data, config);
       return response.data;
     } catch (error) {
-      console.error('API Error:', error.message);
+      console.error("API Error:", error.message);
       return {
         success: false,
-        error: error.response?.data?.message || error.message || 'API Error',
-        data: null
+        error: error.response?.data?.message || error.message || "API Error",
+        data: null,
       };
     }
   }

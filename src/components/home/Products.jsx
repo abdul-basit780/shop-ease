@@ -91,65 +91,65 @@ export default function Products() {
     }
   };
 
-  const handleAddToCart = async (e, product) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // const handleAddToCart = async (e, product) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
     
-    if (!authService.isAuthenticated()) {
-      toast.error('Please login to add items to cart', {
-        icon: '🔒',
-        style: {
-          borderRadius: '12px',
-          background: '#ef4444',
-          color: '#fff',
-        },
-      });
+  //   if (!authService.isAuthenticated()) {
+  //     toast.error('Please login to add items to cart', {
+  //       icon: '🔒',
+  //       style: {
+  //         borderRadius: '12px',
+  //         background: '#ef4444',
+  //         color: '#fff',
+  //       },
+  //     });
       
-      setTimeout(() => {
-        router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
-      }, 1500);
-      return;
-    }
+  //     setTimeout(() => {
+  //       router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+  //     }, 1500);
+  //     return;
+  //   }
     
-    try {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const existingItem = cart.find(item => item.id === product.id);
+  //   try {
+  //     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  //     const existingItem = cart.find(item => item.id === product.id);
       
-      if (existingItem) {
-        existingItem.quantity += 1;
-        toast.success('Quantity updated in cart!', {
-          icon: '🛒',
-          style: {
-            borderRadius: '12px',
-            background: '#0ea5e9',
-            color: '#fff',
-          },
-        });
-      } else {
-        cart.push({ ...product, quantity: 1 });
-        toast.success('Added to cart!', {
-          icon: '🛒',
-          style: {
-            borderRadius: '12px',
-            background: '#0ea5e9',
-            color: '#fff',
-          },
-        });
-      }
+  //     if (existingItem) {
+  //       existingItem.quantity += 1;
+  //       toast.success('Quantity updated in cart!', {
+  //         icon: '🛒',
+  //         style: {
+  //           borderRadius: '12px',
+  //           background: '#0ea5e9',
+  //           color: '#fff',
+  //         },
+  //       });
+  //     } else {
+  //       cart.push({ ...product, quantity: 1 });
+  //       toast.success('Added to cart!', {
+  //         icon: '🛒',
+  //         style: {
+  //           borderRadius: '12px',
+  //           background: '#0ea5e9',
+  //           color: '#fff',
+  //         },
+  //       });
+  //     }
       
-      localStorage.setItem('cart', JSON.stringify(cart));
-      window.dispatchEvent(new Event('cartUpdated'));
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast.error('Failed to add to cart', {
-        style: {
-          borderRadius: '12px',
-          background: '#ef4444',
-          color: '#fff',
-        },
-      });
-    }
-  };
+  //     localStorage.setItem('cart', JSON.stringify(cart));
+  //     window.dispatchEvent(new Event('cartUpdated'));
+  //   } catch (error) {
+  //     console.error('Error adding to cart:', error);
+  //     toast.error('Failed to add to cart', {
+  //       style: {
+  //         borderRadius: '12px',
+  //         background: '#ef4444',
+  //         color: '#fff',
+  //       },
+  //     });
+  //   }
+  // };
 
   const handleAddToWishlist = async (e, product) => {
     e.preventDefault();
@@ -314,7 +314,7 @@ export default function Products() {
                     animationFillMode: 'both'
                   }}
                 >
-                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:rotate-1 border border-gray-100">
+                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2  border border-gray-100">
                     <div className="relative h-64 bg-gray-100 overflow-hidden">
                       {product.img ? (
                         <img
@@ -339,7 +339,7 @@ export default function Products() {
 
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                         <div className="absolute bottom-4 left-4 right-4">
-                          <Link href={`/products/${product.id}`}>
+                          <Link href={`/customer/product/${product.id}`}>
                             <button className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all transform translate-y-8 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 duration-500 shadow-lg">
                               <Eye className="h-5 w-5" />
                               <span>View Details</span>
@@ -404,14 +404,15 @@ export default function Products() {
                           </span>
                         </div>
                         
-                        <button
-                          onClick={(e) => handleAddToCart(e, product)}
+                        <Link
+                          // onClick={(e) => handleAddToCart(e, product)}
+                          href={`/customer/product/${product.id}`}
                           disabled={product.stock === 0}
                           className="p-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl transition-all transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed duration-300"
                           title="Add to cart"
                         >
                           <ShoppingCart className="h-5 w-5" />
-                        </button>
+                        </Link>
                       </div>
                     </div>
 

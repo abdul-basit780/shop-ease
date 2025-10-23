@@ -12,6 +12,8 @@ import {
   Shield,
 } from "lucide-react";
 import { Button } from "../ui/Button";
+import shopping from "@/assets/shopping.jpg";
+import Image from "next/image";
 
 function Banner() {
   return (
@@ -66,7 +68,7 @@ function Banner() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up animation-delay-700">
-                <Link href="/products">
+                <Link href="/customer/all-products">
                   <Button
                     size="lg"
                     className="group bg-white text-primary-600 hover:bg-primary-50 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/50"
@@ -111,7 +113,7 @@ function Banner() {
               <div className="relative">
                 {/* Main Featured Card */}
                 <div className="relative bg-white/10 backdrop-blur-lg rounded-3xl p-6 border border-white/20 shadow-2xl transform hover:scale-105 transition-all duration-500">
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-yellow-400 rounded-full flex items-center justify-center animate-pulse shadow-xl">
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-yellow-400 rounded-full flex items-center justify-center animate-pulse shadow-xl z-20">
                     <div className="text-center flex">
                       <div className="text-2xl font-bold text-gray-900">
                         50%
@@ -122,8 +124,15 @@ function Banner() {
                     </div>
                   </div>
 
-                  <div className="bg-white/90 rounded-2xl py-2 mb-4 h-64 flex items-center justify-center">
-                    <ShoppingBag className="h-32 w-32 text-primary-600" />
+                  {/* <div className="bg-white/90 rounded-2xl py-2 mb-4 h-64 flex items-center justify-center"> */}
+                  <div className="bg-white/90 rounded-2xl py-2 mb-4 h-64 relative overflow-hidden">
+                  {/* <ShoppingBag className="h-32 w-32 text-primary-600" /> */}
+                    <Image
+                      src={shopping}
+                      alt="Shopping"
+                      fill
+                      className="object-cover rounded-xl p-3"
+                    />
                   </div>
 
                   <h3 className="text-xl font-bold text-white mb-2">
