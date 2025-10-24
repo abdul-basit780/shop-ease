@@ -1,9 +1,20 @@
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { ShoppingCart, Heart, Search, Menu, X, LogOut, Package, UserCircle, ChevronDown, ChevronRight } from 'lucide-react';
-import { authService } from '@/lib/auth-service';
-import { apiClient } from '@/lib/api-client';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import {
+  ShoppingCart,
+  Heart,
+  Search,
+  Menu,
+  X,
+  LogOut,
+  Package,
+  UserCircle,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
+import { authService } from "@/lib/auth-service";
+import { apiClient } from "@/lib/api-client";
 
 export const Navbar = () => {
   const router = useRouter();
@@ -11,64 +22,59 @@ export const Navbar = () => {
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [categories, setCategories] = useState([]);
   const [hoveredCategory, setHoveredCategory] = useState(null);
-  const [subcategories, setSubcategories] = useState({});
-  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
   useEffect(() => {
-    // Initial check with slight delay to ensure localStorage is ready
     const timer = setTimeout(() => {
       checkUser();
       updateCounts();
     }, 0);
-    
+
     fetchCategories();
-    
+
     const handleUserLogin = () => {
       checkUser();
       updateCounts();
     };
-    
+
     const handleUserLogout = () => {
       setUser(null);
       setCartCount(0);
       setWishlistCount(0);
     };
 
-    // Also check when window gains focus (handles tab switches)
     const handleFocus = () => {
       checkUser();
       updateCounts();
     };
-    
-    window.addEventListener('userLoggedIn', handleUserLogin);
-    window.addEventListener('userLoggedOut', handleUserLogout);
-    window.addEventListener('cartUpdated', updateCounts);
-    window.addEventListener('wishlistUpdated', updateCounts);
-    window.addEventListener('focus', handleFocus);
-    
+
+    window.addEventListener("userLoggedIn", handleUserLogin);
+    window.addEventListener("userLoggedOut", handleUserLogout);
+    window.addEventListener("cartUpdated", updateCounts);
+    window.addEventListener("wishlistUpdated", updateCounts);
+    window.addEventListener("focus", handleFocus);
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
-    
+    window.addEventListener("scroll", handleScroll);
+
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('userLoggedIn', handleUserLogin);
-      window.removeEventListener('userLoggedOut', handleUserLogout);
-      window.removeEventListener('cartUpdated', updateCounts);
-      window.removeEventListener('wishlistUpdated', updateCounts);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener("userLoggedIn", handleUserLogin);
+      window.removeEventListener("userLoggedOut", handleUserLogout);
+      window.removeEventListener("cartUpdated", updateCounts);
+      window.removeEventListener("wishlistUpdated", updateCounts);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("scroll", handleScroll);
     };
   }, []);
 
-  // Re-check user on route changes
   useEffect(() => {
     checkUser();
     updateCounts();
@@ -79,59 +85,39 @@ export const Navbar = () => {
     setUser(currentUser);
   };
 
-  const updateCounts = () => {
-    if (typeof window !== 'undefined') {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-      setCartCount(cart.length);
-      setWishlistCount(wishlist.length);
+  const updateCounts = async () => {
+    if (!authService.isAuthenticated()) {
+      setCartCount(0);
+      setWishlistCount(0);
+      return;
+    }
+
+    try {
+      // Fetch cart count
+      const cartResponse = await apiClient.get("/api/customer/cart");
+      if (cartResponse.success && cartResponse.data) {
+        setCartCount(cartResponse.data.count || 0);
+      }
+
+      // Fetch wishlist count
+      const wishlistResponse = await apiClient.get("/api/customer/wishlist");
+      if (wishlistResponse.success && wishlistResponse.data) {
+        setWishlistCount(wishlistResponse.data.products?.length || 0);
+      }
+    } catch (error) {
+      console.error("Error updating counts:", error);
     }
   };
 
   const fetchCategories = async () => {
     try {
-      const response = await apiClient.get('/api/public/categories');
-      console.log('Categories response:', response);
+      const response = await apiClient.get("/api/public/navbar/categories");
       if (response.success && response.data?.categories) {
         setCategories(response.data.categories);
-        console.log('Categories loaded:', response.data.categories);
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error("Error fetching categories:", error);
     }
-  };
-
-  const fetchSubcategories = async (categoryId) => {
-    if (subcategories[categoryId]) {
-      console.log('Subcategories already cached for:', categoryId);
-      return; // Already fetched
-    }
-    
-    setLoadingSubcategories(true);
-    try {
-      console.log('Fetching subcategories for category:', categoryId);
-      const response = await apiClient.get(`/api/public/categories?parentId=${categoryId}`);
-      console.log('Subcategories response:', response);
-      
-      if (response.success && response.data) {
-        const subs = response.data.categories || [];
-        console.log('Subcategories found:', subs.length, 'items');
-        setSubcategories(prev => ({
-          ...prev,
-          [categoryId]: subs
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching subcategories:', error);
-    } finally {
-      setLoadingSubcategories(false);
-    }
-  };
-
-  const handleCategoryHover = (categoryId) => {
-    console.log('Hovering category:', categoryId);
-    setHoveredCategory(categoryId);
-    fetchSubcategories(categoryId);
   };
 
   const handleLogout = async () => {
@@ -141,18 +127,22 @@ export const Navbar = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery('');
+      router.push(
+        `/customer/all-products?search=${encodeURIComponent(searchQuery)}`
+      );
+      setSearchQuery("");
       setMobileMenuOpen(false);
     }
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-      isScrolled 
-        ? 'bg-white/95 backdrop-blur-lg shadow-xl' 
-        : 'bg-white shadow-md'
-    }`}>
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        isScrolled
+          ? "bg-white/95 backdrop-blur-lg shadow-xl"
+          : "bg-white shadow-md"
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
@@ -165,12 +155,17 @@ export const Navbar = () => {
               <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 ShopEase
               </span>
-              <div className="text-xs text-gray-500 font-medium -mt-1">Smart Shopping</div>
+              <div className="text-xs text-gray-500 font-medium -mt-1">
+                Smart Shopping
+              </div>
             </div>
           </Link>
 
           {/* Search Bar - Desktop */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-lg mx-8">
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:flex flex-1 max-w-lg mx-8"
+          >
             <div className="relative w-full group">
               <input
                 type="text"
@@ -183,7 +178,7 @@ export const Navbar = () => {
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => setSearchQuery("")}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-4 w-4" />
@@ -194,15 +189,15 @@ export const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-2">
-            <Link 
-              href="/customer/all-products" 
+            <Link
+              href="/customer/all-products"
               className="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-all duration-300"
             >
               Products
             </Link>
-            
+
             {/* Categories Dropdown */}
-            <div 
+            <div
               className="relative"
               onMouseEnter={() => setShowCategoryMenu(true)}
               onMouseLeave={() => {
@@ -212,86 +207,123 @@ export const Navbar = () => {
             >
               <button className="flex items-center space-x-1 px-4 py-2 text-gray-700 hover:text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-all duration-300">
                 <span>Categories</span>
-                <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${showCategoryMenu ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-300 ${
+                    showCategoryMenu ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {/* Mega Menu */}
               {showCategoryMenu && categories.length > 0 && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowCategoryMenu(false)}></div>
-                  <div className="absolute left-0 mt-2 w-screen max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
-                    <div className="grid grid-cols-4 gap-0">
-                      {/* Categories List - NON-CLICKABLE */}
-                      <div className="col-span-1 bg-gray-50 border-r border-gray-200 p-4">
-                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 px-3">
+                  <div
+                    className="fixed inset-0 z-40 bg-black/10"
+                    onClick={() => setShowCategoryMenu(false)}
+                  ></div>
+
+                  <div className="fixed left-1/2 -translate-x-1/2 top-24 w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[70vh] overflow-hidden">
+                    <div className="grid grid-cols-4 gap-0 h-full">
+                      {/* Categories List */}
+                      <div className="col-span-1 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
+                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 px-3 sticky top-0 bg-gray-50 py-2 z-10">
                           All Categories
                         </h3>
                         <div className="space-y-1">
                           {categories.map((category) => (
                             <div
                               key={category.id}
-                              onMouseEnter={() => handleCategoryHover(category.id)}
+                              onMouseEnter={() =>
+                                setHoveredCategory(category.id)
+                              }
                               className={`group cursor-pointer rounded-lg transition-all duration-200 flex items-center justify-between px-3 py-2.5 ${
-                                hoveredCategory === category.id 
-                                  ? 'bg-blue-50 text-blue-600' 
-                                  : 'hover:bg-gray-100'
+                                hoveredCategory === category.id
+                                  ? "bg-blue-50 text-blue-600"
+                                  : "hover:bg-gray-100"
                               }`}
                             >
                               <span className="font-medium capitalize text-sm">
                                 {category.name}
                               </span>
-                              <ChevronRight className={`h-4 w-4 transition-transform ${
-                                hoveredCategory === category.id ? 'translate-x-1' : ''
-                              }`} />
+                              {category.children &&
+                                category.children.length > 0 && (
+                                  <ChevronRight
+                                    className={`h-4 w-4 transition-transform ${
+                                      hoveredCategory === category.id
+                                        ? "translate-x-1"
+                                        : ""
+                                    }`}
+                                  />
+                                )}
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      {/* Subcategories Display - CLICKABLE */}
-                      <div className="col-span-3 p-6">
+                      {/* Subcategories Display */}
+                      <div className="col-span-3 p-6 overflow-y-auto">
                         {hoveredCategory ? (
                           <div>
-                            <div className="mb-4">
+                            <div className="mb-4 sticky top-0 bg-white py-2 z-10">
                               <h3 className="text-lg font-bold text-gray-900 capitalize mb-1">
-                                {categories.find(c => c.id === hoveredCategory)?.name}
+                                {
+                                  categories.find(
+                                    (c) => c.id === hoveredCategory
+                                  )?.name
+                                }
                               </h3>
                               <p className="text-sm text-gray-600">
-                                {categories.find(c => c.id === hoveredCategory)?.description}
+                                Browse all products in this category
                               </p>
                             </div>
 
-                            {loadingSubcategories ? (
-                              <div className="text-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                                <p className="mt-3 text-gray-600">Loading subcategories...</p>
-                              </div>
-                            ) : subcategories[hoveredCategory]?.length > 0 ? (
-                              <div className="grid grid-cols-3 gap-4">
-                                {subcategories[hoveredCategory].map((subcategory) => (
-                                  <Link
-                                    key={subcategory.id}
-                                    href={`/customer/all-products?categoryId=${hoveredCategory}&subcategoryId=${subcategory.id}`}
-                                    onClick={() => setShowCategoryMenu(false)}
-                                    className="text-left p-3 rounded-lg hover:bg-blue-50 transition-all group block"
-                                  >
-                                    <div className="font-semibold text-gray-900 group-hover:text-blue-600 capitalize mb-1">
-                                      {subcategory.name}
-                                    </div>
-                                    {subcategory.description && (
-                                      <div className="text-xs text-gray-600 line-clamp-2">
-                                        {subcategory.description}
+                            {categories.find((c) => c.id === hoveredCategory)
+                              ?.children?.length > 0 ? (
+                              <div className="grid grid-cols-3 gap-4 pb-4">
+                                {categories
+                                  .find((c) => c.id === hoveredCategory)
+                                  .children.map((subcategory) => (
+                                    <Link
+                                      key={subcategory.id}
+                                      href={`/customer/all-products?categoryId=${hoveredCategory}&subcategoryId=${subcategory.id}`}
+                                      onClick={() => setShowCategoryMenu(false)}
+                                      className="text-left p-3 rounded-lg hover:bg-blue-50 transition-all group block border border-gray-100 hover:border-blue-200"
+                                    >
+                                      <div className="font-semibold text-gray-900 group-hover:text-blue-600 capitalize">
+                                        {subcategory.name}
                                       </div>
-                                    )}
-                                  </Link>
-                                ))}
+                                    </Link>
+                                  ))}
                               </div>
                             ) : (
-                              <div className="text-center py-8 text-gray-500">
-                                <p className="mb-2">No subcategories available</p>
-                                <p className="text-sm text-gray-400">
-                                  This category has no subcategories yet
-                                </p>
+                              <div className="space-y-3">
+                                <Link
+                                  href={`/customer/all-products?categoryId=${hoveredCategory}`}
+                                  onClick={() => setShowCategoryMenu(false)}
+                                  className="block p-4 rounded-lg bg-blue-50 hover:bg-blue-100 transition-all border border-blue-200"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-semibold text-blue-900 mb-1">
+                                        View All{" "}
+                                        {
+                                          categories.find(
+                                            (c) => c.id === hoveredCategory
+                                          )?.name
+                                        }
+                                      </div>
+                                      <div className="text-sm text-blue-700">
+                                        Browse all products in this category
+                                      </div>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 text-blue-600" />
+                                  </div>
+                                </Link>
+                                <div className="text-center py-6 text-gray-500">
+                                  <p className="text-sm">
+                                    No subcategories available
+                                  </p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -313,8 +345,8 @@ export const Navbar = () => {
             {user ? (
               <>
                 {/* Wishlist */}
-                <Link 
-                  href="/customer/wishlist" 
+                <Link
+                  href="/customer/wishlist"
                   className="relative p-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-300 group"
                 >
                   <Heart className="h-6 w-6 group-hover:scale-110 transition-transform" />
@@ -326,8 +358,8 @@ export const Navbar = () => {
                 </Link>
 
                 {/* Cart */}
-                <Link 
-                  href="/customer/cart" 
+                <Link
+                  href="/customer/cart"
                   className="relative p-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-300 group mr-2"
                 >
                   <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
@@ -340,50 +372,65 @@ export const Navbar = () => {
 
                 {/* User Menu */}
                 <div className="relative">
-                  <button 
+                  <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-blue-600 font-medium rounded-xl hover:bg-blue-50 transition-all duration-300 group"
                   >
                     <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-md group-hover:shadow-lg transition-shadow">
-                      {user?.name ? user.name.charAt(0).toUpperCase() : user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                      {user?.name
+                        ? user.name.charAt(0).toUpperCase()
+                        : user?.email
+                        ? user.email.charAt(0).toUpperCase()
+                        : "U"}
                     </div>
-                    <span className="hidden lg:block">{user?.name || (user?.email ? user.email.split('@')[0] : 'User')}</span>
+                    <span className="hidden lg:block">
+                      {user?.name ||
+                        (user?.email ? user.email.split("@")[0] : "User")}
+                    </span>
                   </button>
-                  
+
                   {showUserMenu && (
                     <>
-                      <div 
-                        className="fixed inset-0 z-40" 
+                      <div
+                        className="fixed inset-0 z-40"
                         onClick={() => setShowUserMenu(false)}
                       ></div>
                       <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl py-2 z-50 border border-gray-100">
                         <div className="px-4 py-3 border-b border-gray-100">
-                          <p className="text-sm font-semibold text-gray-900">{user?.name || 'User'}</p>
-                          <p className="text-xs text-gray-500">{user?.email || ''}</p>
-                          <p className="text-xs text-blue-600 capitalize mt-1">{user?.role || 'Customer'}</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {user?.name || "User"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {user?.email || ""}
+                          </p>
+                          <p className="text-xs text-blue-600 capitalize mt-1">
+                            {user?.role || "Customer"}
+                          </p>
                         </div>
-                        
-                        <Link 
-                          href="/profile" 
+
+                        <Link
+                          href="/profile"
                           className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                           onClick={() => setShowUserMenu(false)}
                         >
                           <UserCircle className="h-5 w-5" />
                           <span>My Profile</span>
                         </Link>
-                        
-                        <Link 
-                          href="/orders" 
-                          className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                          onClick={() => setShowUserMenu(false)}
-                        >
-                          <Package className="h-5 w-5" />
-                          <span>My Orders</span>
-                        </Link>
-                        
-                        {user?.role === 'admin' && (
-                          <Link 
-                            href="/admin" 
+
+                        {user?.role === "customer" && (
+                          <Link
+                            href="/orders"
+                            className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <Package className="h-5 w-5" />
+                            <span>My Orders</span>
+                          </Link>
+                        )}
+
+                        {user?.role === "admin" && (
+                          <Link
+                            href="/admin"
                             className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-t border-gray-100"
                             onClick={() => setShowUserMenu(false)}
                           >
@@ -391,7 +438,7 @@ export const Navbar = () => {
                             <span>Admin Dashboard</span>
                           </Link>
                         )}
-                        
+
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
@@ -409,8 +456,8 @@ export const Navbar = () => {
               </>
             ) : (
               <div className="flex items-center space-x-3">
-                <Link 
-                  href="/auth/login" 
+                <Link
+                  href="/auth/login"
                   className="px-5 py-2.5 text-gray-700 hover:text-blue-600 font-medium rounded-xl hover:bg-blue-50 transition-all duration-300"
                 >
                   Login
@@ -427,16 +474,14 @@ export const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            onClick={() => {
-              setMobileMenuOpen(!mobileMenuOpen);
-              // Fetch subcategories for mobile menu when opening
-              if (!mobileMenuOpen) {
-                categories.forEach(category => fetchSubcategories(category.id));
-              }
-            }}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
           </button>
         </div>
 
@@ -458,30 +503,34 @@ export const Navbar = () => {
             </form>
 
             <div className="space-y-1">
-              <Link 
-                href="/customer/all-products" 
+              <Link
+                href="/customer/all-products"
                 className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Products
               </Link>
-              
-              {/* Mobile Categories - NON-CLICKABLE with CLICKABLE Subcategories */}
+
+              {/* Mobile Categories */}
               <div className="py-2">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wide px-4 mb-2">
                   Categories
                 </div>
                 {categories.map((category) => (
                   <div key={category.id} className="mb-1">
-                    <div className="py-2.5 px-4 text-gray-700 font-medium capitalize">
+                    <Link
+                      href={`/customer/all-products?categoryId=${category.id}`}
+                      className="py-2.5 px-4 text-gray-700 font-medium capitalize hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors block"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
                       {category.name}
-                    </div>
-                    {subcategories[category.id]?.length > 0 && (
+                    </Link>
+                    {category.children && category.children.length > 0 && (
                       <div className="ml-4 space-y-1">
-                        {subcategories[category.id].map((subcategory) => (
+                        {category.children.map((subcategory) => (
                           <Link
                             key={subcategory.id}
-                            href={`/products?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                            href={`/customer/all-products?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
                             className="block py-2 px-4 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors capitalize"
                             onClick={() => setMobileMenuOpen(false)}
                           >
@@ -496,8 +545,8 @@ export const Navbar = () => {
 
               {user ? (
                 <>
-                  <Link 
-                    href="/customer/wishlist" 
+                  <Link
+                    href="/customer/wishlist"
                     className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -508,8 +557,8 @@ export const Navbar = () => {
                       </span>
                     )}
                   </Link>
-                  <Link 
-                    href="/customer/cart" 
+                  <Link
+                    href="/customer/cart"
                     className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -520,23 +569,23 @@ export const Navbar = () => {
                       </span>
                     )}
                   </Link>
-                  <Link 
-                    href="/profile" 
+                  <Link
+                    href="/profile"
                     className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     My Profile
                   </Link>
-                  <Link 
-                    href="/orders" 
+                  <Link
+                    href="/orders"
                     className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     My Orders
                   </Link>
-                  {user?.role === 'admin' && (
-                    <Link 
-                      href="/admin" 
+                  {user?.role === "admin" && (
+                    <Link
+                      href="/admin"
                       className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -555,15 +604,15 @@ export const Navbar = () => {
                 </>
               ) : (
                 <div className="space-y-2 pt-2">
-                  <Link 
-                    href="/auth/login" 
+                  <Link
+                    href="/auth/login"
                     className="block py-3 px-4 text-center text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-semibold transition-colors border border-gray-200"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Login
                   </Link>
-                  <Link 
-                    href="/auth/register" 
+                  <Link
+                    href="/auth/register"
                     className="block py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg"
                     onClick={() => setMobileMenuOpen(false)}
                   >

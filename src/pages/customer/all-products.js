@@ -1,19 +1,22 @@
-// pages/products.js or pages/products/index.js
+// pages/customer/all-products.js
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
-import { Search, Filter, Grid, List } from 'lucide-react';
+import { authService } from '@/lib/auth-service';
+import { Search, Filter, Package, Heart, ShoppingCart, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function AllProducts() {
   const router = useRouter();
-  const { search, categoryId, subcategoryId, minPrice, maxPrice, inStock, sortBy, sortOrder, page } = router.query;
+  const { search, subcategoryId, minPrice, maxPrice, inStock, sortBy, sortOrder, page } = router.query;
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [filters, setFilters] = useState({
     search: search || '',
-    categoryId: categoryId || '',
     subcategoryId: subcategoryId || '',
     minPrice: minPrice || '',
     maxPrice: maxPrice || '',
@@ -21,27 +24,50 @@ export default function AllProducts() {
     sortBy: sortBy || 'createdAt',
     sortOrder: sortOrder || 'desc',
     page: parseInt(page) || 1,
-    limit: 10
+    limit: 12
   });
+
+  console.log('filter',filters)
 
   // Fetch products whenever filters or router query changes
   useEffect(() => {
     if (router.isReady) {
+      // Update filters from URL query
+      setFilters(prev => ({
+        ...prev,
+        search: search || '',
+        subcategoryId: subcategoryId || '',
+        minPrice: minPrice || '',
+        maxPrice: maxPrice || '',
+        inStock: inStock === 'true',
+        sortBy: sortBy || 'createdAt',
+        sortOrder: sortOrder || 'desc',
+        page: parseInt(page) || 1,
+      }));
+      
       fetchProducts();
     }
   }, [router.query, router.isReady]);
 
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // Build query string from filters
+      // Build query string from URL params
       const queryParams = new URLSearchParams();
       
-      Object.keys(filters).forEach(key => {
-        if (filters[key] !== '' && filters[key] !== null && filters[key] !== undefined) {
-          queryParams.append(key, filters[key]);
-        }
-      });
+      if (search) queryParams.append('search', search);
+      if (subcategoryId) queryParams.append('categoryId', subcategoryId); // Use categoryId in API
+      if (minPrice) queryParams.append('minPrice', minPrice);
+      if (maxPrice) queryParams.append('maxPrice', maxPrice);
+      if (inStock === 'true') queryParams.append('inStock', 'true');
+      queryParams.append('sortBy', sortBy || 'createdAt');
+      queryParams.append('sortOrder', sortOrder || 'desc');
+      queryParams.append('page', page || '1');
+      queryParams.append('limit', '12');
 
       const response = await apiClient.get(`/api/public/products?${queryParams.toString()}`);
       
@@ -51,24 +77,38 @@ export default function AllProducts() {
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value, page: 1 };
-    setFilters(newFilters);
-    
-    // Update URL with new filters
-    const queryParams = new URLSearchParams();
-    Object.keys(newFilters).forEach(k => {
-      if (newFilters[k] !== '' && newFilters[k] !== null && newFilters[k] !== undefined) {
-        queryParams.append(k, newFilters[k]);
+  const fetchCategories = async () => {
+    try {
+      const response = await apiClient.get('/api/public/categories');
+      if (response.success && response.data?.categories) {
+        setCategories(response.data.categories);
       }
-    });
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const handleFilterChange = (key, value) => {
+    const queryParams = new URLSearchParams(router.query);
     
-    router.push(`/products?${queryParams.toString()}`, undefined, { shallow: true });
+    if (value) {
+      queryParams.set(key, value);
+    } else {
+      queryParams.delete(key);
+    }
+    
+    // Reset to page 1 when filters change
+    if (key !== 'page') {
+      queryParams.set('page', '1');
+    }
+    
+    router.push(`/customer/all-products?${queryParams.toString()}`, undefined, { shallow: true });
   };
 
   const handlePageChange = (newPage) => {
@@ -80,15 +120,104 @@ export default function AllProducts() {
     handleFilterChange('search', filters.search);
   };
 
+  const clearAllFilters = () => {
+    router.push('/customer/all-products');
+  };
+
+  const clearFilter = (filterKey) => {
+    const queryParams = new URLSearchParams(router.query);
+    queryParams.delete(filterKey);
+    queryParams.set('page', '1');
+    router.push(`/customer/all-products?${queryParams.toString()}`, undefined, { shallow: true });
+  };
+
+  const handleAddToWishlist = async (productId) => {
+    if (!authService.isAuthenticated()) {
+      toast.error('Please login to add to wishlist', { icon: '🔒' });
+      router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+
+    try {
+      const response = await apiClient.post('/api/customer/wishlist', { productId });
+      if (response.success) {
+        toast.success('Added to wishlist!', { icon: '❤️' });
+        window.dispatchEvent(new Event('wishlistUpdated'));
+      }
+    } catch (error) {
+      toast.error('Failed to add to wishlist');
+    }
+  };
+
+  const activeFiltersCount = [search, subcategoryId, minPrice, maxPrice, inStock].filter(Boolean).length;
+  const selectedCategory = categories.find(cat => cat.id === subcategoryId);
+
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
+        <div className="mb-8 animate-fade-in">
+          <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
+            {search ? `Search Results for "${search}"` : 
+             selectedCategory ? selectedCategory.name : 
+             'All Products'}
+          </h1>
           <p className="text-gray-600">
             {pagination && `Showing ${products.length} of ${pagination.total} products`}
           </p>
+          
+          {/* Active Filters */}
+          {activeFiltersCount > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-gray-700">Active Filters:</span>
+              {search && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  Search: {search}
+                  <button onClick={() => clearFilter('search')} className="hover:text-blue-900">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {selectedCategory && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                  Category: {selectedCategory.name}
+                  <button onClick={() => clearFilter('subcategoryId')} className="hover:text-purple-900">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {minPrice && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  Min: ${minPrice}
+                  <button onClick={() => clearFilter('minPrice')} className="hover:text-green-900">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {maxPrice && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  Max: ${maxPrice}
+                  <button onClick={() => clearFilter('maxPrice')} className="hover:text-green-900">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              {inStock === 'true' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                  In Stock
+                  <button onClick={() => clearFilter('inStock')} className="hover:text-orange-900">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-red-600 hover:text-red-700 font-medium underline"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -194,38 +323,77 @@ export default function AllProducts() {
               </div>
             ) : products.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-2xl shadow-md">
-                <p className="text-gray-600">No products found</p>
+                <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-xl font-semibold text-gray-900 mb-2">No products found</p>
+                <p className="text-gray-600 mb-4">Try adjusting your filters or search terms</p>
+                {activeFiltersCount > 0 && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all"
+                  >
+                    Clear All Filters
+                  </button>
+                )}
               </div>
             ) : (
               <>
                 {/* Products Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {products.map((product) => (
+                  {products.map((product, idx) => (
                     <div
                       key={product.id}
-                      className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
-                      onClick={() => router.push(`/products/${product.id}`)}
+                      className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 animate-scale-in"
+                      style={{ animationDelay: `${idx * 50}ms` }}
                     >
-                      <div className="aspect-square bg-gray-100 relative">
-                        <img
-                          src={product.img || '/placeholder-product.jpg'}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="relative aspect-square bg-gray-100">
+                        <Link href={`/customer/product/${product.id}`}>
+                          <img
+                            src={product.img || '/placeholder-product.jpg'}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 cursor-pointer"
+                          />
+                        </Link>
+                        
                         {product.stock === 0 && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                            <span className="text-white font-bold">Out of Stock</span>
+                            <span className="text-white font-bold text-lg">Out of Stock</span>
                           </div>
                         )}
+
+                        {product.stock > 0 && product.stock < 5 && (
+                          <div className="absolute top-3 left-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                            Only {product.stock} left
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => handleAddToWishlist(product.id)}
+                          className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full text-gray-600 hover:text-red-500 hover:bg-white transition-all shadow-lg"
+                        >
+                          <Heart className="h-5 w-5" />
+                        </button>
                       </div>
-                      <div className="p-4">
-                        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">
-                          {product.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {product.description}
-                        </p>
-                        <div className="flex items-center justify-between">
+
+                      <div className="p-5">
+                        {product.categoryName && (
+                          <span className="inline-block mb-2 px-3 py-1 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full uppercase">
+                            {product.categoryName}
+                          </span>
+                        )}
+
+                        <Link href={`/customer/product/${product.id}`}>
+                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer">
+                            {product.name}
+                          </h3>
+                        </Link>
+
+                        {product.description && (
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            {product.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between mb-3">
                           <span className="text-2xl font-bold text-blue-600">
                             ${product.price.toFixed(2)}
                           </span>
@@ -233,11 +401,12 @@ export default function AllProducts() {
                             Stock: {product.stock}
                           </span>
                         </div>
-                        {product.categoryName && (
-                          <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full">
-                            {product.categoryName}
-                          </span>
-                        )}
+
+                        <Link href={`/customer/product/${product.id}`}>
+                          <button className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all transform hover:scale-105">
+                            View Details
+                          </button>
+                        </Link>
                       </div>
                     </div>
                   ))}
@@ -249,31 +418,34 @@ export default function AllProducts() {
                     <button
                       onClick={() => handlePageChange(pagination.page - 1)}
                       disabled={!pagination.hasPrev}
-                      className="px-4 py-2 border-2 border-gray-200 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      className="px-4 py-2 border-2 border-gray-200 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-all"
                     >
                       Previous
                     </button>
                     
                     <div className="flex space-x-1">
-                      {[...Array(pagination.totalPages)].map((_, idx) => (
-                        <button
-                          key={idx + 1}
-                          onClick={() => handlePageChange(idx + 1)}
-                          className={`px-4 py-2 rounded-lg font-semibold ${
-                            pagination.page === idx + 1
-                              ? 'bg-blue-600 text-white'
-                              : 'border-2 border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {idx + 1}
-                        </button>
-                      ))}
+                      {[...Array(Math.min(pagination.totalPages, 5))].map((_, idx) => {
+                        const pageNum = idx + 1;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                              pagination.page === pageNum
+                                ? 'bg-blue-600 text-white shadow-lg'
+                                : 'border-2 border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     <button
                       onClick={() => handlePageChange(pagination.page + 1)}
                       disabled={!pagination.hasNext}
-                      className="px-4 py-2 border-2 border-gray-200 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      className="px-4 py-2 border-2 border-gray-200 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-all"
                     >
                       Next
                     </button>

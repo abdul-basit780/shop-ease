@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { 
   ShoppingCart, Heart, Star, ArrowLeft, Package, Truck, 
-  Shield, RotateCcw, Plus, Minus, ChevronRight, User 
+  Shield, RotateCcw, Plus, Minus, ChevronRight, User, AlertCircle 
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { authService } from '@/lib/auth-service';
@@ -21,6 +21,7 @@ export default function ProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState({});
 
   useEffect(() => {
     if (id) {
@@ -38,6 +39,15 @@ export default function ProductDetails() {
       
       if (response.success && response.data) {
         setProduct(response.data);
+        
+        // Initialize selected options with null values
+        if (response.data.optionTypes && response.data.optionTypes.length > 0) {
+          const initialOptions = {};
+          response.data.optionTypes.forEach(option => {
+            initialOptions[option.name] = null;
+          });
+          setSelectedOptions(initialOptions);
+        }
       }
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -90,40 +100,94 @@ export default function ProductDetails() {
     }
   };
 
-  const handleAddToCart = async () => {
-  if (!authService.isAuthenticated()) {
-    toast.error('Please login to add items to cart', {
-      icon: '🔒',
-    });
-    router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
-    return;
-  }
+  const handleOptionChange = (optionName, valueObj) => {
+    setSelectedOptions(prev => ({
+      ...prev,
+      [optionName]: valueObj // Store the entire value object (which contains id)
+    }));
+  };
 
-  try {
-    const response = await apiClient.post('/api/customer/cart', {
-      productId: product.id,
-      quantity: quantity
-    });
-    
-    if (response.success) {
-      // Dispatch event to update cart count in header/navbar
-      window.dispatchEvent(new Event('cartUpdated'));
-      
-      toast.success(`Added ${quantity} item(s) to cart!`, {
-        icon: '🛒',
-      });
-      
-      // Optional: Reset quantity to 1 after successful add
-      setQuantity(1);
+  const validateOptions = () => {
+    if (!product.optionTypes || product.optionTypes.length === 0) {
+      return true;
     }
-  } catch (error) {
-    console.error('Error adding to cart:', error);
-    
-    // Handle specific error messages from the API
-    const errorMessage = error.response?.data?.message || 'Failed to add to cart';
-    toast.error(errorMessage);
-  }
-};
+
+    for (const option of product.optionTypes) {
+      if (!selectedOptions[option.name] || !selectedOptions[option.name].id) {
+        toast.error(`Please select ${option.name}`, {
+          icon: '⚠️',
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleAddToCart = async () => {
+    if (!authService.isAuthenticated()) {
+      toast.error('Please login to add items to cart', {
+        icon: '🔒',
+      });
+      router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+
+    if (!validateOptions()) {
+      return;
+    }
+
+    try {
+      console.log('Selected Options State:', selectedOptions);
+      console.log('Product Option Types:', product.optionTypes);
+      
+      // Build cart data with productId and quantity
+      const cartData = {
+        productId: product.id,
+        quantity: quantity
+      };
+
+      // Extract option IDs from selected options and add to selectedOptions array
+      if (product.optionTypes && product.optionTypes.length > 0) {
+        const optionIds = Object.values(selectedOptions)
+          .filter(opt => opt && opt.id) // Filter out empty selections
+          .map(opt => opt.id); // Extract IDs
+        
+        console.log('Extracted Option IDs:', optionIds);
+        
+        if (optionIds.length > 0) {
+          cartData.selectedOptions = optionIds;
+        }
+      }
+
+      console.log('Cart data being sent:', cartData);
+
+      const response = await apiClient.post('/api/customer/cart', cartData);
+      
+      if (response.success) {
+        window.dispatchEvent(new Event('cartUpdated'));
+        
+        toast.success(`Added ${quantity} item(s) to cart!`, {
+          icon: '🛒',
+        });
+        
+        setQuantity(1);
+        
+        if (product.optionTypes && product.optionTypes.length > 0) {
+          const resetOptions = {};
+          product.optionTypes.forEach(option => {
+            resetOptions[option.name] = null;
+          });
+          setSelectedOptions(resetOptions);
+        }
+      } else {
+        toast.error(response.error || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to add to cart';
+      toast.error(errorMessage);
+    }
+  };
 
   const handleAddToWishlist = async () => {
     if (!authService.isAuthenticated()) {
@@ -286,6 +350,46 @@ export default function ProductDetails() {
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
               {product.description}
             </p>
+
+            {/* Product Options */}
+            {product.optionTypes && product.optionTypes.length > 0 && (
+              <div className="mb-8 space-y-6">
+                {product.optionTypes.map((option, idx) => (
+                  <div key={idx}>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Select {option.name.charAt(0).toUpperCase() + option.name.slice(1)} *
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      {option.values.map((value, valueIdx) => {
+                        // Handle if value is an object or string
+                        const displayValue = typeof value === 'object' ? value.value : value;
+                        const valueObj = typeof value === 'object' ? value : { id: value, value: value };
+                        
+                        return (
+                          <button
+                            key={valueIdx}
+                            onClick={() => handleOptionChange(option.name, valueObj)}
+                            className={`px-6 py-3 rounded-xl border-2 font-semibold transition-all transform hover:scale-105 ${
+                              selectedOptions[option.name]?.value === displayValue
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
+                                : 'border-gray-300 text-gray-700 hover:border-blue-400'
+                            }`}
+                          >
+                            {displayValue}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Option validation hint */}
+                <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-600" />
+                  <span>Please select all required options before adding to cart</span>
+                </div>
+              </div>
+            )}
 
             {/* Quantity Selector */}
             <div className="mb-8">

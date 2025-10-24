@@ -60,7 +60,6 @@ export default function Products() {
     
     try {
       const response = await apiClient.get('/api/customer/wishlist');
-      console.log('wish',response)
       // Handle various response structures
       let productIds = [];
       if (response.success) {

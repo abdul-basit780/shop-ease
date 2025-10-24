@@ -55,7 +55,6 @@ export default function WishlistPage() {
     try {
       setIsLoading(true);
       const response = await apiClient.get("/api/customer/wishlist");
-      console.log("wish page", response);
       if (response.success && response.data) {
         setWishlist(response.data);
         if (typeof window !== "undefined") {
