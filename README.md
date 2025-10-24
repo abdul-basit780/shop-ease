@@ -64,7 +64,6 @@ A modern, full-stack e-commerce platform built with Next.js, featuring AI-powere
 - **Swagger** - API documentation
 
 ### Development Tools
-- **ESLint** - Code linting
 - **PostCSS** - CSS processing
 - **Autoprefixer** - CSS vendor prefixes
 
@@ -159,7 +158,7 @@ The API is fully documented with Swagger. Access the interactive documentation a
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `POST /api/auth/forgot-password` - Password reset request
-- `GET /api/auth/me` - Get current user
+- `GET /api/auth/me` - Get current user (customer/admin)
 
 #### Products
 - `GET /api/public/products` - Get all products

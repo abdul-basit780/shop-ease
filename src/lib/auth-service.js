@@ -1,6 +1,6 @@
 import { apiClient } from './api-client';
 import Cookies from 'js-cookie';
-import { jwtDecode } from 'jwt-decode'; // Import jwt-decode
+import { jwtDecode } from 'jwt-decode';
 
 export const authService = {
   async login(credentials) {
