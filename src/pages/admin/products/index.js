@@ -252,16 +252,16 @@ const Button = ({
 };
 
 // Product Card Component
-const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected }) => {
+const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected, onManageOptions }) => {
   return (
     <Card className={`hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${
       isSelected ? 'ring-2 ring-primary-500 bg-primary-50' : ''
     }`}>
       <div className="relative">
         <div className="aspect-w-16 aspect-h-9 bg-gray-200 rounded-t-2xl overflow-hidden">
-          {product.image ? (
+          {product.img ? (
             <img
-              src={product.image}
+              src={product.img}
               alt={product.name}
               className="w-full h-48 object-cover"
             />
@@ -275,7 +275,7 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected }
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={() => onSelect(product._id)}
+            onChange={() => onSelect(product.id)}
             className="w-5 h-5 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
           />
         </div>
@@ -312,36 +312,52 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected }
           </div>
           <div className="flex items-center text-sm text-gray-500">
             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-              {product.category}
+              {product.categoryName || product.category}
+              {product.parentCategoryName && (
+                <span className="text-blue-600 ml-1">
+                  (under {product.parentCategoryName})
+                </span>
+              )}
             </span>
           </div>
         </div>
         
-        <div className="flex space-x-2">
+        <div className="space-y-2">
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onView(product)}
+              className="flex-1"
+            >
+              <Eye className="h-4 w-4" />
+              View
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onEdit(product)}
+              className="flex-1"
+            >
+              <Edit className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(product)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onView(product)}
-            className="flex-1"
+            onClick={() => onManageOptions(product)}
+            className="w-full"
           >
-            <Eye className="h-4 w-4" />
-            View
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onEdit(product)}
-            className="flex-1"
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => onDelete(product)}
-          >
-            <Trash2 className="h-4 w-4" />
+            <Settings className="h-4 w-4 mr-2" />
+            Manage Options
           </Button>
         </div>
       </CardBody>
@@ -571,18 +587,30 @@ export default function ProductsPage() {
         page: currentPage.toString(),
         limit: '12',
         ...(searchTerm && { search: searchTerm }),
-        ...(selectedCategory && { category: selectedCategory }),
+        ...(selectedCategory && { categoryId: selectedCategory }),
       });
 
+      console.log('Fetching products with params:', params.toString());
       const response = await apiClient.get(`/admin/product?${params}`);
+      console.log('Products response:', response);
       
       if (response.success) {
-        setProducts(response.products || []);
-        setTotalPages(response.pagination?.totalPages || 1);
+        setProducts(response.data?.products || response.products || []);
+        setTotalPages(response.data?.pagination?.totalPages || response.pagination?.totalPages || 1);
+      } else {
+        console.error('Failed to fetch products:', response.message);
+        toast.error('Failed to load products');
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('Failed to load products');
+      if (error.response?.status === 401) {
+        toast.error('You are not authorized. Please login again.');
+        router.push('/auth/login');
+      } else if (error.response?.status === 403) {
+        toast.error('You do not have permission to view products.');
+      } else {
+        toast.error('Failed to load products. Please check your connection.');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -604,17 +632,21 @@ export default function ProductsPage() {
   };
 
   const handleEdit = (product) => {
-    router.push(`/admin/products/edit/${product._id}`);
+    router.push(`/admin/products/edit/${product.id}`);
   };
 
   const handleView = (product) => {
-    router.push(`/admin/products/view/${product._id}`);
+    router.push(`/admin/products/view/${product.id}`);
+  };
+
+  const handleManageOptions = (product) => {
+    router.push(`/admin/products/options/${product.id}`);
   };
 
   const handleDelete = async (product) => {
     if (window.confirm(`Are you sure you want to delete "${product.name}"?`)) {
       try {
-        const response = await apiClient.delete(`/admin/product/${product._id}`);
+        const response = await apiClient.delete(`/admin/product/${product.id}`);
         if (response.success) {
           toast.success('Product deleted successfully');
           fetchProducts();
@@ -667,7 +699,7 @@ export default function ProductsPage() {
     if (selectedProducts.length === products.length) {
       setSelectedProducts([]);
     } else {
-      setSelectedProducts(products.map(p => p._id));
+      setSelectedProducts(products.map(p => p.id));
     }
   };
 
@@ -797,13 +829,14 @@ export default function ProductsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 animate-fade-in-up animation-delay-200">
               {products.map((product) => (
                 <ProductCard
-                  key={product._id}
+                  key={product.id}
                   product={product}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onView={handleView}
                   onSelect={handleProductSelect}
-                  isSelected={selectedProducts.includes(product._id)}
+                  isSelected={selectedProducts.includes(product.id)}
+                  onManageOptions={handleManageOptions}
                 />
               ))}
             </div>
@@ -844,24 +877,24 @@ export default function ProductsPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {products.map((product) => (
-                        <tr key={product._id} className={`hover:bg-gray-50 ${
-                          selectedProducts.includes(product._id) ? 'bg-primary-50' : ''
+                        <tr key={product.id} className={`hover:bg-gray-50 ${
+                          selectedProducts.includes(product.id) ? 'bg-primary-50' : ''
                         }`}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input
                               type="checkbox"
-                              checked={selectedProducts.includes(product._id)}
-                              onChange={() => handleProductSelect(product._id)}
+                              checked={selectedProducts.includes(product.id)}
+                              onChange={() => handleProductSelect(product.id)}
                               className="w-4 h-4 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-12 w-12">
-                                {product.image ? (
+                                {product.img ? (
                                   <img
                                     className="h-12 w-12 rounded-lg object-cover"
-                                    src={product.image}
+                                    src={product.img}
                                     alt={product.name}
                                   />
                                 ) : (
@@ -881,9 +914,16 @@ export default function ProductsPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                              {product.category}
-                            </span>
+                            <div className="flex flex-col">
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {product.categoryName || product.category}
+                              </span>
+                              {product.parentCategoryName && (
+                                <span className="text-xs text-gray-500 mt-1">
+                                  under {product.parentCategoryName}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             ${product.price}

@@ -566,7 +566,7 @@ export default function AdminDashboard() {
           orders: { total: 0, byStatus: {} },
           revenue: { total: 0, avgOrderValue: 0, orderCount: 0 },
           products: { total: 0, active: 0, deleted: 0, lowStock: 0 },
-          categories: { total: 0, active: 0, deleted: 0 },
+          categories: { total: 0, active: 0, deleted: 0, subcategories: 0 },
           feedback: { total: 0, avgRating: 0 }
         },
         trends: { revenueTrend: [] },
@@ -580,19 +580,63 @@ export default function AdminDashboard() {
       });
 
       try {
-        const [statsResponse, revenueResponse] = await Promise.all([
+        console.log('Fetching dashboard stats...');
+        const [statsResponse, revenueResponse, subcategoriesResponse] = await Promise.all([
           apiClient.get('/admin/dashboard/stats'),
-          apiClient.get(`/admin/dashboard/revenue?period=${selectedPeriod}`)
+          apiClient.get(`/admin/dashboard/revenue?period=${selectedPeriod}`),
+          apiClient.get('/admin/category?parentId=null&limit=100').then(async (parentResponse) => {
+            if (parentResponse.success) {
+              const parentCategories = parentResponse.data?.categories || parentResponse.categories || [];
+              let subcategoryCount = 0;
+              
+              // Count subcategories for each parent
+              for (const parent of parentCategories) {
+                try {
+                  const subResponse = await apiClient.get(`/admin/category?parentId=${parent.id}&limit=100`);
+                  if (subResponse.success) {
+                    subcategoryCount += (subResponse.data?.categories || subResponse.categories || []).length;
+                  }
+                } catch (error) {
+                  console.error(`Error fetching subcategories for ${parent.name}:`, error);
+                }
+              }
+              
+              return { success: true, subcategoryCount };
+            }
+            return { success: false, subcategoryCount: 0 };
+          })
         ]);
 
+        console.log('Stats response:', statsResponse);
+        console.log('Revenue response:', revenueResponse);
+
         if (statsResponse && statsResponse.success) {
-          setStats(statsResponse.data);
+          console.log('Setting dashboard stats:', statsResponse.data);
+          const updatedStats = {
+            ...statsResponse.data,
+            overview: {
+              ...statsResponse.data.overview,
+              categories: {
+                ...statsResponse.data.overview.categories,
+                subcategories: subcategoriesResponse.subcategoryCount || 0
+              }
+            }
+          };
+          setStats(updatedStats);
+        } else {
+          console.warn('Stats API failed:', statsResponse?.message);
         }
+        
         if (revenueResponse && revenueResponse.success) {
+          console.log('Setting revenue data:', revenueResponse.data);
           setRevenue(revenueResponse.data);
+        } else {
+          console.warn('Revenue API failed:', revenueResponse?.message);
         }
       } catch (apiError) {
-        console.warn('API not available, using fallback data:', apiError);
+        console.error('API calls failed:', apiError);
+        console.error('API error details:', apiError.response?.data);
+        toast.error('Failed to load dashboard data from API');
         // Keep the fallback data that was already set
       }
     } catch (error) {
@@ -746,6 +790,13 @@ export default function AdminDashboard() {
           subtitle={`${stats?.overview?.categories?.total || 0} total`}
           icon={Tag}
           color="green"
+        />
+        <StatCard
+          title="Subcategories"
+          value={stats?.overview?.categories?.subcategories || 0}
+          subtitle="Organized hierarchy"
+          icon={Tag}
+          color="blue"
         />
       </div>
 

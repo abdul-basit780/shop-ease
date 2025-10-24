@@ -313,11 +313,11 @@ export default function CreateProductPage() {
     brand: '',
     sku: '',
     weight: '',
-    dimensions: {
-      length: '',
-      width: '',
-      height: ''
-    },
+    material: '',
+    careInstructions: '',
+    fitType: '',
+    season: '',
+    sizeGuide: '',
     features: [],
     tags: [],
     isActive: true,
@@ -327,40 +327,102 @@ export default function CreateProductPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
+  const [parentCategories, setParentCategories] = useState([]);
+  const [selectedParent, setSelectedParent] = useState('');
+  const [createdProduct, setCreatedProduct] = useState(null);
 
   useEffect(() => {
     fetchCategories();
+    fetchParentCategories();
   }, []);
 
-  const fetchCategories = async () => {
+  const handleParentChange = (parentId) => {
+    console.log('Parent changed to:', parentId);
+    console.log('Parent categories:', parentCategories);
+    const selectedParentName = parentCategories.find(p => p.id === parentId)?.name;
+    console.log('Selected parent name:', selectedParentName);
+    setSelectedParent(parentId);
+    setFormData(prev => ({ ...prev, category: '' })); // Reset category selection
+    fetchCategories(parentId);
+  };
+
+  const fetchParentCategories = async () => {
     try {
-      const response = await apiClient.get('/admin/category');
+      console.log('Fetching parent categories...');
+      const response = await apiClient.get('/admin/category?parentId=null&limit=100');
+      console.log('Parent categories response:', response);
       if (response.success) {
-        setCategories(response.categories || []);
+        const parentCats = response.data?.categories || response.categories || [];
+        console.log('Parent categories loaded:', parentCats);
+        setParentCategories(parentCats);
+      }
+    } catch (error) {
+      console.error('Error fetching parent categories:', error);
+    }
+  };
+
+  const fetchCategories = async (parentId = null) => {
+    try {
+      console.log('Fetching categories...', parentId ? `for parent: ${parentId}` : 'all categories');
+      const url = parentId ? `/admin/category?parentId=${parentId}&limit=100` : '/admin/category?limit=100';
+      console.log('API URL:', url);
+      
+      // Check authentication token
+      const token = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
+      console.log('Auth token exists:', !!token);
+      console.log('Auth token preview:', token ? token.substring(0, 10) + '...' : 'No token');
+      
+      const response = await apiClient.get(url);
+      console.log('Categories response:', response);
+      console.log('Response success:', response.success);
+      console.log('Response data:', response.data);
+      console.log('Response categories:', response.data?.categories || response.categories);
+      
+      if (response.success) {
+        const categoriesData = response.data?.categories || response.categories || [];
+        console.log('Setting categories:', categoriesData);
+        setCategories(categoriesData);
+        
+        if (parentId && categoriesData.length === 0) {
+          console.log('No subcategories found for parent:', parentId);
+          console.log('Testing direct API call...');
+          
+          // Test direct API call to verify
+          fetch(`/api/admin/category?parentId=${parentId}`)
+            .then(response => response.json())
+            .then(data => {
+              console.log('Direct API test result:', data);
+            })
+            .catch(error => {
+              console.error('Direct API test failed:', error);
+            });
+            
+          toast('No subcategories found for this parent category. Create subcategories first.', {
+            icon: 'ℹ️',
+            style: {
+              background: '#3B82F6',
+              color: '#fff',
+            },
+          });
+        }
+      } else {
+        console.error('Failed to fetch categories:', response.message);
+        toast.error('Failed to load categories');
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      console.error('Error details:', error.response?.data);
+      toast.error('Failed to load categories. Please check your connection.');
     }
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    if (name.startsWith('dimensions.')) {
-      const dimensionField = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        dimensions: {
-          ...prev.dimensions,
-          [dimensionField]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: type === 'checkbox' ? checked : value 
-      }));
-    }
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
     
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -457,10 +519,10 @@ export default function CreateProductPage() {
       newErrors.category = 'Category is required';
     }
     
-    // Images validation (optional - backend doesn't require images)
-    // if (images.length === 0) {
-    //   newErrors.images = 'At least one product image is required';
-    // }
+    // Images validation (backend requires image)
+    if (images.length === 0) {
+      newErrors.images = 'Product image is required';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -477,6 +539,8 @@ export default function CreateProductPage() {
     setLoading(true);
 
     try {
+      console.log('Creating product with data:', formData);
+      
       // Create FormData for file upload
       const submitData = new FormData();
       
@@ -487,37 +551,65 @@ export default function CreateProductPage() {
       submitData.append('stock', formData.stock);
       submitData.append('categoryId', formData.category); // Map 'category' to 'categoryId'
 
-      // Add images
-      images.forEach((image, index) => {
-        if (typeof image === 'object') {
-          submitData.append('images', image);
-        }
-      });
+      // Add image (backend expects single 'image' field, not 'images')
+      if (images.length > 0 && typeof images[0] === 'object') {
+        submitData.append('image', images[0]);
+      }
 
+      console.log('Submitting to /admin/product');
+      console.log('FormData contents:');
+      for (let [key, value] of submitData.entries()) {
+        console.log(key, ':', value);
+      }
+      
       const response = await apiClient.post('/admin/product', submitData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
+      console.log('Product creation response:', response);
+
       if (response.success) {
         toast.success('Product created successfully! 🎉');
-        router.push('/admin/products');
+        const product = response.data?.product || response.product;
+        setCreatedProduct(product);
+        
+        // Show option to manage product options
+        const productId = product?.id;
+        if (productId) {
+          const manageOptions = confirm('Product created! Would you like to add option types (Size, Color, etc.) for product variants?');
+          if (manageOptions) {
+            router.push(`/admin/products/options/${productId}`);
+          } else {
+            // Stay on the page to show the success state
+          }
+        }
       } else {
         toast.error(response.message || 'Failed to create product');
       }
     } catch (error) {
       console.error('Error creating product:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       
       // Handle specific validation errors from backend
       if (error.response?.status === 400) {
         const errorMessage = error.response?.data?.message || 'Validation failed. Please check your input.';
+        console.error('400 Error details:', error.response?.data);
         toast.error(errorMessage);
         
         // If there are specific field errors, show them
         if (error.response?.data?.errors) {
           setErrors(error.response.data.errors);
         }
+      } else if (error.response?.status === 401) {
+        toast.error('You are not authorized. Please login again.');
+        router.push('/auth/login');
+      } else if (error.response?.status === 403) {
+        toast.error('You do not have permission to create products.');
+      } else if (error.response?.status === 409) {
+        toast.error('A product with this name already exists in this category. Please choose a different name.');
       } else {
         toast.error('Failed to create product. Please try again.');
       }
@@ -525,6 +617,89 @@ export default function CreateProductPage() {
       setLoading(false);
     }
   };
+
+  // Show success state after product creation
+  if (createdProduct) {
+    return (
+      <AdminLayout title="Product Created!" subtitle="Your product has been successfully added">
+        <div className="max-w-2xl mx-auto">
+          <Card className="text-center">
+            <CardBody className="py-12">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Product Created Successfully!</h2>
+              <p className="text-gray-600 mb-6">
+                "{createdProduct.name}" has been added to your catalog and is now available for customers.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex space-x-4">
+                  <Button
+                    onClick={() => router.push(`/admin/products/options/${createdProduct.id}`)}
+                    className="flex-1"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Add Variants (Size, Color)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/admin/products/view/${createdProduct.id}`)}
+                    className="flex-1"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Product
+                  </Button>
+                </div>
+                
+                <div className="flex space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/admin/products')}
+                    className="flex-1"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Back to Products
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setCreatedProduct(null);
+                      setFormData({
+                        name: '',
+                        description: '',
+                        price: '',
+                        stock: '',
+                        category: '',
+                        brand: '',
+                        sku: '',
+                        weight: '',
+                        material: '',
+                        careInstructions: '',
+                        fitType: '',
+                        season: '',
+                        sizeGuide: '',
+                        features: [],
+                        tags: [],
+                        isActive: true,
+                        isFeatured: false,
+                      });
+                      setImages([]);
+                      setErrors({});
+                    }}
+                    className="flex-1"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Another
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="Create Product" subtitle="Add a new product to your catalog">
@@ -653,6 +828,31 @@ export default function CreateProductPage() {
                   </div>
                 </div>
 
+                {/* Parent Category Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Filter by Parent Category (Optional)
+                  </label>
+                  <select
+                    value={selectedParent}
+                    onChange={(e) => handleParentChange(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                  >
+                    <option value="">All Categories</option>
+                    {parentCategories.map((parent) => (
+                      <option key={parent.id} value={parent.id}>
+                        {parent.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {selectedParent 
+                      ? 'Showing subcategories of selected parent' 
+                      : 'Showing all categories and subcategories'
+                    }
+                  </p>
+                </div>
+
                 {/* Category and Brand */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -668,16 +868,26 @@ export default function CreateProductPage() {
                       }`}
                     >
                       <option value="">Select a category</option>
-                      {categories.map((category) => (
-                        <option key={category._id} value={category._id}>
-                          {category.name}
-                        </option>
-                      ))}
+                      {categories.length === 0 && selectedParent ? (
+                        <option value="" disabled>No subcategories found. Create subcategories first.</option>
+                      ) : (
+                        categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.parentId ? `  └─ ${category.name}` : category.name}
+                          </option>
+                        ))
+                      )}
                     </select>
                     {errors.category && (
                       <p className="mt-2 text-sm text-red-600 flex items-center">
                         <AlertCircle className="h-4 w-4 mr-1" />
                         {errors.category}
+                      </p>
+                    )}
+                    {selectedParent && categories.length === 0 && (
+                      <p className="mt-2 text-sm text-blue-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        No subcategories found. Go to Categories to create subcategories under "{parentCategories.find(p => p.id === selectedParent)?.name}".
                       </p>
                     )}
                   </div>
@@ -858,48 +1068,79 @@ export default function CreateProductPage() {
               </CardBody>
             </Card>
 
-            {/* Dimensions */}
+            {/* Clothing Details */}
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900">Dimensions (cm)</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Clothing Details</h3>
+                <p className="text-sm text-gray-600">Add specific details for clothing items</p>
               </CardHeader>
               <CardBody className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Length</label>
-                  <input
-                    type="number"
-                    name="dimensions.length"
-                    value={formData.dimensions.length}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    placeholder="0.0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
+                    <input
+                      type="text"
+                      name="material"
+                      value={formData.material || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., 100% Cotton, Polyester, Denim"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Care Instructions</label>
+                    <input
+                      type="text"
+                      name="careInstructions"
+                      value={formData.careInstructions || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., Machine wash cold, Hang dry"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fit Type</label>
+                    <select
+                      name="fitType"
+                      value={formData.fitType || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select fit type</option>
+                      <option value="Slim">Slim</option>
+                      <option value="Regular">Regular</option>
+                      <option value="Relaxed">Relaxed</option>
+                      <option value="Oversized">Oversized</option>
+                      <option value="Athletic">Athletic</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
+                    <select
+                      name="season"
+                      value={formData.season || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select season</option>
+                      <option value="All Season">All Season</option>
+                      <option value="Summer">Summer</option>
+                      <option value="Winter">Winter</option>
+                      <option value="Spring">Spring</option>
+                      <option value="Fall">Fall</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
-                  <input
-                    type="number"
-                    name="dimensions.width"
-                    value={formData.dimensions.width}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Size Guide</label>
+                  <textarea
+                    name="sizeGuide"
+                    value={formData.sizeGuide || ''}
                     onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    placeholder="0.0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
-                  <input
-                    type="number"
-                    name="dimensions.height"
-                    value={formData.dimensions.height}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    placeholder="0.0"
+                    rows="3"
+                    placeholder="e.g., Small: Chest 34-36, Medium: Chest 38-40, Large: Chest 42-44"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
