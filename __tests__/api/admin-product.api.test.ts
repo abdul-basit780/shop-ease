@@ -1,11 +1,8 @@
 import { NextApiResponse } from 'next';
-import { index, show, store, update, destroy } from '../../src/lib/controllers/product';
-import { Product } from '../../src/lib/models/Product';
-import { Category } from '../../src/lib/models/Category';
 import { AuthenticatedRequest } from '../../src/lib/middleware/auth';
 import * as productUtils from '../../src/lib/utils/product';
 
-// Mock dependencies
+// Mock dependencies BEFORE importing the controller
 jest.mock('../../src/lib/models/Product');
 jest.mock('../../src/lib/models/Category');
 jest.mock('../../src/lib/utils/product', () => ({
@@ -14,6 +11,53 @@ jest.mock('../../src/lib/utils/product', () => ({
   buildProductResponse: jest.fn(),
   validateImageFile: jest.fn(),
 }));
+
+// Mock ImageKit to prevent module-level initialization hang
+jest.mock('imagekit', () => {
+  return jest.fn().mockImplementation(() => ({
+    upload: jest.fn().mockResolvedValue({
+      url: 'https://example.com/test-image.jpg',
+      fileId: 'test-file-id',
+      name: 'test.jpg',
+    }),
+    deleteFile: jest.fn().mockResolvedValue({ success: true }),
+    listFiles: jest.fn().mockResolvedValue([]),
+  }));
+});
+
+// Mock formidable - needs to return a function that returns an object with parse method
+jest.mock('formidable', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    parse: jest.fn((req, callback) => {
+      // Use data from req.body if available, otherwise use empty objects
+      const fields = req.body || {};
+      const files = {
+        image: req.body?.imageFile || {
+          filepath: '/tmp/test-image.jpg',
+          originalFilename: 'test.jpg',
+          newFilename: 'test.jpg',
+          mimetype: 'image/jpeg',
+          size: 1024,
+        },
+      };
+      callback(null, fields, files);
+    }),
+  })),
+}));
+
+// Mock fs/promises
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn().mockResolvedValue(Buffer.from('mock file content')),
+  unlink: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Now import the controller after mocks are set up
+import { index, show, store, update, destroy } from '../../src/lib/controllers/product';
+import { Product } from '../../src/lib/models/Product';
+import { Category } from '../../src/lib/models/Category';
+import {validateImageFile} from "../../src/lib/utils/product";
+import {isValidObjectId} from "mongoose";
 
 describe('Admin Product Controller API Tests', () => {
   let mockReq: Partial<AuthenticatedRequest>;
@@ -85,6 +129,7 @@ describe('Admin Product Controller API Tests', () => {
       expect(result.success).toBe(true);
       expect(result.products).toHaveLength(2);
       expect(result.statusCode).toBe(200);
+
     });
 
     it('should filter products by category', async () => {
@@ -180,7 +225,7 @@ describe('Admin Product Controller API Tests', () => {
 
       mockReq.query = { id: '507f1f77bcf86cd799439012' };
 
-      (Product.findById as jest.Mock).mockReturnValue({
+      (Product.findOne as jest.Mock).mockReturnValue({
         populate: jest.fn().mockResolvedValue(mockProduct),
       });
 
@@ -210,7 +255,7 @@ describe('Admin Product Controller API Tests', () => {
     it('should return error for non-existent product', async () => {
       mockReq.query = { id: '507f1f77bcf86cd799439012' };
 
-      (Product.findById as jest.Mock).mockReturnValue({
+      (Product.findOne as jest.Mock).mockReturnValue({
         populate: jest.fn().mockResolvedValue(null),
       });
 
@@ -238,6 +283,7 @@ describe('Admin Product Controller API Tests', () => {
         categoryId: '507f1f77bcf86cd799439013',
         isActive: true,
         save: jest.fn().mockResolvedValue(true),
+        populate: jest.fn()
       };
 
       mockReq.body = {
@@ -248,8 +294,10 @@ describe('Admin Product Controller API Tests', () => {
         categoryId: '507f1f77bcf86cd799439013',
       };
 
-      (productUtils.validateProductRequest as jest.Mock).mockReturnValue(null);
-      (Category.findById as jest.Mock).mockResolvedValue(mockCategory);
+      (productUtils.validateProductRequest as jest.Mock).mockReturnValue([]);
+      (productUtils.validateImageFile as jest.Mock).mockReturnValue([]);
+      (Category.findOne as jest.Mock).mockResolvedValue(mockCategory);
+      (Product.findOne as jest.Mock).mockResolvedValue(null);
       (Product.create as jest.Mock).mockResolvedValue(mockProduct);
       (productUtils.buildProductResponse as jest.Mock).mockReturnValue({
         id: '507f1f77bcf86cd799439012',
@@ -269,7 +317,7 @@ describe('Admin Product Controller API Tests', () => {
         price: -10,
       };
 
-      (productUtils.validateProductRequest as jest.Mock).mockReturnValue('Name is required');
+      (productUtils.validateProductRequest as jest.Mock).mockReturnValue(['Name is required']);
 
       const result = await store(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
@@ -286,8 +334,9 @@ describe('Admin Product Controller API Tests', () => {
         categoryId: '507f1f77bcf86cd799439013',
       };
 
-      (productUtils.validateProductRequest as jest.Mock).mockReturnValue(null);
-      (Category.findById as jest.Mock).mockResolvedValue(null);
+      (productUtils.validateProductRequest as jest.Mock).mockReturnValue([]);
+      (productUtils.validateImageFile as jest.Mock).mockReturnValue([]);
+      (Category.findOne as jest.Mock).mockResolvedValue(null);
 
       const result = await store(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
@@ -310,9 +359,22 @@ describe('Admin Product Controller API Tests', () => {
         categoryId: '507f1f77bcf86cd799439013',
       };
 
-      (productUtils.validateProductRequest as jest.Mock).mockReturnValue(null);
-      (Category.findById as jest.Mock).mockResolvedValue(mockCategory);
-      (Product.create as jest.Mock).mockRejectedValue({ code: 11000 });
+      const mockProduct = {
+        _id: '507f1f77bcf86cd799439012',
+        name: 'New Product',
+        description: 'New Description',
+        price: 99.99,
+        stock: 10,
+        categoryId: '507f1f77bcf86cd799439013',
+        isActive: true,
+        save: jest.fn().mockResolvedValue(true),
+        populate: jest.fn()
+      };
+
+      (productUtils.validateProductRequest as jest.Mock).mockReturnValue([]);
+      (productUtils.validateImageFile as jest.Mock).mockReturnValue([]);
+      (Category.findOne as jest.Mock).mockResolvedValue(mockCategory);
+      (Product.findOne as jest.Mock).mockResolvedValue(mockProduct);
 
       const result = await store(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
@@ -344,9 +406,11 @@ describe('Admin Product Controller API Tests', () => {
         price: 149.99,
       };
 
-      (Product.findById as jest.Mock).mockResolvedValue(mockProduct);
-      (productUtils.validateProductRequest as jest.Mock).mockReturnValue(null);
-      (Category.findById as jest.Mock).mockResolvedValue(mockCategory);
+
+      (Product.findOne as jest.Mock).mockReturnValueOnce(mockProduct).mockReturnValueOnce(null);
+      (productUtils.validateProductRequest as jest.Mock).mockReturnValue([]);
+      (Category.findOne as jest.Mock).mockResolvedValue(mockCategory);
+      (Product.findByIdAndUpdate as jest.Mock).mockReturnValue({populate: jest.fn()});
       (productUtils.buildProductResponse as jest.Mock).mockReturnValue({
         id: '507f1f77bcf86cd799439012',
         name: 'Updated Product',
@@ -374,7 +438,7 @@ describe('Admin Product Controller API Tests', () => {
       mockReq.query = { id: '507f1f77bcf86cd799439012' };
       mockReq.body = { name: 'Updated Name' };
 
-      (Product.findById as jest.Mock).mockResolvedValue(null);
+      (Product.findOne as jest.Mock).mockResolvedValue(null);
 
       const result = await update(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
@@ -394,8 +458,8 @@ describe('Admin Product Controller API Tests', () => {
         price: -50, // Invalid price
       };
 
-      (Product.findById as jest.Mock).mockResolvedValue(mockProduct);
-      (productUtils.validateProductRequest as jest.Mock).mockReturnValue('Price must be positive');
+      (Product.findOne as jest.Mock).mockResolvedValue(mockProduct);
+      (productUtils.validateProductRequest as jest.Mock).mockReturnValue(['Price must be positive']);
 
       const result = await update(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
@@ -437,7 +501,7 @@ describe('Admin Product Controller API Tests', () => {
     it('should return error for non-existent product', async () => {
       mockReq.query = { id: '507f1f77bcf86cd799439012' };
 
-      (Product.findById as jest.Mock).mockResolvedValue(null);
+      (Product.findOne as jest.Mock).mockResolvedValue(null);
 
       const result = await destroy(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
@@ -455,8 +519,8 @@ describe('Admin Product Controller API Tests', () => {
 
       mockReq.query = { id: '507f1f77bcf86cd799439012' };
 
-      (Product.findById as jest.Mock).mockResolvedValue(mockProduct);
-      (Product.findByIdAndDelete as jest.Mock).mockRejectedValue(new Error('Database error'));
+      (Product.findOne as jest.Mock).mockResolvedValue(mockProduct);
+      (Product.findByIdAndUpdate as jest.Mock).mockRejectedValue(new Error('Database error'));
 
       const result = await destroy(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 

@@ -10,7 +10,7 @@ import {
   me,
 } from '../../src/lib/controllers/auth';
 import { User } from '../../src/lib/models/User';
-import { Customer } from '../../src/lib/models/Customer';
+
 import { Address } from '../../src/lib/models/Address';
 import { emailService } from '../../src/lib/services/EmailService';
 import * as authUtils from '../../src/lib/utils/auth';
@@ -18,10 +18,38 @@ import { UserRole, Gender } from '../../src/lib/models/enums';
 import jwt from 'jsonwebtoken';
 
 // Mock dependencies
-jest.mock('../../src/lib/models/User');
-jest.mock('../../src/lib/models/Customer');
-jest.mock('../../src/lib/models/Address');
-jest.mock('../../src/lib/services/EmailService');
+jest.mock('../../src/lib/models/User', () => ({
+  User: {
+    findOne: jest.fn(),
+    findById: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    discriminator: jest.fn().mockReturnValue({
+      findOne: jest.fn(),
+      findById: jest.fn(),
+      create: jest.fn(),
+    }),
+    discriminators: {},
+  },
+}));
+jest.mock('../../src/lib/models/Customer', () => ({
+  Customer: {
+    create: jest.fn(),
+    findById: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    findOne: jest.fn(),
+  },
+}));
+jest.mock('../../src/lib/models/Address', () => ({
+  Address: {
+    create: jest.fn(),
+  },
+}));
+jest.mock('../../src/lib/services/EmailService', () => ({
+  emailService: {
+    sendEmailVerification: jest.fn(),
+    sendPasswordReset: jest.fn(),
+  },
+}));
 jest.mock('../../src/lib/utils/auth', () => ({
   ...jest.requireActual('../../src/lib/utils/auth'),
   comparePassword: jest.fn(),
@@ -35,6 +63,8 @@ jest.mock('../../src/lib/utils/auth', () => ({
   generateAuthToken: jest.fn(),
   verifyAuthToken: jest.fn(),
 }));
+
+import { Customer } from '../../src/lib/models/Customer';
 
 describe('Auth Controller API Tests', () => {
   let mockReq: Partial<NextApiRequest>;
@@ -221,7 +251,7 @@ describe('Auth Controller API Tests', () => {
         email: 'john@example.com',
         role: UserRole.CUSTOMER,
         phone: '+1234567890',
-        dob: '1990-01-01',
+        dob: new Date(1990, 1, 1),
         gender: Gender.MALE,
         occupation: 'Engineer',
         isActive: true,
@@ -233,7 +263,7 @@ describe('Auth Controller API Tests', () => {
         email: 'john@example.com',
         password: 'Password123!',
         phone: '+1234567890',
-        dob: '1990-01-01',
+        dob: new Date(1990, 1, 1),
         gender: Gender.MALE,
         occupation: 'Engineer',
         address: {

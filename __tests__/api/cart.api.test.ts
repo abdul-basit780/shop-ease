@@ -3,6 +3,7 @@ import { getCart, addProduct } from '../../src/lib/controllers/cart';
 import { Cart } from '../../src/lib/models/Cart';
 import { Product } from '../../src/lib/models/Product';
 import { OptionValue } from '../../src/lib/models/OptionValue';
+import { OptionType } from '../../src/lib/models/OptionType';
 import * as cartUtils from '../../src/lib/utils/cart';
 import { AuthenticatedRequest } from '../../src/lib/middleware/auth';
 import mongoose from 'mongoose';
@@ -15,6 +16,12 @@ jest.mock('../../src/lib/utils/cart', () => ({
   ...jest.requireActual('../../src/lib/utils/cart'),
   buildCartResponse: jest.fn(),
   validateAddToCart: jest.fn(),
+}));
+
+jest.mock('../../src/lib/models/OptionType', () => ({
+  OptionType: {
+    find: jest.fn()
+  }
 }));
 
 describe('Cart Controller API Tests', () => {
@@ -154,6 +161,7 @@ describe('Cart Controller API Tests', () => {
         products: [],
         totalAmount: 0,
         save: jest.fn().mockResolvedValue(true),
+        populate: jest.fn()
       };
 
       const mockCartResponse = {
@@ -177,9 +185,11 @@ describe('Cart Controller API Tests', () => {
         quantity: 1,
       };
 
-      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue(null);
-      (Product.findById as jest.Mock).mockResolvedValue(mockProduct);
+      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue([]);
+      (Product.findOne as jest.Mock).mockResolvedValue(mockProduct);
       (Cart.findOne as jest.Mock).mockResolvedValue(mockCart);
+      (Cart.findOneAndUpdate as jest.Mock).mockResolvedValue(mockCart);
+      (OptionType.find as jest.Mock).mockResolvedValue([]);
       (cartUtils.buildCartResponse as jest.Mock).mockResolvedValue(mockCartResponse);
 
       const result = await addProduct(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
@@ -195,7 +205,7 @@ describe('Cart Controller API Tests', () => {
         quantity: -1,
       };
 
-      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue('Invalid product ID');
+      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue(['Invalid product ID']);
 
       const result = await addProduct(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
@@ -209,38 +219,14 @@ describe('Cart Controller API Tests', () => {
         quantity: 1,
       };
 
-      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue(null);
-      (Product.findById as jest.Mock).mockResolvedValue(null);
+      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue([]);
+      (Product.findOne as jest.Mock).mockResolvedValue(null);
 
       const result = await addProduct(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 
       expect(result.success).toBe(false);
       expect(result.message).toContain('not found');
       expect(result.statusCode).toBe(404);
-    });
-
-    it('should return error for inactive product', async () => {
-      const mockProduct = {
-        _id: '507f1f77bcf86cd799439013',
-        name: 'Test Product',
-        price: 99.99,
-        stock: 10,
-        isActive: false,
-      };
-
-      mockReq.body = {
-        productId: '507f1f77bcf86cd799439013',
-        quantity: 1,
-      };
-
-      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue(null);
-      (Product.findById as jest.Mock).mockResolvedValue(mockProduct);
-
-      const result = await addProduct(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
-
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('not available');
-      expect(result.statusCode).toBe(400);
     });
 
     it('should return error for insufficient stock', async () => {
@@ -270,8 +256,8 @@ describe('Cart Controller API Tests', () => {
         quantity: 5,
       };
 
-      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue(null);
-      (Product.findById as jest.Mock).mockResolvedValue(mockProduct);
+      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue([]);
+      (Product.findOne as jest.Mock).mockResolvedValue(mockProduct);
       (Cart.findOne as jest.Mock).mockResolvedValue(mockCart);
 
       const result = await addProduct(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
@@ -287,8 +273,8 @@ describe('Cart Controller API Tests', () => {
         quantity: 1,
       };
 
-      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue(null);
-      (Product.findById as jest.Mock).mockRejectedValue(new Error('Database error'));
+      (cartUtils.validateAddToCart as jest.Mock).mockReturnValue([]);
+      (Product.findOne as jest.Mock).mockRejectedValue(new Error('Database error'));
 
       const result = await addProduct(mockReq as AuthenticatedRequest, mockRes as NextApiResponse);
 

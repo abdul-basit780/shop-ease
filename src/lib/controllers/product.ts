@@ -493,7 +493,9 @@ export const update = async (
         new: true,
         runValidators: true,
       }
-    ).populate("categoryId", "name");
+    )
+
+    updatedProduct.populate("categoryId", "name");
 
     if (!updatedProduct) {
       productResponse.message = "Product not found";
