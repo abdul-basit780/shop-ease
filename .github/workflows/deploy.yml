@@ -26,5 +26,6 @@ jobs:
 
       # Collect coverage
       - uses: ArtiomTr/jest-coverage-report-action@v2
+        name: Coverage
         with:
-          test-script: npm run coverate
+          test-script: npm run coverage
