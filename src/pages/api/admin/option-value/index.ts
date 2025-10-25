@@ -16,6 +16,13 @@ import {
 } from "../../../../lib/middleware/auth";
 import { index, store } from "@/lib/controllers/optionValue";
 
+// Disable Next.js body parser for file uploads
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 const getOptionValuesHandler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse

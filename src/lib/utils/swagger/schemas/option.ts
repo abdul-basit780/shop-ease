@@ -64,7 +64,7 @@ export const optionSchemas = {
   // Option Value Schemas
   OptionValueRequest: {
     type: "object",
-    required: ["optionTypeId", "value"],
+    required: ["optionTypeId", "value", "image"],
     properties: {
       optionTypeId: {
         type: "string",
@@ -78,6 +78,11 @@ export const optionSchemas = {
         example: "M",
         description:
           "Option value (e.g., M, Red, Cotton). Must be unique for this option type.",
+      },
+      image: {
+        type: "string",
+        format: "binary",
+        description: "Option value image file (JPEG, PNG, WebP - max 5MB)",
       },
       price: {
         type: "number",
@@ -93,6 +98,44 @@ export const optionSchemas = {
         description: "Stock quantity for this option (default: 0)",
       },
     },
+  },
+
+  OptionValueUpdateRequest: {
+    type: "object",
+    properties: {
+      optionTypeId: {
+        type: "string",
+        example: "507f1f77bcf86cd799439011",
+        description: "Option type ID",
+      },
+      value: {
+        type: "string",
+        minLength: 1,
+        maxLength: 100,
+        example: "L",
+        description: "Updated option value",
+      },
+      image: {
+        type: "string",
+        format: "binary",
+        description:
+          "Updated option value image file (JPEG, PNG, WebP - max 5MB)",
+      },
+      price: {
+        type: "number",
+        format: "float",
+        minimum: 0,
+        example: 7.5,
+        description: "Updated additional price",
+      },
+      stock: {
+        type: "integer",
+        minimum: 0,
+        example: 150,
+        description: "Updated stock quantity",
+      },
+    },
+    description: "All fields are optional for updates",
   },
 
   OptionValueResponse: {
@@ -111,9 +154,20 @@ export const optionSchemas = {
         example: "size",
         description: "Populated option type name",
       },
+      productId: {
+        type: "string",
+        example: "507f1f77bcf86cd799439013",
+        description: "Product ID (populated from option type)",
+      },
       value: {
         type: "string",
         example: "m",
+      },
+      img: {
+        type: "string",
+        format: "uri",
+        example: "https://ik.imagekit.io/your_id/option-values/image_xyz.jpg",
+        description: "ImageKit CDN URL for the option value image",
       },
       price: {
         type: "number",
