@@ -1,4 +1,4 @@
-import { useState, useEffect,useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import {
@@ -72,16 +72,28 @@ export default function Cart() {
     }
   };
 
-  const updateQuantity = async (cartId, productId, newQuantity) => {
+  const updateQuantity = async (productId, newQuantity, selectedOptions) => {
     if (newQuantity < 1) return;
 
-    setUpdatingItems((prev) => new Set(prev).add(productId));
+    // Create unique key for updating state
+    const itemKey = `${productId}-${selectedOptions?.map(o => o.id).join('-') || 'no-options'}`;
+    setUpdatingItems((prev) => new Set(prev).add(itemKey));
 
     try {
-      const response = await apiClient.put(`/api/customer/cart/${cartId}`, {
-        productId,
+      // Build request body
+      const requestBody = {
         quantity: newQuantity,
-      });
+      };
+
+      // Add selectedOptions if they exist
+      if (selectedOptions && selectedOptions.length > 0) {
+        requestBody.selectedOptions = selectedOptions.map(option => option.id);
+      }
+
+      const response = await apiClient.put(
+        `/api/customer/cart/${productId}`,
+        requestBody
+      );
 
       if (response.success && response.data) {
         setCart(response.data);
@@ -96,19 +108,31 @@ export default function Cart() {
     } finally {
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(productId);
+        newSet.delete(itemKey);
         return newSet;
       });
     }
   };
 
-  const removeItem = async (productId) => {
-    setUpdatingItems((prev) => new Set(prev).add(productId));
+  const removeItem = async (productId, selectedOptions) => {
+    // Create unique key for updating state
+    const itemKey = `${productId}-${selectedOptions?.map(o => o.id).join('-') || 'no-options'}`;
+    setUpdatingItems((prev) => new Set(prev).add(itemKey));
 
     try {
+      // Build request body for delete
+      const requestBody = {};
+
+      // Add selectedOptions if they exist
+      if (selectedOptions && selectedOptions.length > 0) {
+        requestBody.selectedOptions = selectedOptions.map(option => option.id);
+      }
+
       const response = await apiClient.delete(
-        `/api/customer/cart/${productId}`
+        `/api/customer/cart/${productId}`,
+        requestBody
       );
+
       console.log("cart del", response);
       if (response.success) {
         setCart(response.data);
@@ -125,7 +149,7 @@ export default function Cart() {
     } finally {
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(productId);
+        newSet.delete(itemKey);
         return newSet;
       });
     }
@@ -133,6 +157,12 @@ export default function Cart() {
 
   const handleCheckout = () => {
     router.push("/checkout");
+  };
+
+  // Helper function to check if item is being updated
+  const isItemUpdating = (productId, selectedOptions) => {
+    const itemKey = `${productId}-${selectedOptions?.map(o => o.id).join('-') || 'no-options'}`;
+    return updatingItems.has(itemKey);
   };
 
   if (isLoading) {
@@ -163,7 +193,7 @@ export default function Cart() {
             <p className="text-gray-600 mb-8">
               Add some products to get started!
             </p>
-            <Link href="/products">
+            <Link href="/customer/all-products">
               <button className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-xl transition-all transform hover:scale-105">
                 Browse Products
               </button>
@@ -193,136 +223,154 @@ export default function Cart() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {cart.products.map((item, idx) => (
-              <div
-                key={item.productId}
-                className="bg-white rounded-2xl shadow-md p-6 transition-all hover:shadow-lg animate-fade-in"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <div className="flex gap-6">
-                  {/* Product Image */}
-                  <Link href={`/products/${item.productId}`}>
-                    <div className="w-32 h-32 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
-                      {item.img ? (
-                        <img
-                          src={item.img}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                            e.target.nextElementSibling.style.display = "flex";
-                          }}
-                        />
-                      ) : null}
-                      <div
-                        className="w-full h-full flex items-center justify-center"
-                        style={{ display: item.img ? "none" : "flex" }}
-                      >
-                        <Package className="h-12 w-12 text-gray-400" />
-                      </div>
-                    </div>
-                  </Link>
-
-                  {/* Product Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <Link href={`/products/${item.productId}`}>
-                          <h3 className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 transition-colors cursor-pointer">
-                            {item.name}
-                          </h3>
-                        </Link>
-                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs font-semibold uppercase">
-                          {item.categoryName}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => removeItem(item.productId)}
-                        disabled={updatingItems.has(item.productId)}
-                        className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50 p-2 hover:bg-red-50 rounded-lg"
-                        title="Remove item"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                      {item.description}
-                    </p>
-
-                    {/* Availability Warning */}
-                    {!item.isAvailable && (
-                      <div className="flex items-center gap-2 mb-3 text-red-600 text-sm bg-red-50 p-2 rounded-lg">
-                        <AlertCircle className="h-4 w-4" />
-                        <span className="font-semibold">
-                          Currently unavailable
-                        </span>
-                      </div>
-                    )}
-
-                    {item.isAvailable && item.stock < 5 && (
-                      <div className="flex items-center gap-2 mb-3 text-orange-600 text-sm bg-orange-50 p-2 rounded-lg">
-                        <AlertCircle className="h-4 w-4" />
-                        <span className="font-semibold">
-                          Only {item.stock} left in stock
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      {/* Quantity Controls */}
-                      <div className="flex items-center border-2 border-gray-300 rounded-lg overflow-hidden">
-                        <button
-                          onClick={() =>
-                            updateQuantity(
-                              cart.id,
-                              item.productId,
-                              item.quantity - 1
-                            )
-                          }
-                          disabled={
-                            item.quantity <= 1 ||
-                            updatingItems.has(item.productId)
-                          }
-                          className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            {cart.products.map((item, idx) => {
+              const isUpdating = isItemUpdating(item.productId, item.selectedOptions);
+              
+              return (
+                <div
+                  key={`${item.productId}-${item.selectedOptions?.map(o => o.id).join('-') || idx}`}
+                  className="bg-white rounded-2xl shadow-md p-6 transition-all hover:shadow-lg animate-fade-in"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
+                  <div className="flex gap-6">
+                    {/* Product Image */}
+                    <Link href={`/products/${item.productId}`}>
+                      <div className="w-32 h-32 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+                        {item.img ? (
+                          <img
+                            src={item.img}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                              e.target.nextElementSibling.style.display = "flex";
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="w-full h-full flex items-center justify-center"
+                          style={{ display: item.img ? "none" : "flex" }}
                         >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="w-12 text-center font-bold">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() =>
-                            updateQuantity(
-                              cart.id,
-                              item.productId,
-                              item.quantity + 1
-                            )
-                          }
-                          disabled={
-                            item.quantity >= item.stock ||
-                            updatingItems.has(item.productId)
-                          }
-                          className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      {/* Price */}
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500">
-                          ${item.price.toFixed(2)} each
+                          <Package className="h-12 w-12 text-gray-400" />
                         </div>
-                        <div className="text-xl font-bold text-blue-600">
-                          ${item.subtotal.toFixed(2)}
+                      </div>
+                    </Link>
+
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <Link href={`/products/${item.productId}`}>
+                            <h3 className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 transition-colors cursor-pointer">
+                              {item.name}
+                            </h3>
+                          </Link>
+                          <span className="inline-block px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs font-semibold uppercase">
+                            {item.categoryName}
+                          </span>
+                          
+                          {/* Display Selected Options */}
+                          {item.selectedOptions && item.selectedOptions.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {item.selectedOptions.map((option, optIdx) => (
+                                <span
+                                  key={optIdx}
+                                  className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium"
+                                >
+                                  {option.optionTypeName && (
+                                    <span className="font-semibold mr-1">{option.optionTypeName}:</span>
+                                  )}
+                                  {option.value}
+                                  {option.price > 0 && (
+                                    <span className="ml-1 text-purple-600">+${option.price.toFixed(2)}</span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeItem(item.productId, item.selectedOptions)}
+                          disabled={isUpdating}
+                          className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50 p-2 hover:bg-red-50 rounded-lg"
+                          title="Remove item"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                        {item.description}
+                      </p>
+
+                      {/* Availability Warning */}
+                      {!item.isAvailable && (
+                        <div className="flex items-center gap-2 mb-3 text-red-600 text-sm bg-red-50 p-2 rounded-lg">
+                          <AlertCircle className="h-4 w-4" />
+                          <span className="font-semibold">
+                            Currently unavailable
+                          </span>
+                        </div>
+                      )}
+
+                      {item.isAvailable && item.stock < 5 && (
+                        <div className="flex items-center gap-2 mb-3 text-orange-600 text-sm bg-orange-50 p-2 rounded-lg">
+                          <AlertCircle className="h-4 w-4" />
+                          <span className="font-semibold">
+                            Only {item.stock} left in stock
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between">
+                        {/* Quantity Controls */}
+                        <div className="flex items-center border-2 border-gray-300 rounded-lg overflow-hidden">
+                          <button
+                            onClick={() =>
+                              updateQuantity(
+                                item.productId,
+                                item.quantity - 1,
+                                item.selectedOptions
+                              )
+                            }
+                            disabled={item.quantity <= 1 || isUpdating}
+                            className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="w-12 text-center font-bold">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() =>
+                              updateQuantity(
+                                item.productId,
+                                item.quantity + 1,
+                                item.selectedOptions
+                              )
+                            }
+                            disabled={item.quantity >= item.stock || isUpdating}
+                            className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right">
+                          <div className="text-sm text-gray-500">
+                            ${item.price.toFixed(2)} each
+                          </div>
+                          <div className="text-xl font-bold text-blue-600">
+                            ${item.subtotal.toFixed(2)}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Order Summary */}
@@ -388,7 +436,7 @@ export default function Cart() {
                 <ArrowRight className="h-5 w-5" />
               </button>
 
-              <Link href="/products">
+              <Link href="/customer/all-products">
                 <button className="w-full px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all">
                   Continue Shopping
                 </button>
