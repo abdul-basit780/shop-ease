@@ -495,7 +495,7 @@ export const update = async (
       }
     )
 
-    updatedProduct.populate("categoryId", "name");
+    updatedProduct?.populate("categoryId", "name");
 
     if (!updatedProduct) {
       productResponse.message = "Product not found";
