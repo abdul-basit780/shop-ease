@@ -5,6 +5,10 @@ import 'jest-extended';
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret';
 process.env.JWT_EXPIRES_IN = '7d';
+process.env.RESEND_API_KEY = 'test_resend_api_key'
+process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY="public_"
+process.env.IMAGEKIT_PRIVATE_KEY="private_"
+process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT="https://ik.imagekit.io/dpmu0ud8v"
 
 // Mock console methods to reduce noise in tests
 global.console = {
