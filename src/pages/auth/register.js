@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { authService } from "../../lib/auth-service";
@@ -17,6 +16,8 @@ import {
   Sparkles,
   CheckCircle,
   Gift,
+  Send,
+  ArrowRight,
 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -42,11 +43,12 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    // Handle nested address fields
     if (name.startsWith("address.")) {
       const addressField = name.split(".")[1];
       setFormData((prev) => ({
@@ -126,25 +128,19 @@ export default function RegisterPage() {
       });
 
       if (response.success) {
+        // Show success and email verification info
+        setRegisteredEmail(formData.email);
+        setRegistrationSuccess(true);
+        
         toast.success("Account created successfully! 🎉", {
           icon: "✨",
+          duration: 4000,
           style: {
             borderRadius: "12px",
             background: "#10b981",
             color: "#fff",
           },
         });
-
-        // Wait for toast to show and events to propagate
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        // Navigate to home page
-        await router.push("/");
-
-        // Dispatch event again after navigation to ensure navbar updates
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("userLoggedIn"));
-        }
       } else {
         toast.error(response.error || "Registration failed", {
           style: {
@@ -165,6 +161,42 @@ export default function RegisterPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleContinue = () => {
+    router.push("/");
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      const response = await authService.sendVerificationEmail(registeredEmail);
+      if (response.success) {
+        toast.success("Verification email sent! 📧", {
+          icon: "✉️",
+          style: {
+            borderRadius: "12px",
+            background: "#10b981",
+            color: "#fff",
+          },
+        });
+      } else {
+        toast.error("Failed to resend email", {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+          },
+        });
+      }
+    } catch (error) {
+      toast.error("An error occurred", {
+        style: {
+          borderRadius: "12px",
+          background: "#ef4444",
+          color: "#fff",
+        },
+      });
     }
   };
 
@@ -192,6 +224,103 @@ export default function RegisterPage() {
 
   const strength = passwordStrength();
 
+  // ✅ SUCCESS SCREEN - Show after registration
+  if (registrationSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-green-50 via-white to-blue-50 relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute w-96 h-96 bg-green-200 opacity-20 rounded-full blur-3xl top-10 right-10 animate-pulse"></div>
+          <div className="absolute w-96 h-96 bg-blue-200 opacity-20 rounded-full blur-3xl bottom-10 left-10 animate-pulse"></div>
+        </div>
+
+        <div className="w-full max-w-md relative z-10">
+          <Card className="shadow-2xl border-0 backdrop-blur-sm bg-white/90">
+            <CardBody className="p-8 text-center">
+              {/* Success Icon */}
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-6 shadow-lg animate-bounce-in">
+                <CheckCircle className="h-10 w-10 text-white" />
+              </div>
+
+              {/* Success Message */}
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">
+                Welcome to ShopEase! 🎉
+              </h2>
+              <p className="text-gray-600 mb-2">
+                Your account has been created successfully!
+              </p>
+
+              {/* Email Verification Notice */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6 text-left">
+                <div className="flex items-start mb-4">
+                  <Mail className="h-6 w-6 text-blue-600 mr-3 mt-1 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      📧 Verify Your Email
+                    </h3>
+                    <p className="text-sm text-gray-700 mb-3">
+                      We've sent a verification link to:
+                    </p>
+                    <p className="text-sm font-semibold text-blue-600 mb-3 break-all">
+                      {registeredEmail}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Please check your inbox and click the verification link to activate your account.
+                    </p>
+                  </div>
+                </div>
+
+                {/* What's Next */}
+                <div className="border-t border-blue-200 pt-4 mt-4">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">What's next?</p>
+                  <ul className="space-y-2 text-xs text-gray-600">
+                    <li className="flex items-start">
+                      <span className="mr-2">1️⃣</span>
+                      <span>Check your email (including spam folder)</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">2️⃣</span>
+                      <span>Click the verification link</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">3️⃣</span>
+                      <span>Start shopping with full access!</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button
+                  onClick={handleContinue}
+                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                >
+                  Continue to ShopEase
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+
+                <button
+                  onClick={handleResendVerification}
+                  className="w-full px-6 py-3 text-gray-700 hover:text-gray-900 font-semibold border-2 border-gray-300 hover:border-gray-400 rounded-xl hover:bg-gray-50 transition-all"
+                >
+                  <Send className="h-5 w-5 mr-2 inline" />
+                  Resend Verification Email
+                </button>
+              </div>
+
+              {/* Note */}
+              <p className="mt-6 text-xs text-gray-500">
+                You can verify your email later from your account settings
+              </p>
+            </CardBody>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // REGISTRATION FORM (original code continues...)
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-secondary-50 via-white to-primary-50 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -321,7 +450,7 @@ export default function RegisterPage() {
                   Account
                 </span>
               </h1>
-              <p className="text-gray-600">Join ShopHub today</p>
+              <p className="text-gray-600">Join ShopEase today</p>
             </div>
 
             <Card className="shadow-2xl border-0 backdrop-blur-sm bg-white/90">

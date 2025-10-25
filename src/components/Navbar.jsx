@@ -222,119 +222,123 @@ export const Navbar = () => {
                     onClick={() => setShowCategoryMenu(false)}
                   ></div>
 
-                  <div className="fixed left-1/2 -translate-x-1/2 top-24 w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[70vh] overflow-hidden">
-                    <div className="grid grid-cols-4 gap-0 h-full">
-                      {/* Categories List */}
-                      <div className="col-span-1 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
-                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 px-3 sticky top-0 bg-gray-50 py-2 z-10">
+                  <div className="fixed left-1/2 -translate-x-1/2 top-24 w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+                    <div className="grid grid-cols-4 gap-0" style={{ height: '600px', maxHeight: 'calc(100vh - 120px)' }}>
+                      {/* Categories List with Scroll */}
+                      <div className="col-span-1 bg-gray-50 border-r border-gray-200 flex flex-col h-full">
+                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide px-3 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
                           All Categories
                         </h3>
-                        <div className="space-y-1">
-                          {categories.map((category) => (
-                            <div
-                              key={category.id}
-                              onMouseEnter={() =>
-                                setHoveredCategory(category.id)
-                              }
-                              className={`group cursor-pointer rounded-lg transition-all duration-200 flex items-center justify-between px-3 py-2.5 ${
-                                hoveredCategory === category.id
-                                  ? "bg-blue-50 text-blue-600"
-                                  : "hover:bg-gray-100"
-                              }`}
-                            >
-                              <span className="font-medium capitalize text-sm">
-                                {category.name}
-                              </span>
-                              {category.children &&
-                                category.children.length > 0 && (
-                                  <ChevronRight
-                                    className={`h-4 w-4 transition-transform ${
-                                      hoveredCategory === category.id
-                                        ? "translate-x-1"
-                                        : ""
-                                    }`}
-                                  />
-                                )}
-                            </div>
-                          ))}
+                        <div className="overflow-y-auto flex-1 p-4">
+                          <div className="space-y-1">
+                            {categories.map((category) => (
+                              <div
+                                key={category.id}
+                                onMouseEnter={() =>
+                                  setHoveredCategory(category.id)
+                                }
+                                className={`group cursor-pointer rounded-lg transition-all duration-200 flex items-center justify-between px-3 py-2.5 ${
+                                  hoveredCategory === category.id
+                                    ? "bg-blue-50 text-blue-600"
+                                    : "hover:bg-gray-100"
+                                }`}
+                              >
+                                <span className="font-medium capitalize text-sm">
+                                  {category.name}
+                                </span>
+                                {category.children &&
+                                  category.children.length > 0 && (
+                                    <ChevronRight
+                                      className={`h-4 w-4 transition-transform ${
+                                        hoveredCategory === category.id
+                                          ? "translate-x-1"
+                                          : ""
+                                      }`}
+                                    />
+                                  )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Subcategories Display */}
-                      <div className="col-span-3 p-6 overflow-y-auto">
-                        {hoveredCategory ? (
-                          <div>
-                            <div className="mb-4 sticky top-0 bg-white py-2 z-10">
-                              <h3 className="text-lg font-bold text-gray-900 capitalize mb-1">
-                                {
-                                  categories.find(
-                                    (c) => c.id === hoveredCategory
-                                  )?.name
-                                }
-                              </h3>
-                              <p className="text-sm text-gray-600">
-                                Browse all products in this category
-                              </p>
-                            </div>
+                      {/* Subcategories Display with Scroll */}
+                      <div className="col-span-3 flex flex-col h-full">
+                        <div className="overflow-y-auto flex-1 p-6">
+                          {hoveredCategory ? (
+                            <div>
+                              <div className="mb-4 sticky top-0 bg-white pb-4 z-10">
+                                <h3 className="text-lg font-bold text-gray-900 capitalize mb-1">
+                                  {
+                                    categories.find(
+                                      (c) => c.id === hoveredCategory
+                                    )?.name
+                                  }
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  Browse all products in this category
+                                </p>
+                              </div>
 
-                            {categories.find((c) => c.id === hoveredCategory)
-                              ?.children?.length > 0 ? (
-                              <div className="grid grid-cols-3 gap-4 pb-4">
-                                {categories
-                                  .find((c) => c.id === hoveredCategory)
-                                  .children.map((subcategory) => (
-                                    <Link
-                                      key={subcategory.id}
-                                      href={`/customer/all-products?categoryId=${hoveredCategory}&subcategoryId=${subcategory.id}`}
-                                      onClick={() => setShowCategoryMenu(false)}
-                                      className="text-left p-3 rounded-lg hover:bg-blue-50 transition-all group block border border-gray-100 hover:border-blue-200"
-                                    >
-                                      <div className="font-semibold text-gray-900 group-hover:text-blue-600 capitalize">
-                                        {subcategory.name}
-                                      </div>
-                                    </Link>
-                                  ))}
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                <Link
-                                  href={`/customer/all-products?categoryId=${hoveredCategory}`}
-                                  onClick={() => setShowCategoryMenu(false)}
-                                  className="block p-4 rounded-lg bg-blue-50 hover:bg-blue-100 transition-all border border-blue-200"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <div className="font-semibold text-blue-900 mb-1">
-                                        View All{" "}
-                                        {
-                                          categories.find(
-                                            (c) => c.id === hoveredCategory
-                                          )?.name
-                                        }
-                                      </div>
-                                      <div className="text-sm text-blue-700">
-                                        Browse all products in this category
-                                      </div>
-                                    </div>
-                                    <ChevronRight className="h-5 w-5 text-blue-600" />
-                                  </div>
-                                </Link>
-                                <div className="text-center py-6 text-gray-500">
-                                  <p className="text-sm">
-                                    No subcategories available
-                                  </p>
+                              {categories.find((c) => c.id === hoveredCategory)
+                                ?.children?.length > 0 ? (
+                                <div className="grid grid-cols-3 gap-4 pb-4">
+                                  {categories
+                                    .find((c) => c.id === hoveredCategory)
+                                    .children.map((subcategory) => (
+                                      <Link
+                                        key={subcategory.id}
+                                        href={`/customer/all-products?categoryId=${hoveredCategory}&subcategoryId=${subcategory.id}`}
+                                        onClick={() => setShowCategoryMenu(false)}
+                                        className="text-left p-3 rounded-lg hover:bg-blue-50 transition-all group block border border-gray-100 hover:border-blue-200"
+                                      >
+                                        <div className="font-semibold text-gray-900 group-hover:text-blue-600 capitalize">
+                                          {subcategory.name}
+                                        </div>
+                                      </Link>
+                                    ))}
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-400">
-                            <div className="text-center">
-                              <Package className="h-16 w-16 mx-auto mb-3 opacity-50" />
-                              <p>Hover over a category to see options</p>
+                              ) : (
+                                <div className="space-y-3">
+                                  <Link
+                                    href={`/customer/all-products?categoryId=${hoveredCategory}`}
+                                    onClick={() => setShowCategoryMenu(false)}
+                                    className="block p-4 rounded-lg bg-blue-50 hover:bg-blue-100 transition-all border border-blue-200"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <div className="font-semibold text-blue-900 mb-1">
+                                          View All{" "}
+                                          {
+                                            categories.find(
+                                              (c) => c.id === hoveredCategory
+                                            )?.name
+                                          }
+                                        </div>
+                                        <div className="text-sm text-blue-700">
+                                          Browse all products in this category
+                                        </div>
+                                      </div>
+                                      <ChevronRight className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                  </Link>
+                                  <div className="text-center py-6 text-gray-500">
+                                    <p className="text-sm">
+                                      No subcategories available
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-gray-400">
+                              <div className="text-center">
+                                <Package className="h-16 w-16 mx-auto mb-3 opacity-50" />
+                                <p>Hover over a category to see options</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -485,141 +489,145 @@ export const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu with Scroll */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            {/* Mobile Search */}
-            <form onSubmit={handleSearch} className="mb-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 bg-gray-50"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              </div>
-            </form>
-
-            <div className="space-y-1">
-              <Link
-                href="/customer/all-products"
-                className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Products
-              </Link>
-
-              {/* Mobile Categories */}
-              <div className="py-2">
-                <div className="text-xs font-bold text-gray-500 uppercase tracking-wide px-4 mb-2">
-                  Categories
+          <div className="md:hidden border-t border-gray-200 max-h-[calc(100vh-80px)] overflow-y-auto">
+            <div className="py-4">
+              {/* Mobile Search */}
+              <form onSubmit={handleSearch} className="mb-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 bg-gray-50"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 </div>
-                {categories.map((category) => (
-                  <div key={category.id} className="mb-1">
+              </form>
+
+              <div className="space-y-1">
+                <Link
+                  href="/customer/all-products"
+                  className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Products
+                </Link>
+
+                {/* Mobile Categories with Scroll */}
+                <div className="py-2">
+                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wide px-4 mb-2">
+                    Categories
+                  </div>
+                  <div className="space-y-1">
+                    {categories.map((category) => (
+                      <div key={category.id} className="mb-1">
+                        <Link
+                          href={`/customer/all-products?categoryId=${category.id}`}
+                          className="py-2.5 px-4 text-gray-700 font-medium capitalize hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors block"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {category.name}
+                        </Link>
+                        {category.children && category.children.length > 0 && (
+                          <div className="ml-4 space-y-1">
+                            {category.children.map((subcategory) => (
+                              <Link
+                                key={subcategory.id}
+                                href={`/customer/all-products?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                className="block py-2 px-4 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors capitalize"
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                • {subcategory.name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {user ? (
+                  <>
                     <Link
-                      href={`/customer/all-products?categoryId=${category.id}`}
-                      className="py-2.5 px-4 text-gray-700 font-medium capitalize hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors block"
+                      href="/customer/wishlist"
+                      className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      {category.name}
+                      <span>Wishlist</span>
+                      {wishlistCount > 0 && (
+                        <span className="bg-red-500 text-white text-xs rounded-full px-2.5 py-1 font-bold">
+                          {wishlistCount}
+                        </span>
+                      )}
                     </Link>
-                    {category.children && category.children.length > 0 && (
-                      <div className="ml-4 space-y-1">
-                        {category.children.map((subcategory) => (
-                          <Link
-                            key={subcategory.id}
-                            href={`/customer/all-products?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
-                            className="block py-2 px-4 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors capitalize"
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            • {subcategory.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {user ? (
-                <>
-                  <Link
-                    href="/customer/wishlist"
-                    className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <span>Wishlist</span>
-                    {wishlistCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2.5 py-1 font-bold">
-                        {wishlistCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link
-                    href="/customer/cart"
-                    className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <span>Cart</span>
-                    {cartCount > 0 && (
-                      <span className="bg-blue-500 text-white text-xs rounded-full px-2.5 py-1 font-bold">
-                        {cartCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    My Profile
-                  </Link>
-                  <Link
-                    href="/orders"
-                    className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    My Orders
-                  </Link>
-                  {user?.role === "admin" && (
                     <Link
-                      href="/admin"
+                      href="/customer/cart"
+                      className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span>Cart</span>
+                      {cartCount > 0 && (
+                        <span className="bg-blue-500 text-white text-xs rounded-full px-2.5 py-1 font-bold">
+                          {cartCount}
+                        </span>
+                      )}
+                    </Link>
+                    <Link
+                      href="/profile"
                       className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Admin Dashboard
+                      My Profile
                     </Link>
-                  )}
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full text-left py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <div className="space-y-2 pt-2">
-                  <Link
-                    href="/auth/login"
-                    className="block py-3 px-4 text-center text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-semibold transition-colors border border-gray-200"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    className="block py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Link>
-                </div>
-              )}
+                    <Link
+                      href="/orders"
+                      className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      My Orders
+                    </Link>
+                    {user?.role === "admin" && (
+                      <Link
+                        href="/admin"
+                        className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Admin Dashboard
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full text-left py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <div className="space-y-2 pt-2">
+                    <Link
+                      href="/auth/login"
+                      className="block py-3 px-4 text-center text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-semibold transition-colors border border-gray-200"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/auth/register"
+                      className="block py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

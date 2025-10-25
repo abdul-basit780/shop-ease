@@ -169,8 +169,9 @@ export default function WishlistPage() {
   };
 
   const handleMoveToCart = async (product) => {
-    await handleAddToCart(product);
+    // await handleAddToCart(product);
     await handleRemoveFromWishlist(product.productId);
+    await router.push(`/customer/product/${product.productId}`);
   };
 
   if (isLoading) {
@@ -290,7 +291,7 @@ export default function WishlistPage() {
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                     <div className="absolute bottom-4 left-4 right-4 pointer-events-auto">
-                      <Link href={`/products/${product.productId}`}>
+                      <Link href={`/customer/product/${product.productId}`}>
                         <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all shadow-lg">
                           <Eye className="h-4 w-4" />
                           <span>View Details</span>
@@ -332,14 +333,14 @@ export default function WishlistPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAddToCart(product)}
+                      <Link
+                        href={`/customer/product/${product?.productId}`}
                         disabled={product.stock === 0 || !product.isAvailable}
                         className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                       >
                         <ShoppingCart className="h-4 w-4" />
                         <span>Add to Cart</span>
-                      </button>
+                      </Link>
                     </div>
 
                     {product.isAvailable && product.stock > 0 && (
@@ -392,12 +393,12 @@ export default function WishlistPage() {
                 </p>
               </div>
               <div className="mt-4 md:mt-0 flex gap-3">
-                <Link href="/products">
+                <Link href="/customer/all-products">
                   <button className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-all border-2 border-blue-600">
                     Continue Shopping
                   </button>
                 </Link>
-                <Link href="/cart">
+                <Link href="/customer/cart">
                   <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all">
                     View Cart
                   </button>

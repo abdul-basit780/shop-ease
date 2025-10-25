@@ -15,6 +15,8 @@ export default function AllProducts() {
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [user, setUser] = useState(null);
+  const [wishlistProductIds, setWishlistProductIds] = useState([]);
   const [filters, setFilters] = useState({
     search: search || '',
     subcategoryId: subcategoryId || '',
@@ -26,8 +28,6 @@ export default function AllProducts() {
     page: parseInt(page) || 1,
     limit: 12
   });
-
-  console.log('filter',filters)
 
   // Fetch products whenever filters or router query changes
   useEffect(() => {
@@ -51,7 +51,64 @@ export default function AllProducts() {
 
   useEffect(() => {
     fetchCategories();
+    checkUser();
+    loadWishlist();
+    
+    // Listen for auth and wishlist changes
+    window.addEventListener('userLoggedIn', handleUserLogin);
+    window.addEventListener('userLoggedOut', handleLogout);
+    window.addEventListener('wishlistUpdated', handleWishlistUpdated);
+    
+    return () => {
+      window.removeEventListener('userLoggedIn', handleUserLogin);
+      window.removeEventListener('userLoggedOut', handleLogout);
+      window.removeEventListener('wishlistUpdated', handleWishlistUpdated);
+    };
   }, []);
+
+  const handleUserLogin = () => {
+    checkUser();
+    loadWishlist();
+  };
+
+  const handleWishlistUpdated = () => {
+    // Delay slightly to ensure API has processed the change
+    setTimeout(() => {
+      loadWishlist();
+    }, 300);
+  };
+
+  const checkUser = () => {
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setWishlistProductIds([]);
+  };
+
+  const loadWishlist = async () => {
+    if (!authService.isAuthenticated()) {
+      setWishlistProductIds([]);
+      return;
+    }
+    
+    try {
+      const response = await apiClient.get('/api/customer/wishlist');
+      // Handle various response structures
+      let productIds = [];
+      if (response.success) {
+        const wishlistProducts = response.data?.products || response.wishlist?.products || [];
+        productIds = wishlistProducts.map(p => p.productId || p.id);
+      }
+      
+      setWishlistProductIds(productIds);
+    } catch (error) {
+      console.error('Error loading wishlist:', error);
+      setWishlistProductIds([]);
+    }
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -60,7 +117,7 @@ export default function AllProducts() {
       const queryParams = new URLSearchParams();
       
       if (search) queryParams.append('search', search);
-      if (subcategoryId) queryParams.append('categoryId', subcategoryId); // Use categoryId in API
+      if (subcategoryId) queryParams.append('categoryId', subcategoryId);
       if (minPrice) queryParams.append('minPrice', minPrice);
       if (maxPrice) queryParams.append('maxPrice', maxPrice);
       if (inStock === 'true') queryParams.append('inStock', 'true');
@@ -131,22 +188,93 @@ export default function AllProducts() {
     router.push(`/customer/all-products?${queryParams.toString()}`, undefined, { shallow: true });
   };
 
-  const handleAddToWishlist = async (productId) => {
+  const handleAddToWishlist = async (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!authService.isAuthenticated()) {
-      toast.error('Please login to add to wishlist', { icon: '🔒' });
-      router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+      toast.error('Please login to add items to wishlist', {
+        icon: '🔒',
+        style: {
+          borderRadius: '12px',
+          background: '#ef4444',
+          color: '#fff',
+        },
+      });
+      
+      setTimeout(() => {
+        router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
+      }, 1500);
       return;
     }
-
+    
     try {
-      const response = await apiClient.post('/api/customer/wishlist', { productId });
+      const response = await apiClient.post('/api/customer/wishlist', {
+        productId: product.id
+      });
+      
       if (response.success) {
-        toast.success('Added to wishlist!', { icon: '❤️' });
+        // Immediately update local state
+        setWishlistProductIds(prev => {
+          if (!prev.includes(product.id)) {
+            return [...prev, product.id];
+          }
+          return prev;
+        });
+        
+        toast.success('Added to wishlist!', {
+          icon: '❤️',
+          style: {
+            borderRadius: '12px',
+            background: '#d946ef',
+            color: '#fff',
+          },
+        });
+        
+        // Reload full wishlist to stay in sync
+        loadWishlist();
         window.dispatchEvent(new Event('wishlistUpdated'));
+      } else {
+        if (response.error && (response.error.includes('already') || response.error.includes('exists'))) {
+          toast('Already in wishlist!', {
+            icon: '💜',
+            style: {
+              borderRadius: '12px',
+              background: '#8b5cf6',
+              color: '#fff',
+            },
+          });
+          // Ensure state is updated
+          setWishlistProductIds(prev => {
+            if (!prev.includes(product.id)) {
+              return [...prev, product.id];
+            }
+            return prev;
+          });
+        } else {
+          toast.error(response.error || 'Failed to add to wishlist', {
+            style: {
+              borderRadius: '12px',
+              background: '#ef4444',
+              color: '#fff',
+            },
+          });
+        }
       }
     } catch (error) {
-      toast.error('Failed to add to wishlist');
+      console.error('Error adding to wishlist:', error);
+      toast.error('Failed to add to wishlist. Please try again.', {
+        style: {
+          borderRadius: '12px',
+          background: '#ef4444',
+          color: '#fff',
+        },
+      });
     }
+  };
+
+  const isInWishlist = (productId) => {
+    return wishlistProductIds.includes(productId);
   };
 
   const activeFiltersCount = [search, subcategoryId, minPrice, maxPrice, inStock].filter(Boolean).length;
@@ -339,77 +467,86 @@ export default function AllProducts() {
               <>
                 {/* Products Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {products.map((product, idx) => (
-                    <div
-                      key={product.id}
-                      className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 animate-scale-in"
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                    >
-                      <div className="relative aspect-square bg-gray-100">
-                        <Link href={`/customer/product/${product.id}`}>
-                          <img
-                            src={product.img || '/placeholder-product.jpg'}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 cursor-pointer"
-                          />
-                        </Link>
-                        
-                        {product.stock === 0 && (
-                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">Out of Stock</span>
-                          </div>
-                        )}
+                  {products.map((product, idx) => {
+                    const inWishlist = isInWishlist(product.id);
+                    
+                    return (
+                      <div
+                        key={product.id}
+                        className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 animate-scale-in"
+                        style={{ animationDelay: `${idx * 50}ms` }}
+                      >
+                        <div className="relative aspect-square bg-gray-100">
+                          <Link href={`/customer/product/${product.id}`}>
+                            <img
+                              src={product.img || '/placeholder-product.jpg'}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 cursor-pointer"
+                            />
+                          </Link>
+                          
+                          {product.stock === 0 && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                              <span className="text-white font-bold text-lg">Out of Stock</span>
+                            </div>
+                          )}
 
-                        {product.stock > 0 && product.stock < 5 && (
-                          <div className="absolute top-3 left-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                            Only {product.stock} left
-                          </div>
-                        )}
+                          {product.stock > 0 && product.stock < 5 && (
+                            <div className="absolute top-3 left-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse z-10">
+                              Only {product.stock} left
+                            </div>
+                          )}
 
-                        <button
-                          onClick={() => handleAddToWishlist(product.id)}
-                          className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full text-gray-600 hover:text-red-500 hover:bg-white transition-all shadow-lg"
-                        >
-                          <Heart className="h-5 w-5" />
-                        </button>
-                      </div>
-
-                      <div className="p-5">
-                        {product.categoryName && (
-                          <span className="inline-block mb-2 px-3 py-1 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full uppercase">
-                            {product.categoryName}
-                          </span>
-                        )}
-
-                        <Link href={`/customer/product/${product.id}`}>
-                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer">
-                            {product.name}
-                          </h3>
-                        </Link>
-
-                        {product.description && (
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                            {product.description}
-                          </p>
-                        )}
-
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-2xl font-bold text-blue-600">
-                            ${product.price.toFixed(2)}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            Stock: {product.stock}
-                          </span>
+                          <button
+                            onClick={(e) => handleAddToWishlist(e, product)}
+                            className={`absolute top-3 right-3 p-2.5 backdrop-blur-sm rounded-full hover:scale-110 transition-all shadow-lg z-10 ${
+                              inWishlist 
+                                ? 'bg-red-500 text-white' 
+                                : 'bg-white/95 text-gray-600 hover:text-red-500 hover:bg-white'
+                            }`}
+                            title={inWishlist ? 'In wishlist' : 'Add to wishlist'}
+                          >
+                            <Heart className={`h-5 w-5 ${inWishlist ? 'fill-current' : ''}`} />
+                          </button>
                         </div>
 
-                        <Link href={`/customer/product/${product.id}`}>
-                          <button className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all transform hover:scale-105">
-                            View Details
-                          </button>
-                        </Link>
+                        <div className="p-5">
+                          {product.categoryName && (
+                            <span className="inline-block mb-2 px-3 py-1 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full uppercase">
+                              {product.categoryName}
+                            </span>
+                          )}
+
+                          <Link href={`/customer/product/${product.id}`}>
+                            <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer">
+                              {product.name}
+                            </h3>
+                          </Link>
+
+                          {product.description && (
+                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                              {product.description}
+                            </p>
+                          )}
+
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-2xl font-bold text-blue-600">
+                              ${product.price.toFixed(2)}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              Stock: {product.stock}
+                            </span>
+                          </div>
+
+                          <Link href={`/customer/product/${product.id}`}>
+                            <button className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all transform hover:scale-105">
+                              View Details
+                            </button>
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Pagination */}
