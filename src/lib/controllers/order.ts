@@ -383,7 +383,6 @@ export const listOrders = async (
 
     return orderResponse;
   } catch (err) {
-    console.log(err)
     console.error("List orders error:", err);
     orderResponse.message = "Internal server error";
     orderResponse.statusCode = 500;
