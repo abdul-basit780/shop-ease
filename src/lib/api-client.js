@@ -1,12 +1,12 @@
-import axios from 'axios';
-import Cookies from 'js-cookie';
+import axios from "axios";
+import Cookies from "js-cookie";
 
 class ApiClient {
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
+      baseURL: process.env.NEXT_PUBLIC_URL,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       timeout: 10000,
     });
@@ -14,7 +14,7 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config) => {
-        const token = Cookies.get('auth_token');
+        const token = Cookies.get("auth_token");
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -28,9 +28,9 @@ class ApiClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          Cookies.remove('auth_token');
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+          Cookies.remove("auth_token");
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
           }
         }
         return Promise.reject(error);

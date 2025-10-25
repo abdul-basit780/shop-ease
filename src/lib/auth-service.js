@@ -1,12 +1,12 @@
 import { apiClient } from './api-client';
 import Cookies from 'js-cookie';
-import { jwtDecode } from 'jwt-decode'; // Import jwt-decode
+import { jwtDecode } from 'jwt-decode';
 
 export const authService = {
   async login(credentials) {
     try {
       localStorage.removeItem('user')
-      const response = await apiClient.post('/auth/login', credentials);
+      const response = await apiClient.post('/api/auth/login', credentials);
       
       if (response.success && response.data) {
         Cookies.set('auth_token', response.data.token, { expires: 7 });
@@ -36,7 +36,7 @@ export const authService = {
   async register(data) {
     try {
       localStorage.removeItem('user')
-      const response = await apiClient.post('/auth/register', data);
+      const response = await apiClient.post('/api/auth/register', data);
       
       // Handle nested success structure from your API
       if (response.success && response.data) {

@@ -16,6 +16,8 @@ import { adminFeedbackSchemas } from "./adminFeedback";
 import { adminOrderSchemas } from "./adminOrder";
 import { adminDashboardSchemas } from "./adminDashboard";
 import { recommendationSchemas } from "./recommendation";
+import { navbarSchemas } from "./navbar";
+import { optionSchemas } from "./option";
 
 export const schemas = {
   ...baseSchemas,
@@ -35,4 +37,6 @@ export const schemas = {
   ...adminOrderSchemas,
   ...adminDashboardSchemas,
   ...recommendationSchemas,
+  ...navbarSchemas,
+  ...optionSchemas,
 };
