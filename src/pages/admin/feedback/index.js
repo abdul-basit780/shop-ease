@@ -409,7 +409,7 @@ export default function FeedbackPage() {
         ...(statusFilter && { status: statusFilter }),
       });
 
-      const response = await apiClient.get(`/admin/feedback?${params}`);
+      const response = await apiClient.get(`/api/admin/feedback?${params}`).catch(() => apiClient.get(`/admin/feedback?${params}`));
       
       if (response.success) {
         setFeedbacks(response.feedbacks || []);
@@ -795,3 +795,800 @@ export default function FeedbackPage() {
     </AdminLayout>
   );
 }
+
+
+  const fetchFeedbacks = async () => {
+
+    try {
+
+      setRefreshing(true);
+
+      const params = new URLSearchParams({
+
+        page: currentPage.toString(),
+
+        limit: '12',
+
+        ...(searchTerm && { search: searchTerm }),
+
+        ...(typeFilter && { type: typeFilter }),
+
+        ...(statusFilter && { status: statusFilter }),
+
+      });
+
+
+
+      const response = await apiClient.get(`/admin/feedback?${params}`);
+
+      
+
+      if (response.success) {
+
+        setFeedbacks(response.feedbacks || []);
+
+        setTotalPages(response.pagination?.totalPages || 1);
+
+        setStats(response.stats || null);
+
+      }
+
+    } catch (error) {
+
+      console.error('Error fetching feedbacks:', error);
+
+      toast.error('Failed to load feedback');
+
+    } finally {
+
+      setLoading(false);
+
+      setRefreshing(false);
+
+    }
+
+  };
+
+
+
+  useEffect(() => {
+
+    fetchFeedbacks();
+
+  }, [currentPage, searchTerm, typeFilter, statusFilter]);
+
+
+
+  const handleSearch = (e) => {
+
+    setSearchTerm(e.target.value);
+
+    setCurrentPage(1);
+
+  };
+
+
+
+  const handleTypeFilter = (type) => {
+
+    setTypeFilter(type);
+
+    setCurrentPage(1);
+
+  };
+
+
+
+  const handleStatusFilter = (status) => {
+
+    setStatusFilter(status);
+
+    setCurrentPage(1);
+
+  };
+
+
+
+  const handleView = (feedback) => {
+
+    router.push(`/admin/feedback/view/${feedback._id}`);
+
+  };
+
+
+
+  const handleReply = (feedback) => {
+
+    router.push(`/admin/feedback/reply/${feedback._id}`);
+
+  };
+
+
+
+  const handleRefresh = () => {
+
+    fetchFeedbacks();
+
+  };
+
+
+
+  const formatDate = (dateString) => {
+
+    return new Date(dateString).toLocaleDateString('en-US', {
+
+      year: 'numeric',
+
+      month: 'short',
+
+      day: 'numeric',
+
+      hour: '2-digit',
+
+      minute: '2-digit'
+
+    });
+
+  };
+
+
+
+  if (loading) {
+
+    return (
+
+      <AdminLayout title="Feedback" subtitle="Loading customer feedback...">
+
+        <div className="flex items-center justify-center h-64">
+
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+
+        </div>
+
+      </AdminLayout>
+
+    );
+
+  }
+
+
+
+  return (
+
+    <AdminLayout title="Feedback" subtitle="Manage customer feedback and reviews">
+
+      {/* Header Actions */}
+
+      <div className="flex items-center justify-between mb-8">
+
+        <div>
+
+          <h2 className="text-2xl font-bold text-gray-900">Customer Feedback</h2>
+
+          <p className="text-gray-600">Review and respond to customer feedback</p>
+
+        </div>
+
+        <div className="flex items-center space-x-3">
+
+          <Button
+
+            variant="outline"
+
+            onClick={handleRefresh}
+
+            isLoading={refreshing}
+
+          >
+
+            <RefreshCw className="h-4 w-4" />
+
+            Refresh
+
+          </Button>
+
+          <Button variant="secondary">
+
+            <Download className="h-4 w-4" />
+
+            Export
+
+          </Button>
+
+        </div>
+
+      </div>
+
+
+
+      {/* Stats Cards */}
+
+      {stats && (
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+          <Card>
+
+            <CardBody>
+
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-gray-600">Total Feedback</p>
+
+                  <p className="text-3xl font-bold text-gray-900">{stats.total || 0}</p>
+
+                </div>
+
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+
+                  <MessageSquare className="h-6 w-6 text-blue-600" />
+
+                </div>
+
+              </div>
+
+            </CardBody>
+
+          </Card>
+
+          <Card>
+
+            <CardBody>
+
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-gray-600">Pending</p>
+
+                  <p className="text-3xl font-bold text-yellow-600">{stats.pending || 0}</p>
+
+                </div>
+
+                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+
+                  <Clock className="h-6 w-6 text-yellow-600" />
+
+                </div>
+
+              </div>
+
+            </CardBody>
+
+          </Card>
+
+          <Card>
+
+            <CardBody>
+
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-gray-600">Resolved</p>
+
+                  <p className="text-3xl font-bold text-green-600">{stats.resolved || 0}</p>
+
+                </div>
+
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+
+                </div>
+
+              </div>
+
+            </CardBody>
+
+          </Card>
+
+          <Card>
+
+            <CardBody>
+
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-gray-600">Avg. Rating</p>
+
+                  <p className="text-3xl font-bold text-gray-900">{stats.averageRating || 0}</p>
+
+                </div>
+
+                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+
+                  <Star className="h-6 w-6 text-yellow-600" />
+
+                </div>
+
+              </div>
+
+            </CardBody>
+
+          </Card>
+
+        </div>
+
+      )}
+
+
+
+      {/* Filters and Search */}
+
+      <Card className="mb-6">
+
+        <CardBody>
+
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+
+            {/* Search */}
+
+            <div className="relative flex-1 max-w-md">
+
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+
+              <input
+
+                type="text"
+
+                placeholder="Search feedback..."
+
+                value={searchTerm}
+
+                onChange={handleSearch}
+
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+
+              />
+
+            </div>
+
+
+
+            {/* Filters */}
+
+            <div className="flex items-center space-x-4">
+
+              {/* Type Filter */}
+
+              <select
+
+                value={typeFilter}
+
+                onChange={(e) => handleTypeFilter(e.target.value)}
+
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+
+              >
+
+                <option value="">All Types</option>
+
+                <option value="review">Review</option>
+
+                <option value="complaint">Complaint</option>
+
+                <option value="suggestion">Suggestion</option>
+
+                <option value="question">Question</option>
+
+                <option value="bug">Bug Report</option>
+
+              </select>
+
+
+
+              {/* Status Filter */}
+
+              <select
+
+                value={statusFilter}
+
+                onChange={(e) => handleStatusFilter(e.target.value)}
+
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+
+              >
+
+                <option value="">All Statuses</option>
+
+                <option value="pending">Pending</option>
+
+                <option value="reviewed">Reviewed</option>
+
+                <option value="resolved">Resolved</option>
+
+                <option value="closed">Closed</option>
+
+              </select>
+
+
+
+              {/* View Mode Toggle */}
+
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+
+                <button
+
+                  onClick={() => setViewMode('grid')}
+
+                  className={`p-2 rounded-md transition-colors ${
+
+                    viewMode === 'grid' 
+
+                      ? 'bg-white text-blue-600 shadow-sm' 
+
+                      : 'text-gray-500 hover:text-gray-700'
+
+                  }`}
+
+                >
+
+                  <Grid className="h-4 w-4" />
+
+                </button>
+
+                <button
+
+                  onClick={() => setViewMode('list')}
+
+                  className={`p-2 rounded-md transition-colors ${
+
+                    viewMode === 'list' 
+
+                      ? 'bg-white text-blue-600 shadow-sm' 
+
+                      : 'text-gray-500 hover:text-gray-700'
+
+                  }`}
+
+                >
+
+                  <List className="h-4 w-4" />
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </CardBody>
+
+      </Card>
+
+
+
+      {/* Feedback Grid/List */}
+
+      {feedbacks.length === 0 ? (
+
+        <Card>
+
+          <CardBody>
+
+            <div className="text-center py-12">
+
+              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No feedback found</h3>
+
+              <p className="text-gray-600 mb-6">
+
+                {searchTerm || typeFilter || statusFilter 
+
+                  ? 'Try adjusting your search or filter criteria'
+
+                  : 'Customer feedback will appear here'
+
+                }
+
+              </p>
+
+            </div>
+
+          </CardBody>
+
+        </Card>
+
+      ) : (
+
+        <>
+
+          {viewMode === 'grid' ? (
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+
+              {feedbacks.map((feedback) => (
+
+                <FeedbackCard
+
+                  key={feedback._id}
+
+                  feedback={feedback}
+
+                  onView={handleView}
+
+                  onReply={handleReply}
+
+                />
+
+              ))}
+
+            </div>
+
+          ) : (
+
+            <Card className="mb-8">
+
+              <CardBody>
+
+                <div className="overflow-x-auto">
+
+                  <table className="min-w-full divide-y divide-gray-200">
+
+                    <thead className="bg-gray-50">
+
+                      <tr>
+
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                          Customer
+
+                        </th>
+
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                          Type
+
+                        </th>
+
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                          Subject
+
+                        </th>
+
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                          Rating
+
+                        </th>
+
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                          Status
+
+                        </th>
+
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                          Date
+
+                        </th>
+
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                          Actions
+
+                        </th>
+
+                      </tr>
+
+                    </thead>
+
+                    <tbody className="bg-white divide-y divide-gray-200">
+
+                      {feedbacks.map((feedback) => (
+
+                        <tr key={feedback._id} className="hover:bg-gray-50">
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+
+                            <div className="flex items-center">
+
+                              <div className="flex-shrink-0 h-8 w-8">
+
+                                <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+
+                                  <span className="text-white font-semibold text-xs">
+
+                                    {feedback.customer?.name?.charAt(0) || 'U'}
+
+                                  </span>
+
+                                </div>
+
+                              </div>
+
+                              <div className="ml-3">
+
+                                <div className="text-sm font-medium text-gray-900">
+
+                                  {feedback.customer?.name || 'Anonymous'}
+
+                                </div>
+
+                                <div className="text-sm text-gray-500">
+
+                                  {feedback.customer?.email || 'No email'}
+
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+
+                            <FeedbackTypeBadge type={feedback.type} />
+
+                          </td>
+
+                          <td className="px-6 py-4">
+
+                            <div className="text-sm text-gray-900 max-w-xs truncate">
+
+                              {feedback.subject || 'No subject'}
+
+                            </div>
+
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+
+                            {feedback.rating ? (
+
+                              <RatingStars rating={feedback.rating} />
+
+                            ) : (
+
+                              <span className="text-sm text-gray-500">No rating</span>
+
+                            )}
+
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+
+                            <FeedbackStatusBadge status={feedback.status} />
+
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+
+                            {formatDate(feedback.createdAt)}
+
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+
+                            <div className="flex items-center justify-end space-x-2">
+
+                              <Button
+
+                                variant="outline"
+
+                                size="sm"
+
+                                onClick={() => handleView(feedback)}
+
+                              >
+
+                                <Eye className="h-4 w-4" />
+
+                              </Button>
+
+                              {feedback.status === 'pending' && (
+
+                                <Button
+
+                                  variant="primary"
+
+                                  size="sm"
+
+                                  onClick={() => handleReply(feedback)}
+
+                                >
+
+                                  <Reply className="h-4 w-4" />
+
+                                </Button>
+
+                              )}
+
+                            </div>
+
+                          </td>
+
+                        </tr>
+
+                      ))}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </CardBody>
+
+            </Card>
+
+          )}
+
+
+
+          {/* Pagination */}
+
+          {totalPages > 1 && (
+
+            <div className="flex items-center justify-between">
+
+              <div className="text-sm text-gray-700">
+
+                Showing page {currentPage} of {totalPages}
+
+              </div>
+
+              <div className="flex items-center space-x-2">
+
+                <Button
+
+                  variant="outline"
+
+                  size="sm"
+
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+
+                  disabled={currentPage === 1}
+
+                >
+
+                  <ChevronLeft className="h-4 w-4" />
+
+                  Previous
+
+                </Button>
+
+                <Button
+
+                  variant="outline"
+
+                  size="sm"
+
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+
+                  disabled={currentPage === totalPages}
+
+                >
+
+                  Next
+
+                  <ChevronRight className="h-4 w-4" />
+
+                </Button>
+
+              </div>
+
+            </div>
+
+          )}
+
+        </>
+
+      )}
+
+    </AdminLayout>
+
+  );
+
+}
+
+

@@ -286,7 +286,7 @@ export default function OrdersPage() {
         ...(statusFilter && { status: statusFilter }),
       });
 
-      const response = await apiClient.get(`/admin/orders?${params}`);
+      const response = await apiClient.get(`/api/admin/orders?${params}`).catch(() => apiClient.get(`/admin/orders?${params}`));
       
       if (response.success) {
         setOrders(response.orders || []);
@@ -322,7 +322,7 @@ export default function OrdersPage() {
 
   const handleUpdateStatus = async (order, newStatus) => {
     try {
-      const response = await apiClient.put(`/admin/orders/${order._id}`, {
+      const response = await apiClient.put(`/api/admin/orders/${order._id}`, {
         status: newStatus
       });
 

@@ -226,11 +226,6 @@ export default function CreateCategoryPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    isActive: true,
-    sortOrder: 0,
-    metaTitle: '',
-    metaDescription: '',
-    keywords: '',
     parentId: null,
   });
   const [parentCategories, setParentCategories] = useState([]);
@@ -241,7 +236,7 @@ export default function CreateCategoryPage() {
 
   const fetchParentCategories = async () => {
     try {
-      const response = await apiClient.get('/admin/category?parentId=null&limit=100');
+      const response = await apiClient.get('/api/admin/category?parentId=null&limit=100');
       if (response.success) {
         const parents = response.data?.categories || response.categories || [];
         setParentCategories(parents);
@@ -316,14 +311,45 @@ export default function CreateCategoryPage() {
     setLoading(true);
 
     try {
-      // Map form data to backend expected format
+      // Debug: Log the form data before sending
+      console.log('=== FORM SUBMISSION DEBUG ===');
+      console.log('Form data:', formData);
+      console.log('Is subcategory:', isSubcategory);
+      console.log('Show subcategory options:', showSubcategoryOptions);
+      console.log('Parent ID:', formData.parentId);
+      console.log('Parent ID type:', typeof formData.parentId);
+      console.log('Parent ID truthy:', !!formData.parentId);
+      
+      // Map form data to backend expected format (matching Swagger API)
       const submitData = {
         name: formData.name,
         description: formData.description,
-        ...(formData.parentId && { parentId: formData.parentId })
+        parentId: formData.parentId || null  // Always include parentId, use null for parent categories
       };
       
-      const response = await apiClient.post('/admin/category', submitData);
+      console.log('Submit data:', submitData);
+      console.log('Submit data parentId:', submitData.parentId);
+      
+      // Debug API client configuration
+      console.log('=== API CLIENT DEBUG ===');
+      console.log('Base URL:', process.env.NEXT_PUBLIC_URL);
+      console.log('Full URL will be:', `${process.env.NEXT_PUBLIC_URL}/api/admin/category`);
+      console.log('Request data being sent:', submitData);
+      console.log('Request data JSON:', JSON.stringify(submitData));
+      console.log('Request data parentId specifically:', submitData.parentId);
+      console.log('Request data parentId type:', typeof submitData.parentId);
+      console.log('Request data parentId is null:', submitData.parentId === null);
+      console.log('Request data parentId is undefined:', submitData.parentId === undefined);
+      
+      const response = await apiClient.post('/api/admin/category', submitData);
+
+      console.log('=== API RESPONSE DEBUG ===');
+      console.log('Full response:', response);
+      console.log('Response success:', response.success);
+      console.log('Response data:', response.data);
+      console.log('Response category:', response.category);
+      console.log('Created category parentId:', response.data?.parentId);
+      console.log('Created category fields:', Object.keys(response.data || {}));
 
       if (response.success) {
         toast.success(isSubcategory ? 'Subcategory created successfully! 🎉' : 'Category created successfully! 🎉');
@@ -373,7 +399,7 @@ export default function CreateCategoryPage() {
               Back to Categories
             </Button>
           </Link>
-            <div>
+          <div>
               <h2 className="text-2xl font-bold text-gray-900">
                 {showSubcategoryOptions ? 'Create New Subcategory' : 'Create New Category'}
               </h2>
@@ -383,7 +409,7 @@ export default function CreateCategoryPage() {
                   : 'Fill in the details to add a new category'
                 }
               </p>
-            </div>
+          </div>
         </div>
       </div>
 
@@ -461,14 +487,14 @@ export default function CreateCategoryPage() {
                       >
                         {showSubcategoryOptions ? 'Create Main Category' : 'Create as Subcategory'}
                       </button>
-                    </div>
+                  </div>
                     
                     {!showSubcategoryOptions ? (
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                           <Tag className="h-5 w-5 text-white" />
                         </div>
-                        <div>
+                  <div>
                           <span className="text-sm font-medium text-gray-700">Main Category</span>
                           <p className="text-xs text-gray-500">Top-level category</p>
                         </div>
@@ -478,26 +504,29 @@ export default function CreateCategoryPage() {
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
                             <Tag className="h-5 w-5 text-white" />
-                          </div>
-                          <div>
+                  </div>
+                  <div>
                             <span className="text-sm font-medium text-gray-700">Subcategory</span>
                             <p className="text-xs text-gray-500">Belongs to a parent category</p>
                           </div>
-                        </div>
-                        
+                  </div>
+
                         {/* Parent Category Selection */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Select Parent Category *
-                          </label>
+                    </label>
                           <select
                             name="parentId"
                             value={formData.parentId || ''}
                             onChange={(e) => {
-                              setFormData(prev => ({ ...prev, parentId: e.target.value }));
-                              setIsSubcategory(!!e.target.value);
+                              const selectedParentId = e.target.value;
+                              console.log('Parent category selected:', selectedParentId);
+                              console.log('Setting parentId to:', selectedParentId);
+                              setFormData(prev => ({ ...prev, parentId: selectedParentId }));
+                              setIsSubcategory(!!selectedParentId);
                             }}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
                             required
                           >
                             <option value="">Choose a parent category</option>
@@ -507,7 +536,7 @@ export default function CreateCategoryPage() {
                               </option>
                             ))}
                           </select>
-                          <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-500">
                             Select the parent category for this subcategory
                           </p>
                           {errors.parentId && (
@@ -521,117 +550,14 @@ export default function CreateCategoryPage() {
                     )}
                   </div>
 
-                  {/* Sort Order */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Sort Order
-                    </label>
-                    <input
-                      type="number"
-                      name="sortOrder"
-                      value={formData.sortOrder}
-                      onChange={handleChange}
-                      min="0"
-                      placeholder="0"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
-                    <p className="mt-1 text-sm text-gray-500">
-                      Lower numbers appear first in category lists
-                    </p>
-                  </div>
                 </CardBody>
               </Card>
 
-              {/* SEO Information */}
-              <Card>
-                <CardHeader>
-                  <h3 className="text-lg font-semibold text-gray-900">SEO Information</h3>
-                  <p className="text-sm text-gray-600">Optional fields for search engine optimization</p>
-                </CardHeader>
-                <CardBody className="space-y-6">
-                  {/* Meta Title */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Meta Title
-                    </label>
-                    <input
-                      type="text"
-                      name="metaTitle"
-                      value={formData.metaTitle}
-                      onChange={handleChange}
-                      placeholder="SEO title for search engines"
-                      maxLength="60"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
-                    <p className="mt-1 text-sm text-gray-500">
-                      {formData.metaTitle.length}/60 characters
-                    </p>
-                  </div>
-
-                  {/* Meta Description */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Meta Description
-                    </label>
-                    <textarea
-                      name="metaDescription"
-                      value={formData.metaDescription}
-                      onChange={handleChange}
-                      rows={3}
-                      placeholder="SEO description for search engines"
-                      maxLength="160"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
-                    <p className="mt-1 text-sm text-gray-500">
-                      {formData.metaDescription.length}/160 characters
-                    </p>
-                  </div>
-
-                  {/* Keywords */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Keywords
-                    </label>
-                    <input
-                      type="text"
-                      name="keywords"
-                      value={formData.keywords}
-                      onChange={handleChange}
-                      placeholder="Comma-separated keywords"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
-                    <p className="mt-1 text-sm text-gray-500">
-                      Separate keywords with commas (e.g., electronics, gadgets, tech)
-                    </p>
-                  </div>
-                </CardBody>
-              </Card>
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
 
-              {/* Category Status */}
-              <Card>
-                <CardHeader>
-                  <h3 className="text-lg font-semibold text-gray-900">Category Status</h3>
-                </CardHeader>
-                <CardBody>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
-                      onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="ml-3 text-sm font-medium text-gray-700">Active</span>
-                  </label>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Inactive categories won't be visible to customers
-                  </p>
-                </CardBody>
-              </Card>
 
               {/* Category Preview */}
               <Card>
@@ -640,19 +566,19 @@ export default function CreateCategoryPage() {
                 </CardHeader>
                 <CardBody>
                     <div className="space-y-4">
-                      <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-3">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                           showSubcategoryOptions 
                             ? 'bg-gradient-to-br from-green-500 to-emerald-500' 
                             : 'bg-gradient-to-br from-blue-500 to-purple-500'
                         }`}>
                           <Tag className="h-6 w-6 text-white" />
-                        </div>
+                      </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <h4 className="font-semibold text-gray-900">
+                        <h4 className="font-semibold text-gray-900">
                               {formData.name || (showSubcategoryOptions ? 'Subcategory Name' : 'Category Name')}
-                            </h4>
+                        </h4>
                             {showSubcategoryOptions && (
                               <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                                 Subcategory
@@ -660,11 +586,11 @@ export default function CreateCategoryPage() {
                             )}
                           </div>
                           <p className="text-sm text-gray-500 mb-2">
-                            {formData.description ? 
+                          {formData.description ? 
                               formData.description.substring(0, 60) + (formData.description.length > 60 ? '...' : '') :
                               (showSubcategoryOptions ? 'Subcategory description will appear here' : 'Category description will appear here')
-                            }
-                          </p>
+                          }
+                        </p>
                           {showSubcategoryOptions && formData.parentId && (
                             <div className="flex items-center space-x-1 text-xs text-blue-600">
                               <span>└─</span>
@@ -674,23 +600,11 @@ export default function CreateCategoryPage() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            formData.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {formData.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Sort: {formData.sortOrder}
-                          </span>
-                        </div>
                         <div className="text-xs text-gray-400">
                           {showSubcategoryOptions ? 'Subcategory' : 'Main Category'}
-                        </div>
-                      </div>
                     </div>
+                    </div>
+                  </div>
                 </CardBody>
               </Card>
 
@@ -698,6 +612,7 @@ export default function CreateCategoryPage() {
               <Card>
                 <CardBody>
                   <div className="space-y-3">
+
                     <button
                       type="submit"
                       disabled={loading}

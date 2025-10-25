@@ -336,10 +336,10 @@ export default function CreateProductPage() {
   const fetchParentCategories = async () => {
     try {
       console.log('Fetching parent categories...');
-      const response = await apiClient.get('/admin/category?parentId=null&limit=100');
+      const response = await apiClient.get('/api/admin/category?parentId=null&limit=100');
       console.log('Parent categories response:', response);
       if (response.success) {
-        const parentCats = response.data?.categories || response.categories || [];
+        const parentCats = response.data?.categories || [];
         console.log('Parent categories loaded:', parentCats);
         setParentCategories(parentCats);
       }
@@ -351,7 +351,7 @@ export default function CreateProductPage() {
   const fetchCategories = async (parentId = null) => {
     try {
       console.log('Fetching categories...', parentId ? `for parent: ${parentId}` : 'all categories');
-      const url = parentId ? `/admin/category?parentId=${parentId}&limit=100` : '/admin/category?limit=100';
+      const url = parentId ? `/api/admin/category?parentId=${parentId}&limit=100` : '/api/admin/category?limit=100';
       console.log('API URL:', url);
       
       // Check authentication token
@@ -366,7 +366,7 @@ export default function CreateProductPage() {
       console.log('Response categories:', response.data?.categories || response.categories);
       
       if (response.success) {
-        const categoriesData = response.data?.categories || response.categories || [];
+        const categoriesData = response.data?.categories || [];
         console.log('Setting categories:', categoriesData);
         
         // WORKAROUND: Since backend doesn't return parentId, we'll track it locally
@@ -387,6 +387,7 @@ export default function CreateProductPage() {
         });
         
         setCategories(processedCategories);
+        console.log('Categories set:', processedCategories);
         
         if (parentId && categoriesData.length === 0) {
           console.log('No subcategories found for parent:', parentId);
@@ -656,7 +657,7 @@ export default function CreateProductPage() {
         console.log(key, ':', value);
       }
       
-      const response = await apiClient.post('/admin/product', submitData, {
+      const response = await apiClient.post('/api/admin/product', submitData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -676,7 +677,8 @@ export default function CreateProductPage() {
           if (manageOptions) {
             router.push(`/admin/products/options/${productId}`);
           } else {
-            // Stay on the page to show the success state
+            // Redirect to main products page
+            router.push('/admin/products');
           }
         }
       } else {
@@ -937,17 +939,21 @@ export default function CreateProductPage() {
                         errors.category ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
                       }`}
                     >
+                      {console.log('Total categories:', categories.length, 'Parent categories:', categories.filter(cat => !cat.parentId).length)}
                       <option value="">Select a parent category</option>
                       {categories.length === 0 ? (
                         <option value="" disabled>No categories found. Create categories first.</option>
                       ) : (
                         categories
                           .filter(category => !category.parentId) // Only show parent categories
-                          .map((category) => (
-                          <option key={category.id} value={category.id}>
-                              {category.name}
-                          </option>
-                        ))
+                          .map((category) => {
+                            console.log('Rendering category option:', category);
+                            return (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            );
+                          })
                       )}
                     </select>
                     {errors.category && (

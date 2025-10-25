@@ -212,7 +212,7 @@ export default function ProductView() {
       setLoading(true);
       console.log('Fetching product with ID:', id);
       console.log('API URL:', `/admin/product/${id}`);
-      const response = await apiClient.get(`/admin/product/${id}`);
+      const response = await apiClient.get(`/api/admin/product/${id}`);
       console.log('Product response:', response);
       console.log('Response success:', response.success);
       console.log('Response product:', response.product);
@@ -254,7 +254,7 @@ export default function ProductView() {
 
     try {
       console.log('Deleting product with ID:', id);
-      const response = await apiClient.delete(`/admin/product/${id}`);
+      const response = await apiClient.delete(`/api/admin/product/${id}`);
       console.log('Delete response:', response);
 
       if (response.success) {

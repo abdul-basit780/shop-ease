@@ -365,7 +365,7 @@ export default function CustomersPage() {
         ...(statusFilter && { status: statusFilter }),
       });
 
-      const response = await apiClient.get(`/admin/customer?${params}`);
+      const response = await apiClient.get(`/api/admin/customer?${params}`).catch(() => apiClient.get(`/admin/customer?${params}`));
       
       if (response.success) {
         setCustomers(response.customers || []);

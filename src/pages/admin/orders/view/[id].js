@@ -267,7 +267,7 @@ export default function OrderViewPage() {
     try {
       setLoading(true);
       console.log('Fetching order:', id);
-      const response = await apiClient.get(`/admin/orders/${id}`);
+      const response = await apiClient.get(`/api/admin/orders/${id}`).catch(() => apiClient.get(`/admin/orders/${id}`));
       console.log('Order response:', response);
       
       if (response.success) {
@@ -302,7 +302,7 @@ export default function OrderViewPage() {
   const handleStatusUpdate = async (newStatus) => {
     try {
       setUpdating(true);
-      const response = await apiClient.put(`/admin/orders/${id}`, {
+      const response = await apiClient.put(`/api/admin/orders/${id}`, {
         status: newStatus
       });
 
@@ -325,7 +325,7 @@ export default function OrderViewPage() {
 
     try {
       setUpdating(true);
-      const response = await apiClient.post(`/admin/orders/${id}/cancel`);
+      const response = await apiClient.post(`/api/admin/orders/${id}/cancel`).catch(() => apiClient.post(`/admin/orders/${id}/cancel`));
 
       if (response.success) {
         toast.success('Order cancelled successfully');

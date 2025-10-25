@@ -223,7 +223,7 @@ export default function ProductEdit() {
   const fetchProduct = async () => {
     try {
       console.log('Fetching product with ID:', id);
-      const response = await apiClient.get(`/admin/product/${id}`);
+      const response = await apiClient.get(`/api/admin/product/${id}`);
       console.log('Product response:', response);
 
       if (response.success) {
@@ -263,7 +263,7 @@ export default function ProductEdit() {
   const fetchCategories = async () => {
     try {
       console.log('Fetching categories...');
-      const response = await apiClient.get('/admin/category');
+      const response = await apiClient.get('/api/admin/category');
       console.log('Categories response:', response);
       
       if (response.success) {
@@ -389,7 +389,7 @@ export default function ProductEdit() {
       }
 
       console.log('Submitting to /admin/product/' + id);
-      const response = await apiClient.put(`/admin/product/${id}`, submitData, {
+      const response = await apiClient.put(`/api/admin/product/${id}`, submitData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

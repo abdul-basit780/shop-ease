@@ -591,12 +591,12 @@ export default function ProductsPage() {
       });
 
       console.log('Fetching products with params:', params.toString());
-      const response = await apiClient.get(`/admin/product?${params}`);
+      const response = await apiClient.get(`/api/admin/product?${params}`);
       console.log('Products response:', response);
       
       if (response.success) {
-        setProducts(response.data?.products || response.products || []);
-        setTotalPages(response.data?.pagination?.totalPages || response.pagination?.totalPages || 1);
+        setProducts(response.data?.products || []);
+        setTotalPages(response.data?.pagination?.totalPages || 1);
       } else {
         console.error('Failed to fetch products:', response.message);
         toast.error('Failed to load products');
@@ -646,7 +646,7 @@ export default function ProductsPage() {
   const handleDelete = async (product) => {
     if (window.confirm(`Are you sure you want to delete "${product.name}"?`)) {
       try {
-        const response = await apiClient.delete(`/admin/product/${product.id}`);
+        const response = await apiClient.delete(`/api/admin/product/${product.id}`);
         if (response.success) {
           toast.success('Product deleted successfully');
           fetchProducts();
@@ -666,7 +666,7 @@ export default function ProductsPage() {
     if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
       try {
         const deletePromises = selectedProducts.map(productId => 
-          apiClient.delete(`/admin/product/${productId}`)
+          apiClient.delete(`/api/admin/product/${productId}`)
         );
         await Promise.all(deletePromises);
         toast.success(`${selectedProducts.length} products deleted successfully`);

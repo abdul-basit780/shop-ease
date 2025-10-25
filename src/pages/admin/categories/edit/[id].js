@@ -201,11 +201,7 @@ export default function CategoryEdit() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    parentId: '',
-    sortOrder: '',
-    metaTitle: '',
-    metaDescription: '',
-    isActive: true
+    parentId: ''
   });
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -221,7 +217,7 @@ export default function CategoryEdit() {
   const fetchCategory = async () => {
     try {
       console.log('Fetching category with ID:', id);
-      const response = await apiClient.get(`/admin/category/${id}`);
+      const response = await apiClient.get(`/api/admin/category/${id}`);
       console.log('Category response:', response);
 
       if (response.success) {
@@ -258,7 +254,7 @@ export default function CategoryEdit() {
   const fetchCategories = async () => {
     try {
       console.log('Fetching categories...');
-      const response = await apiClient.get('/admin/category');
+      const response = await apiClient.get('/api/admin/category');
       console.log('Categories response:', response);
       
       if (response.success) {
@@ -346,7 +342,7 @@ export default function CategoryEdit() {
       };
 
       console.log('Submitting to /admin/category/' + id);
-      const response = await apiClient.put(`/admin/category/${id}`, submitData);
+      const response = await apiClient.put(`/api/admin/category/${id}`, submitData);
 
       console.log('Category update response:', response);
 

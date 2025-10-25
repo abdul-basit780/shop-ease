@@ -227,7 +227,7 @@ export default function OptionValues() {
 
   const fetchProduct = async () => {
     try {
-      const response = await apiClient.get(`/admin/product/${productId}`);
+      const response = await apiClient.get(`/api/admin/product/${productId}`);
       if (response.success) {
         setProduct(response.product || response.data);
       }
@@ -277,7 +277,7 @@ export default function OptionValues() {
 
     try {
       console.log('Creating option value:', newValue);
-      const response = await apiClient.post('/admin/option-value', {
+      const response = await apiClient.post('/api/admin/option-value', {
         optionTypeId: optionTypeId,
         value: newValue.value.trim(),
         price: parseFloat(newValue.price) || 0,
@@ -313,7 +313,7 @@ export default function OptionValues() {
 
     try {
       console.log('Updating option value:', editingValue);
-      const response = await apiClient.put(`/admin/option-value/${editingValue.id}`, {
+      const response = await apiClient.put(`/api/admin/option-value/${editingValue.id}`, {
         value: editingValue.value.trim(),
         price: parseFloat(editingValue.price) || 0,
         stock: parseInt(editingValue.stock) || 0
@@ -344,7 +344,7 @@ export default function OptionValues() {
 
     try {
       console.log('Deleting option value:', valueId);
-      const response = await apiClient.delete(`/admin/option-value/${valueId}`);
+      const response = await apiClient.delete(`/api/admin/option-value/${valueId}`);
       console.log('Delete option value response:', response);
 
       if (response.success) {

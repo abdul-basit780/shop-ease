@@ -308,7 +308,7 @@ export default function FeedbackViewPage() {
     try {
       setLoading(true);
       console.log('Fetching feedback:', id);
-      const response = await apiClient.get(`/admin/feedback/${id}`);
+      const response = await apiClient.get(`/api/admin/feedback/${id}`).catch(() => apiClient.get(`/admin/feedback/${id}`));
       console.log('Feedback response:', response);
       
       if (response.success) {
@@ -343,7 +343,7 @@ export default function FeedbackViewPage() {
 
     try {
       setDeleting(true);
-      const response = await apiClient.delete(`/admin/feedback/${id}`);
+      const response = await apiClient.delete(`/api/admin/feedback/${id}`);
 
       if (response.success) {
         toast.success('Feedback deleted successfully');

@@ -8,6 +8,7 @@ import {
   Edit, 
   Trash2, 
   Eye,
+  RefreshCw,
   AlertCircle,
   CheckCircle,
   Package,
@@ -214,12 +215,24 @@ export default function CategoryView() {
     }
   }, [id]);
 
+  // Refresh stats when page becomes visible (e.g., when navigating back from product creation)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && id) {
+        fetchCategoryStats();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id]);
+
   const fetchCategory = async () => {
     try {
       setLoading(true);
       console.log('Fetching category with ID:', id);
       console.log('API URL:', `/admin/category/${id}`);
-      const response = await apiClient.get(`/admin/category/${id}`);
+      const response = await apiClient.get(`/api/admin/category/${id}`);
       console.log('Category response:', response);
       console.log('Response success:', response.success);
       console.log('Response category:', response.category);
@@ -263,7 +276,7 @@ export default function CategoryView() {
   const fetchParentCategory = async (parentId) => {
     try {
       console.log('Fetching parent category with ID:', parentId);
-      const response = await apiClient.get(`/admin/category/${parentId}`);
+      const response = await apiClient.get(`/api/admin/category/${parentId}`);
       console.log('Parent category response:', response);
       
       if (response.success) {
@@ -284,7 +297,7 @@ export default function CategoryView() {
       
       // Get products in this category
       console.log('Fetching products for category ID:', id);
-      const productsResponse = await apiClient.get(`/admin/product?categoryId=${id}&limit=1`);
+      const productsResponse = await apiClient.get(`/api/admin/product?categoryId=${id}&limit=1`);
       console.log('Products response for category:', productsResponse);
       console.log('API URL called:', `/admin/product?categoryId=${id}&limit=1`);
       
@@ -295,7 +308,7 @@ export default function CategoryView() {
                           productsResponse.products?.length || 0;
       
       // Get subcategories (categories with this as parent)
-      const categoriesResponse = await apiClient.get('/admin/category');
+      const categoriesResponse = await apiClient.get('/api/admin/category');
       console.log('Categories response:', categoriesResponse);
       
       const allCategories = categoriesResponse.data?.categories || 
@@ -328,7 +341,7 @@ export default function CategoryView() {
 
     try {
       console.log('Deleting category with ID:', id);
-      const response = await apiClient.delete(`/admin/category/${id}`);
+      const response = await apiClient.delete(`/api/admin/category/${id}`);
       console.log('Delete response:', response);
 
       if (response.success) {
@@ -409,6 +422,15 @@ export default function CategoryView() {
               Back to Categories
             </Button>
           </Link>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={fetchCategoryStats}
+            className="flex items-center space-x-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh Stats
+          </Button>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{category.name}</h2>
             <p className="text-gray-600">Category ID: {category.id}</p>

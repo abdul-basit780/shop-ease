@@ -219,7 +219,7 @@ export default function ProductOptions() {
   const fetchProduct = async () => {
     try {
       console.log('Fetching product:', productId);
-      const response = await apiClient.get(`/admin/product/${productId}`);
+      const response = await apiClient.get(`/api/admin/product/${productId}`);
       console.log('Product response:', response);
 
       if (response.success) {
@@ -237,7 +237,7 @@ export default function ProductOptions() {
   const fetchOptionTypes = async () => {
     try {
       console.log('Fetching option types for product:', productId);
-      
+     
       // TODO: Replace with actual API call when backend endpoints are implemented
       // For now, return empty array to prevent 404 errors
       console.log('Option types API not implemented yet - returning empty array');

@@ -269,7 +269,7 @@ export default function CustomerViewPage() {
     try {
       setLoading(true);
       console.log('Fetching customer:', id);
-      const response = await apiClient.get(`/admin/customer/${id}`);
+      const response = await apiClient.get(`/api/admin/customer/${id}`).catch(() => apiClient.get(`/admin/customer/${id}`));
       console.log('Customer response:', response);
       
       if (response.success) {
@@ -302,7 +302,7 @@ export default function CustomerViewPage() {
     
     try {
       setOrdersLoading(true);
-      const response = await apiClient.get(`/admin/orders?customerId=${id}&limit=10`);
+      const response = await apiClient.get(`/api/admin/orders?customerId=${id}&limit=10`).catch(() => apiClient.get(`/admin/orders?customerId=${id}&limit=10`));
       
       if (response.success) {
         setOrders(response.orders || []);
