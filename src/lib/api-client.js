@@ -44,8 +44,27 @@ class ApiClient {
   }
 
   async post(url, data, config) {
-    const response = await this.client.post(url, data, config);
-    return response.data;
+    try {
+      const response = await this.client.post(url, data, config);
+      return response.data;
+    } catch (error) {
+      // Log the full error details for debugging
+      console.error('API POST Error:', {
+        url,
+        data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
+      // Re-throw the error with more details
+      const enhancedError = new Error(error.message);
+      enhancedError.response = error.response;
+      enhancedError.status = error.response?.status;
+      enhancedError.data = error.response?.data;
+      throw enhancedError;
+    }
   }
 
   async put(url, data, config) {

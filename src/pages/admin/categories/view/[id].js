@@ -534,6 +534,14 @@ export default function CategoryView() {
                     Add Product
                   </Button>
                 </Link>
+                {!category.parentId && (
+                  <Link href={`/admin/categories/create?parentId=${category.id}`} className="block">
+                    <Button variant="outline" className="w-full">
+                      <Tag className="h-4 w-4 mr-2" />
+                      Create Subcategory
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="danger" className="w-full" onClick={handleDelete}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Category

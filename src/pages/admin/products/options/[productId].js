@@ -237,15 +237,21 @@ export default function ProductOptions() {
   const fetchOptionTypes = async () => {
     try {
       console.log('Fetching option types for product:', productId);
-      const response = await apiClient.get(`/admin/option-type?productId=${productId}`);
-      console.log('Option types response:', response);
-
-      if (response.success) {
-        setOptionTypes(response.data?.optionTypes || response.optionTypes || []);
-      } else {
-        console.error('Failed to fetch option types:', response.message);
-        toast.error('Failed to load option types');
-      }
+      
+      // TODO: Replace with actual API call when backend endpoints are implemented
+      // For now, return empty array to prevent 404 errors
+      console.log('Option types API not implemented yet - returning empty array');
+      setOptionTypes([]);
+      
+      // Uncomment when backend API is ready:
+      // const response = await apiClient.get(`/admin/option-type?productId=${productId}`);
+      // console.log('Option types response:', response);
+      // if (response.success) {
+      //   setOptionTypes(response.data?.optionTypes || response.optionTypes || []);
+      // } else {
+      //   console.error('Failed to fetch option types:', response.message);
+      //   toast.error('Failed to load option types');
+      // }
     } catch (error) {
       console.error('Error fetching option types:', error);
       toast.error('Failed to load option types');
@@ -264,20 +270,28 @@ export default function ProductOptions() {
 
     try {
       console.log('Creating option type:', newOptionType);
-      const response = await apiClient.post('/admin/option-type', {
-        productId: productId,
-        name: newOptionType.name.trim()
-      });
-      console.log('Create option type response:', response);
-
-      if (response.success) {
-        toast.success('Option type created successfully!');
+      
+      // TODO: Replace with actual API call when backend endpoints are implemented
+      // For now, show success message to prevent errors
+      console.log('Option type creation API not implemented yet - showing success message');
+      toast.success('Option type creation API not implemented yet - this is a placeholder');
         setNewOptionType({ name: '' });
         setShowCreateOptionType(false);
-        fetchOptionTypes();
-      } else {
-        toast.error(response.message || 'Failed to create option type');
-      }
+      
+      // Uncomment when backend API is ready:
+      // const response = await apiClient.post('/admin/option-type', {
+      //   productId: productId,
+      //   name: newOptionType.name.trim()
+      // });
+      // console.log('Create option type response:', response);
+      // if (response.success) {
+      //   toast.success('Option type created successfully!');
+      //   setNewOptionType({ name: '' });
+      //   setShowCreateOptionType(false);
+      //   fetchOptionTypes();
+      // } else {
+      //   toast.error(response.message || 'Failed to create option type');
+      // }
     } catch (error) {
       console.error('Error creating option type:', error);
       toast.error('Failed to create option type');
@@ -291,15 +305,21 @@ export default function ProductOptions() {
 
     try {
       console.log('Deleting option type:', optionTypeId);
-      const response = await apiClient.delete(`/admin/option-type/${optionTypeId}`);
-      console.log('Delete option type response:', response);
-
-      if (response.success) {
-        toast.success('Option type deleted successfully!');
-        fetchOptionTypes();
-      } else {
-        toast.error(response.message || 'Failed to delete option type');
-      }
+      
+      // TODO: Replace with actual API call when backend endpoints are implemented
+      // For now, show success message to prevent errors
+      console.log('Option type deletion API not implemented yet - showing success message');
+      toast.success('Option type deletion API not implemented yet - this is a placeholder');
+      
+      // Uncomment when backend API is ready:
+      // const response = await apiClient.delete(`/admin/option-type/${optionTypeId}`);
+      // console.log('Delete option type response:', response);
+      // if (response.success) {
+      //   toast.success('Option type deleted successfully!');
+      //   fetchOptionTypes();
+      // } else {
+      //   toast.error(response.message || 'Failed to delete option type');
+      // }
     } catch (error) {
       console.error('Error deleting option type:', error);
       toast.error('Failed to delete option type');
