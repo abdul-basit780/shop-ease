@@ -24,14 +24,7 @@ const customJestConfig = {
     coverageDirectory: 'coverage',
     coverageReporters: ['text', 'lcov', 'html'],
     collectCoverageFrom: [
-        'pages/api/**/*.{js,ts}',
-        'lib/**/*.{js,ts}',
-        '!lib/**/*.d.ts',
-        '!**/*.config.js',
-        '!**/node_modules/**',
-        '!**/__tests__/**',
-        '!**/*.test.{js,ts}',
-        '!**/*.spec.{js,ts}',
+        'src/lib/utils/**.(js|jsx|ts|tsx)'
     ],
 
     transform: {

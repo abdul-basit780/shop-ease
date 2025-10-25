@@ -23,3 +23,8 @@ jobs:
       # Run tests
       - name: Test
         run: npm run test
+
+      # Collect coverage
+      - uses: ArtiomTr/jest-coverage-report-action@v2
+        with:
+          test-script: npm run coverate
