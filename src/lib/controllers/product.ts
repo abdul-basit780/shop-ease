@@ -12,15 +12,13 @@ import {
   ProductRequest,
   validateProductRequest,
   validateImageFile,
-  generateImageFilename,
-  IMAGE_CONFIG,
   buildProductFilter,
   buildProductSort,
   ProductFilterParams,
 } from "../utils/product";
-import fs from "fs/promises";
-import path from "path";
 import formidable from "formidable";
+import ImageKit from "imagekit";
+import fs from "fs/promises";
 
 interface Response {
   success: boolean;
@@ -38,32 +36,60 @@ interface Response {
   statusCode: number | undefined;
 }
 
-// Helper function to ensure upload directory exists
-const ensureUploadDir = async () => {
-  const uploadDir = path.join(process.cwd(), IMAGE_CONFIG.UPLOAD_DIR);
+// Initialize ImageKit
+const imagekit = new ImageKit({
+  publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY!,
+  urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT!,
+});
+
+const IMAGEKIT_FOLDER = "/products";
+
+// Helper function to upload image to ImageKit
+const uploadToImageKit = async (file: formidable.File): Promise<string> => {
   try {
-    await fs.access(uploadDir);
-  } catch {
-    await fs.mkdir(uploadDir, { recursive: true });
+    const fileBuffer = await fs.readFile(file.filepath);
+
+    const result = await imagekit.upload({
+      file: fileBuffer,
+      fileName: file.originalFilename || file.newFilename,
+      folder: IMAGEKIT_FOLDER,
+      useUniqueFileName: true,
+    });
+
+    // Clean up temp file
+    await fs.unlink(file.filepath).catch(() => {});
+
+    return result.url;
+  } catch (error) {
+    await fs.unlink(file.filepath).catch(() => {});
+    throw error;
   }
-  return uploadDir;
 };
 
-// Helper function to delete image file
-const deleteImageFile = async (imagePath: string) => {
-  if (!imagePath) return;
+// Helper function to delete image from ImageKit
+const deleteFromImageKit = async (imageUrl: string) => {
+  if (!imageUrl) return;
 
   try {
-    // Extract filename from URL path
-    const filename = imagePath.replace(IMAGE_CONFIG.URL_PREFIX + "/", "");
-    const fullPath = path.join(
-      process.cwd(),
-      IMAGE_CONFIG.UPLOAD_DIR,
-      filename
-    );
-    await fs.unlink(fullPath);
+    const urlParts = imageUrl.split("/");
+    const fileIdWithExt = urlParts[urlParts.length - 1];
+    const fileName = fileIdWithExt.split("?")[0];
+
+    const files = await imagekit.listFiles({
+      path: IMAGEKIT_FOLDER,
+      searchQuery: `name="${fileName}"`,
+    });
+
+    if (files.length > 0) {
+      const file = files[0];
+      // Check if it's a file (not a folder) and has fileId
+      if ("fileId" in file && file.fileId) {
+        await imagekit.deleteFile(file.fileId);
+      }
+    }
   } catch (error) {
-    console.error("Error deleting image file:", error);
+    console.error("Error deleting image from ImageKit:", error);
   }
 };
 
@@ -102,14 +128,13 @@ export const index = async (
     0
   );
 
-  // Build filter and sort objects
   const filter = buildProductFilter(params);
   const sort = buildProductSort(params);
 
   try {
     const [products, total] = await Promise.all([
       Product.find(filter)
-        .populate("categoryId", "name") // Populate category name
+        .populate("categoryId", "name")
         .sort(sort)
         .skip(skip)
         .limit(limitNum)
@@ -117,7 +142,6 @@ export const index = async (
       Product.countDocuments(filter),
     ]);
 
-    // Recalculate pagination with actual total
     const finalPagination = calculatePagination(
       params.page,
       params.limit,
@@ -155,13 +179,8 @@ export const store = async (
   };
 
   try {
-    // Parse form data with formidable
-    const uploadDir = await ensureUploadDir();
-
     const form = formidable({
-      uploadDir,
-      keepExtensions: true,
-      maxFileSize: IMAGE_CONFIG.MAX_SIZE,
+      maxFileSize: 5 * 1024 * 1024, // 5MB
     });
 
     const [fields, files] = await new Promise<[any, any]>((resolve, reject) => {
@@ -171,7 +190,6 @@ export const store = async (
       });
     });
 
-    // Parse fields (formidable returns arrays)
     const requestData: ProductRequest = {
       name: Array.isArray(fields.name) ? fields.name[0] : fields.name,
       price: parseFloat(
@@ -188,7 +206,6 @@ export const store = async (
         : fields.categoryId,
     };
 
-    // Validate request data
     const validationErrors = validateProductRequest(requestData);
     if (validationErrors.length > 0) {
       productResponse.message = validationErrors.join(", ");
@@ -196,7 +213,6 @@ export const store = async (
       return productResponse;
     }
 
-    // Handle image file
     const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;
 
     if (!imageFile) {
@@ -205,30 +221,26 @@ export const store = async (
       return productResponse;
     }
 
-    // Validate image
     const imageErrors = validateImageFile(imageFile);
     if (imageErrors.length > 0) {
-      // Delete uploaded file
-      await fs.unlink(imageFile.filepath);
+      await fs.unlink(imageFile.filepath).catch(() => {});
       productResponse.message = imageErrors.join(", ");
       productResponse.statusCode = 400;
       return productResponse;
     }
 
-    // Check if category exists and is not deleted
     const category = await Category.findOne({
       _id: requestData.categoryId,
       deletedAt: null,
     });
 
     if (!category) {
-      await fs.unlink(imageFile.filepath);
+      await fs.unlink(imageFile.filepath).catch(() => {});
       productResponse.message = "Category not found or has been deleted";
       productResponse.statusCode = 404;
       return productResponse;
     }
 
-    // Check for duplicate product name in the same category
     const existingProduct = await Product.findOne({
       name: requestData.name.toLowerCase().trim(),
       categoryId: requestData.categoryId,
@@ -236,30 +248,30 @@ export const store = async (
     });
 
     if (existingProduct) {
-      await fs.unlink(imageFile.filepath);
+      await fs.unlink(imageFile.filepath).catch(() => {});
       productResponse.message =
         "Product with this name already exists in the category";
       productResponse.statusCode = 409;
       return productResponse;
     }
 
-    // Generate new filename and move file
-    const newFilename = generateImageFilename(
-      imageFile.originalFilename || imageFile.newFilename
-    );
-    const newPath = path.join(uploadDir, newFilename);
-    await fs.rename(imageFile.filepath, newPath);
+    let imageUrl: string;
+    try {
+      imageUrl = await uploadToImageKit(imageFile);
+    } catch (error) {
+      console.error("ImageKit upload error:", error);
+      productResponse.message = "Failed to upload image";
+      productResponse.statusCode = 500;
+      return productResponse;
+    }
 
-    // Create product with image URL
     const newProduct = await Product.create({
       ...requestData,
-      img: `${IMAGE_CONFIG.URL_PREFIX}/${newFilename}`,
+      img: imageUrl,
     });
 
-    // Populate category for response
     await newProduct.populate("categoryId", "name");
 
-    // Build response
     const responseProduct = buildProductResponse(newProduct);
     productResponse.product = responseProduct;
     productResponse.success = true;
@@ -340,13 +352,8 @@ export const update = async (
   }
 
   try {
-    // Parse form data
-    const uploadDir = await ensureUploadDir();
-
     const form = formidable({
-      uploadDir,
-      keepExtensions: true,
-      maxFileSize: IMAGE_CONFIG.MAX_SIZE,
+      maxFileSize: 5 * 1024 * 1024, // 5MB
     });
 
     const [fields, files] = await new Promise<[any, any]>((resolve, reject) => {
@@ -356,7 +363,6 @@ export const update = async (
       });
     });
 
-    // Parse fields
     const requestData: Partial<ProductRequest> = {};
 
     if (fields.name) {
@@ -385,7 +391,6 @@ export const update = async (
         : fields.categoryId;
     }
 
-    // Validate request data
     const validationErrors = validateProductRequest(
       requestData as ProductRequest,
       true
@@ -396,7 +401,13 @@ export const update = async (
       return productResponse;
     }
 
-    // Find existing product
+    // Skip update if no fields were provided
+    if (Object.keys(requestData).length === 0 && !files.image) {
+      productResponse.message = "No fields to update";
+      productResponse.statusCode = 400;
+      return productResponse;
+    }
+
     const existingProduct = await Product.findOne({
       _id: id,
       deletedAt: null,
@@ -408,7 +419,12 @@ export const update = async (
       return productResponse;
     }
 
-    // Check category if being updated
+    if (requestData.categoryId === "") {
+      productResponse.message = "Category ID cannot be empty string";
+      productResponse.statusCode = 400;
+      return productResponse;
+    }
+
     if (requestData.categoryId) {
       const category = await Category.findOne({
         _id: requestData.categoryId,
@@ -422,7 +438,6 @@ export const update = async (
       }
     }
 
-    // Check for duplicate name if being updated
     if (
       requestData.name &&
       requestData.name.toLowerCase().trim() !== existingProduct.name
@@ -442,35 +457,32 @@ export const update = async (
       }
     }
 
-    // Handle image update if provided
     const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;
     let newImageUrl = existingProduct.img;
 
     if (imageFile) {
-      // Validate new image
       const imageErrors = validateImageFile(imageFile);
       if (imageErrors.length > 0) {
-        await fs.unlink(imageFile.filepath);
+        await fs.unlink(imageFile.filepath).catch(() => {});
         productResponse.message = imageErrors.join(", ");
         productResponse.statusCode = 400;
         return productResponse;
       }
 
-      // Generate new filename and move file
-      const newFilename = generateImageFilename(
-        imageFile.originalFilename || imageFile.newFilename
-      );
-      const newPath = path.join(uploadDir, newFilename);
-      await fs.rename(imageFile.filepath, newPath);
+      try {
+        newImageUrl = await uploadToImageKit(imageFile);
 
-      // Delete old image
-      await deleteImageFile(existingProduct.img);
-
-      // Update image URL
-      newImageUrl = `${IMAGE_CONFIG.URL_PREFIX}/${newFilename}`;
+        deleteFromImageKit(existingProduct.img).catch((err) =>
+          console.error("Failed to delete old image:", err)
+        );
+      } catch (error) {
+        console.error("ImageKit upload error:", error);
+        productResponse.message = "Failed to upload image";
+        productResponse.statusCode = 500;
+        return productResponse;
+      }
     }
 
-    // Update product
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
       {
@@ -489,7 +501,6 @@ export const update = async (
       return productResponse;
     }
 
-    // Build response
     const responseProduct = buildProductResponse(updatedProduct);
     productResponse.product = responseProduct;
     productResponse.success = true;
@@ -536,12 +547,9 @@ export const destroy = async (
       return productResponse;
     }
 
-    // Soft delete: Set deletedAt timestamp
     await Product.findByIdAndUpdate(id, {
       deletedAt: new Date(),
     });
-
-    // Note: We keep the image file for potential restoration
 
     productResponse.success = true;
     productResponse.message = "Product deleted successfully";
@@ -588,7 +596,6 @@ export const restore = async (
       return productResponse;
     }
 
-    // Check if a product with the same name exists in the category
     const existingProduct = await Product.findOne({
       name: product.name,
       categoryId: product.categoryId,
@@ -603,11 +610,9 @@ export const restore = async (
       return productResponse;
     }
 
-    // Restore the product
     product.deletedAt = null;
     await product.save();
 
-    // Populate category for response
     await product.populate("categoryId", "name");
 
     const responseProduct = buildProductResponse(product);
@@ -653,10 +658,8 @@ export const permanentDestroy = async (
       return productResponse;
     }
 
-    // Delete the image file
-    await deleteImageFile(product.img);
+    await deleteFromImageKit(product.img);
 
-    // Permanently delete the product
     await Product.findByIdAndDelete(id);
 
     productResponse.success = true;

@@ -26,8 +26,9 @@ export const publicProductSchemas = {
       },
       img: {
         type: "string",
-        example: "/uploads/products/product_1704067200_abc123.jpg",
-        description: "Product image URL",
+        format: "uri",
+        example: "https://ik.imagekit.io/your_id/products/product_xyz.jpg",
+        description: "Product image URL (ImageKit CDN)",
       },
       description: {
         type: "string",
@@ -46,7 +47,8 @@ export const publicProductSchemas = {
       },
       optionTypes: {
         type: "array",
-        description: "Available option types for this product",
+        description:
+          "Available option types for this product (e.g., Size, Color)",
         items: {
           type: "object",
           properties: {
@@ -58,7 +60,7 @@ export const publicProductSchemas = {
             name: {
               type: "string",
               example: "size",
-              description: "Option type name",
+              description: "Option type name (lowercase)",
             },
             values: {
               type: "array",
@@ -74,18 +76,27 @@ export const publicProductSchemas = {
                   value: {
                     type: "string",
                     example: "m",
-                    description: "Option value",
+                    description: "Option value (e.g., m, l, xl for size)",
+                  },
+                  img: {
+                    type: "string",
+                    format: "uri",
+                    example:
+                      "https://ik.imagekit.io/your_id/option-values/size_m.jpg",
+                    description: "Option value image URL (ImageKit CDN)",
                   },
                   price: {
                     type: "number",
                     format: "float",
                     example: 0,
-                    description: "Additional price for this option",
+                    description:
+                      "Additional price for this option (added to base product price)",
                   },
                   stock: {
                     type: "integer",
                     example: 50,
-                    description: "Stock for this option",
+                    description:
+                      "Available stock for this specific option value",
                   },
                 },
               },
@@ -126,7 +137,8 @@ export const publicProductSchemas = {
           products: {
             type: "array",
             items: { $ref: "#/components/schemas/PublicProductResponse" },
-            description: "Array of product objects with option types",
+            description:
+              "Array of product objects with option types and values",
           },
           pagination: {
             $ref: "#/components/schemas/PaginationInfo",
@@ -246,6 +258,84 @@ export const publicProductSchemas = {
             description: "HTTP status code",
           },
         },
+      },
+    },
+  },
+
+  // Example: Full Product with Options Response
+  FullProductExample: {
+    type: "object",
+    example: {
+      success: true,
+      message: "Product retrieved successfully",
+      data: {
+        id: "507f1f77bcf86cd799439011",
+        name: "Cotton T-Shirt",
+        price: 29.99,
+        stock: 100,
+        img: "https://ik.imagekit.io/your_id/products/tshirt_main.jpg",
+        description:
+          "Comfortable 100% cotton t-shirt available in multiple sizes and colors",
+        categoryId: "507f1f77bcf86cd799439010",
+        categoryName: "Clothing",
+        optionTypes: [
+          {
+            id: "507f1f77bcf86cd799439012",
+            name: "size",
+            values: [
+              {
+                id: "507f1f77bcf86cd799439013",
+                value: "s",
+                img: "https://ik.imagekit.io/your_id/option-values/size_s.jpg",
+                price: 0,
+                stock: 25,
+              },
+              {
+                id: "507f1f77bcf86cd799439014",
+                value: "m",
+                img: "https://ik.imagekit.io/your_id/option-values/size_m.jpg",
+                price: 0,
+                stock: 50,
+              },
+              {
+                id: "507f1f77bcf86cd799439015",
+                value: "l",
+                img: "https://ik.imagekit.io/your_id/option-values/size_l.jpg",
+                price: 2.0,
+                stock: 30,
+              },
+            ],
+          },
+          {
+            id: "507f1f77bcf86cd799439016",
+            name: "color",
+            values: [
+              {
+                id: "507f1f77bcf86cd799439017",
+                value: "red",
+                img: "https://ik.imagekit.io/your_id/option-values/color_red.jpg",
+                price: 0,
+                stock: 40,
+              },
+              {
+                id: "507f1f77bcf86cd799439018",
+                value: "blue",
+                img: "https://ik.imagekit.io/your_id/option-values/color_blue.jpg",
+                price: 0,
+                stock: 35,
+              },
+              {
+                id: "507f1f77bcf86cd799439019",
+                value: "black",
+                img: "https://ik.imagekit.io/your_id/option-values/color_black.jpg",
+                price: 3.0,
+                stock: 60,
+              },
+            ],
+          },
+        ],
+        createdAt: "2024-01-01T00:00:00.000Z",
+        updatedAt: "2024-01-15T12:30:00.000Z",
       },
     },
   },
