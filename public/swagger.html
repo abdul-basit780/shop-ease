@@ -69,17 +69,12 @@
           {
             url: "http://localhost:3000",
             description: "Development server"
-          }
-        ];
-
-        // Add production server if not localhost
-        const currentHostname = window.location.hostname;
-        if (!currentHostname.includes('localhost') && !currentHostname.includes('127.0.0.1')) {
-          commonServers.push({
+          },
+          {
             url: "https://shop-ease-online-app.vercel.app",
             description: "Production server"
-          });
-        }
+          }
+        ];
 
         commonServers.forEach(commonServer => {
           if (!servers.some(s => s.url === commonServer.url)) {
