@@ -8,7 +8,6 @@ import TrendingProducts from "../components/home/TrendingProducts";
 export default function HomePage() {
   return (
     <div className="">
-      {/* <div className="container mx-auto"> */}
       <Banner></Banner>
       <TrustBadge></TrustBadge>
       <Categories></Categories>
