@@ -10,7 +10,7 @@ export interface ProductResponse {
   img: string;
   description: string;
   categoryId: string;
-  categoryName?: string; // Optional, populated from category
+  categoryName?: string;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -24,7 +24,7 @@ export interface PublicProductResponse {
   img: string;
   description: string;
   categoryId: string;
-  categoryName?: string; // Optional, populated from category
+  categoryName?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,7 +35,7 @@ export interface ProductRequest {
   stock: number;
   description: string;
   categoryId: string;
-  img?: string; // Optional in request, will be handled by file upload
+  img?: string;
 }
 
 // Helper function to build product response (admin - includes deletedAt)
@@ -51,7 +51,7 @@ export const buildProductResponse = (
     description: product.description,
     categoryId:
       product.categoryId?._id?.toString() || product.categoryId?.toString(),
-    categoryName: product.categoryId?.name || undefined, // If populated
+    categoryName: product.categoryId?.name || undefined,
     deletedAt: product.deletedAt,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
@@ -71,7 +71,7 @@ export const buildPublicProductResponse = (
     description: product.description,
     categoryId:
       product.categoryId?._id?.toString() || product.categoryId?.toString(),
-    categoryName: product.categoryId?.name || undefined, // If populated
+    categoryName: product.categoryId?.name || undefined,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };
@@ -143,15 +143,6 @@ export const validateProductRequest = (
   return errors;
 };
 
-// Image upload configuration
-export const IMAGE_CONFIG = {
-  MAX_SIZE: 5 * 1024 * 1024, // 5MB
-  ALLOWED_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
-  ALLOWED_EXTENSIONS: [".jpg", ".jpeg", ".png", ".webp"],
-  UPLOAD_DIR: "public/uploads/products",
-  URL_PREFIX: "/uploads/products",
-};
-
 // Validate image file
 export const validateImageFile = (file: any): string[] => {
   const errors: string[] = [];
@@ -160,29 +151,21 @@ export const validateImageFile = (file: any): string[] => {
     return errors; // Image is optional for updates
   }
 
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+
   // Check file size
-  if (file.size > IMAGE_CONFIG.MAX_SIZE) {
-    errors.push(
-      `Image size must not exceed ${IMAGE_CONFIG.MAX_SIZE / 1024 / 1024}MB`
-    );
+  if (file.size > MAX_SIZE) {
+    errors.push(`Image size must not exceed ${MAX_SIZE / 1024 / 1024}MB`);
   }
 
   // Check file type
-  if (!IMAGE_CONFIG.ALLOWED_TYPES.includes(file.mimetype)) {
-    errors.push(
-      `Image must be one of: ${IMAGE_CONFIG.ALLOWED_EXTENSIONS.join(", ")}`
-    );
+  if (!ALLOWED_TYPES.includes(file.mimetype)) {
+    errors.push(`Image must be one of: ${ALLOWED_EXTENSIONS.join(", ")}`);
   }
 
   return errors;
-};
-
-// Generate unique filename
-export const generateImageFilename = (originalName: string): string => {
-  const ext = originalName.substring(originalName.lastIndexOf("."));
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `product_${timestamp}_${random}${ext}`;
 };
 
 // Build filter for product queries

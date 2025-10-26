@@ -18,6 +18,7 @@ interface PublicProductWithOptions extends PublicProductResponse {
     values: Array<{
       id: string;
       value: string;
+      img: string;
       price: number;
       stock: number;
     }>;
@@ -160,6 +161,7 @@ export const listProducts = async (
               .map((ov) => ({
                 id: ov._id.toString(),
                 value: ov.value,
+                img: ov.img,
                 price: ov.price,
                 stock: ov.stock,
               })),
@@ -255,6 +257,7 @@ export const getProduct = async (req: NextApiRequest, res: NextApiResponse) => {
           .map((ov) => ({
             id: ov._id.toString(),
             value: ov.value,
+            img: ov.img,
             price: ov.price,
             stock: ov.stock,
           })),
