@@ -7,7 +7,7 @@ import { authService } from "@/lib/auth-service";
 import toast from "react-hot-toast";
 import { Lock, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
 
-export default function ResetPassword() {
+export default function ResetPasswordPage() {
   const router = useRouter();
   const { token } = router.query;
   const [formData, setFormData] = useState({
@@ -18,13 +18,20 @@ export default function ResetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [tokenValid, setTokenValid] = useState(true);
+  const [tokenValid, setTokenValid] = useState(null);
 
   useEffect(() => {
-    if (!token) {
-      setTokenValid(false);
+    // Only check token when router is ready
+    if (router.isReady) {
+      console.log('Token check:', { token, hasToken: !!token, length: token?.length });
+      
+      if (token && typeof token === 'string' && token.length > 0) {
+        setTokenValid(true);
+      } else {
+        setTokenValid(false);
+      }
     }
-  }, [token]);
+  }, [router.isReady, token]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -144,7 +151,34 @@ export default function ResetPassword() {
 
   const strength = passwordStrength();
 
-  if (!tokenValid) {
+  // Loading state
+  if (tokenValid === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="w-full max-w-md text-center">
+          <Card className="shadow-2xl border-0">
+            <CardBody className="p-12">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-6 animate-pulse">
+                <Lock className="h-10 w-10 text-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                Verifying Reset Link
+              </h2>
+              <p className="text-gray-600">
+                Please wait while we verify your password reset link...
+              </p>
+              <div className="mt-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Invalid token
+  if (tokenValid === false) {
     return (
       <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-red-50 via-white to-orange-50">
         <div className="w-full max-w-md">
@@ -171,6 +205,7 @@ export default function ResetPassword() {
     );
   }
 
+  // Valid token - show form
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
       {/* Animated Background */}

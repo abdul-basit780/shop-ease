@@ -33,7 +33,7 @@ class ApiClient {
         if (error.response?.status === 401) {
           Cookies.remove("auth_token");
           if (typeof window !== "undefined") {
-            window.location.href = "/login";
+            window.location.href = "/auth/login";
           }
         }
         return Promise.reject(error);

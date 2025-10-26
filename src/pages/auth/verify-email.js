@@ -20,12 +20,17 @@ export default function VerifyEmail() {
   const [verificationStatus, setVerificationStatus] = useState("loading");
   const [message, setMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      verifyEmail(token);
-    } else if (router.isReady && !token) {
-      setVerificationStatus("no-token");
+    // Wait for router to be ready before processing
+    if (router.isReady) {
+      setPageLoading(false);
+      if (token) {
+        verifyEmail(token);
+      } else {
+        setVerificationStatus("no-token");
+      }
     }
   }, [token, router.isReady]);
 
