@@ -213,5 +213,6 @@ export const setCorsHeaders = (res: NextApiResponse): void => {
 
 export const handleOptions = (res: NextApiResponse): void => {
   setCorsHeaders(res);
-  res.status(200).end();
+  res.status(200);
+  res.end();
 };

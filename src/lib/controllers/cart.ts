@@ -302,7 +302,9 @@ export const addProduct = async (
         new: true,
         setDefaultsOnInsert: true,
       }
-    ).populate([
+    )
+
+    updatedCart.populate([
       {
         path: "products.productId",
         populate: {

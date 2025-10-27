@@ -88,31 +88,43 @@ export const authService = {
 
   async verifyEmail(token) {
     try {
-      const response = await apiClient.post('/auth/verify-email', { token });
+      const response = await apiClient.post('/api/auth/verify-email', { token });
       return response;
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Email verification failed',
+        error: error.response?.data?.message || error.response?.data?.error || 'Email verification failed',
+      };
+    }
+  },
+
+  async sendVerificationEmail(email) {
+    try {
+      const response = await apiClient.post('/api/auth/send-verification', { email });
+      return response;
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || error.response?.data?.error || 'Failed to send verification email',
       };
     }
   },
 
   async resetPasswordRequest(email) {
     try {
-      const response = await apiClient.post('/auth/reset-password-request', { email });
+      const response = await apiClient.post('/api/auth/forgot-password', { email });
       return response;
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Password reset request failed',
+        error: error.response?.data?.message || error.response?.data?.error || 'Password reset request failed',
       };
     }
   },
 
   async resetPassword(token, newPassword) {
     try {
-      const response = await apiClient.post('/auth/reset-password', {
+      const response = await apiClient.post('/api/auth/reset-password', {
         token,
         newPassword
       });
@@ -120,7 +132,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Password reset failed',
+        error: error.response?.data?.message || error.response?.data?.error || 'Password reset failed',
       };
     }
   },
