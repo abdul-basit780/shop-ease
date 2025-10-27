@@ -272,10 +272,13 @@ export default function CustomerViewPage() {
       const response = await apiClient.get(`/api/admin/customer/${id}`);
       console.log('Customer response:', response);
       
-      if (response.success && response.customer) {
-        setCustomer(response.customer);
+      // Handle both possible response structures (response.data or direct response)
+      const responseData = response.data || response;
+      
+      if (responseData.success && responseData.customer) {
+        setCustomer(responseData.customer);
       } else {
-        toast.error(response.message || 'Customer not found');
+        toast.error(responseData.message || 'Customer not found');
         router.push('/admin/customers');
       }
     } catch (error) {
@@ -302,10 +305,13 @@ export default function CustomerViewPage() {
     
     try {
       setOrdersLoading(true);
-      const response = await apiClient.get(`/api/admin/orders?customerId=${id}&limit=10`).catch(() => apiClient.get(`/admin/orders?customerId=${id}&limit=10`));
+      const response = await apiClient.get(`/api/admin/orders?customerId=${id}&limit=10`);
       
-      if (response.success) {
-        setOrders(response.orders || []);
+      // Handle both possible response structures (response.data or direct response)
+      const responseData = response.data || response;
+      
+      if (responseData.success) {
+        setOrders(responseData.orders || []);
       }
     } catch (error) {
       console.error('Error fetching customer orders:', error);
@@ -335,11 +341,14 @@ export default function CustomerViewPage() {
       });
       console.log('Toggle status response:', response);
 
-      if (response.success) {
+      // Handle both possible response structures (response.data or direct response)
+      const responseData = response.data || response;
+
+      if (responseData.success) {
         toast.success(`Customer ${action}d successfully`);
         setCustomer(prev => ({ ...prev, isActive: newStatus }));
       } else {
-        toast.error(response.message || `Failed to ${action} customer`);
+        toast.error(responseData.message || `Failed to ${action} customer`);
       }
     } catch (error) {
       console.error('Error toggling customer status:', error);
@@ -609,6 +618,23 @@ export default function CustomerViewPage() {
                 >
                   <Star className="h-4 w-4 mr-2" />
                   View Feedback
+                </Button>
+                <Button
+                  variant={customer?.isActive ? "danger" : "success"}
+                  className="w-full"
+                  onClick={handleToggleStatus}
+                >
+                  {customer?.isActive ? (
+                    <>
+                      <X className="h-4 w-4 mr-2" />
+                      Deactivate Account
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Activate Account
+                    </>
+                  )}
                 </Button>
                 <Button
                   variant="outline"

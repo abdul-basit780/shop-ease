@@ -6,7 +6,7 @@ import {
   DollarSign, 
   Users, 
   Package, 
-  TrendingUp, 
+  TrendingUp,
   AlertTriangle,
   RefreshCw,
   Download,
@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   LogOut,
-  Search
+  Search,
+  Star
 } from 'lucide-react';
 import { apiClient } from '../../lib/api-client';
 import { toast } from 'react-hot-toast';
@@ -175,22 +176,22 @@ const AdminLayout = ({ children, title, subtitle }) => {
 
 // Card Components
 const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`} {...props}>
+  <div className={`bg-white rounded-lg shadow-lg border border-gray-200 ${className}`} {...props}>
     {children}
   </div>
 );
 
 const CardHeader = ({ children, className = '', ...props }) => (
-  <div className={`px-6 py-4 border-b border-gray-200 ${className}`} {...props}>
-    {children}
-  </div>
-);
+    <div className={`px-6 py-4 border-b border-gray-200 ${className}`} {...props}>
+      {children}
+    </div>
+  );
 
 const CardBody = ({ children, className = '', ...props }) => (
-  <div className={`p-6 ${className}`} {...props}>
-    {children}
-  </div>
-);
+    <div className={`p-6 ${className}`} {...props}>
+      {children}
+    </div>
+  );
 
 // Button Component
 const Button = ({ 
@@ -249,7 +250,7 @@ const StatCard = ({ title, value, subtitle, change, changeType, icon: Icon, colo
   };
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+    <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -267,8 +268,8 @@ const StatCard = ({ title, value, subtitle, change, changeType, icon: Icon, colo
               </div>
             )}
           </div>
-          <div className={`w-12 h-12 rounded-lg bg-gradient-to-r ${colorClasses[color]} flex items-center justify-center`}>
-            <Icon className="h-6 w-6 text-white" />
+          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${colorClasses[color]} flex items-center justify-center shadow-lg`}>
+            <Icon className="h-7 w-7 text-white" />
           </div>
         </div>
       </CardBody>
@@ -374,9 +375,92 @@ const RecentOrders = ({ orders }) => {
   );
 };
 
+// Revenue Chart Component
+const RevenueChart = ({ trends }) => {
+  if (!trends || trends.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <TrendingUp className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+        <p>No revenue data available</p>
+      </div>
+    );
+  }
+
+  const maxRevenue = Math.max(...trends.map(t => t.revenue || 0));
+
+  return (
+    <div className="space-y-2">
+      {trends.slice(0, 7).map((item, index) => {
+        const percentage = maxRevenue > 0 ? (item.revenue / maxRevenue) * 100 : 0;
+        return (
+          <div key={index} className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">{item.date || 'Date'}</span>
+              <span className="font-medium text-gray-900">${(item.revenue || 0).toLocaleString()}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${percentage}%` }}
+              ></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// System Health Component
+const SystemHealth = ({ health }) => {
+  if (!health || !health.status) return null;
+
+  const getStatusColor = (status) => {
+    return status === 'healthy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        <p className="text-xs text-gray-500 mb-1">Database Status</p>
+        <p className="text-lg font-bold text-gray-900">
+          {health.database?.status === 'connected' ? '✅ Connected' : '❌ Disconnected'}
+        </p>
+        {health.database?.latency && (
+          <p className="text-xs text-gray-500 mt-1">{health.database.latency}ms</p>
+        )}
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        <p className="text-xs text-gray-500 mb-1">Memory Usage</p>
+        <p className="text-lg font-bold text-gray-900">{health.memory?.percentage || 0}%</p>
+        <p className="text-xs text-gray-500 mt-1">
+          {health.memory?.used || 0}MB / {health.memory?.total || 0}MB
+        </p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        <p className="text-xs text-gray-500 mb-1">Environment</p>
+        <p className="text-lg font-bold text-gray-900">{health.environment || 'Unknown'}</p>
+        <p className="text-xs text-gray-500 mt-1">v{health.version || '1.0.0'}</p>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        <p className="text-xs text-gray-500 mb-1">Uptime</p>
+        <p className="text-lg font-bold text-gray-900">
+          {Math.round((health.uptime || 0) / 3600)}h {Math.round(((health.uptime || 0) % 3600) / 60)}m
+        </p>
+        <p className="text-xs text-gray-500 mt-1">{Math.round(health.uptime || 0)}s</p>
+      </div>
+    </div>
+  );
+};
+
 // Main Dashboard Component
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
+  const [revenueData, setRevenueData] = useState(null);
+  const [healthData, setHealthData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -417,19 +501,85 @@ export default function AdminDashboard() {
 
       // Try to fetch real data
       try {
-        const [statsResponse, revenueResponse] = await Promise.all([
-          apiClient.get('/api/admin/dashboard/stats'),
-          apiClient.get('/api/admin/dashboard/revenue')
+        const [statsResponse, revenueResponse, healthResponse] = await Promise.all([
+          apiClient.get('/api/admin/dashboard/stats').catch(() => ({ data: null })),
+          apiClient.get('/api/admin/dashboard/revenue?period=daily').catch(() => ({ data: null })),
+          apiClient.get('/api/health').catch(() => ({ data: null }))
         ]);
-
-        if (statsResponse?.success) {
-          setStats(statsResponse.data);
+        
+        // Handle stats response - API returns { success, message, data }
+        if (statsResponse?.success && statsResponse.data) {
+          const data = statsResponse.data;
+          
+          setStats({
+            overview: {
+              totalOrders: data.overview?.orders?.total || 0,
+              totalRevenue: data.overview?.revenue?.total || 0,
+              totalCustomers: data.overview?.customers?.total || 0,
+              totalProducts: data.overview?.products?.total || 0,
+              avgOrderValue: data.overview?.revenue?.avgOrderValue || 0,
+              avgRating: data.overview?.feedback?.avgRating || 0,
+            },
+            customers: {
+              active: data.overview?.customers?.active || 0,
+              blocked: data.overview?.customers?.blocked || 0,
+              verified: data.overview?.customers?.verified || 0,
+              unverified: data.overview?.customers?.unverified || 0,
+              newCustomers: data.overview?.customers?.newCustomers || 0,
+            },
+            orders: {
+              byStatus: data.overview?.orders?.byStatus || {},
+              today: data.overview?.orders?.total || 0,
+              thisWeek: 0,
+              thisMonth: 0,
+            },
+            revenue: {
+              today: 0,
+              thisWeek: 0,
+              thisMonth: data.overview?.revenue?.total || 0,
+              avgOrderValue: data.overview?.revenue?.avgOrderValue || 0,
+              orderCount: data.overview?.revenue?.orderCount || 0,
+            },
+            products: {
+              total: data.overview?.products?.total || 0,
+              active: data.overview?.products?.active || 0,
+              deleted: data.overview?.products?.deleted || 0,
+              lowStock: data.overview?.products?.lowStock || 0,
+            },
+            categories: {
+              total: data.overview?.categories?.total || 0,
+              active: data.overview?.categories?.active || 0,
+              deleted: data.overview?.categories?.deleted || 0,
+            },
+            feedback: {
+              total: data.overview?.feedback?.total || 0,
+              avgRating: data.overview?.feedback?.avgRating || 0,
+            },
+            lowStockProducts: data.insights?.lowStockProducts || [],
+            recentOrders: data.insights?.recentOrders || [],
+            topSellingProducts: data.insights?.topSellingProducts || [],
+            trends: data.trends?.revenueTrend || [],
+          });
         }
-        if (revenueResponse?.success) {
-          // Handle revenue data if needed
+
+        // Handle revenue response - API returns { success, message, data: { period, dateRange, data: [...] } }
+        if (revenueResponse?.success && revenueResponse.data) {
+          setRevenueData(revenueResponse.data);
+        }
+
+        // Handle health response - API returns { success, message, data }
+        console.log('Health response:', healthResponse);
+        
+        if (healthResponse?.success && healthResponse.data) {
+          console.log('Setting health data:', healthResponse.data);
+          setHealthData(healthResponse.data);
+        } else if (healthResponse?.data?.status) {
+          // Handle case where response.data has the health object directly
+          console.log('Setting health data (direct):', healthResponse.data);
+          setHealthData(healthResponse.data);
         }
       } catch (apiError) {
-        console.log('API calls failed, using fallback data:', apiError);
+        console.error('API calls failed:', apiError);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -486,13 +636,13 @@ export default function AdminDashboard() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
+        <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600">Welcome back! Here's what's happening with your store.</p>
-          </div>
+        </div>
           <div className="flex items-center space-x-4">
             <button
-              onClick={handleRefresh}
+            onClick={handleRefresh}
               disabled={refreshing}
               className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
@@ -500,7 +650,7 @@ export default function AdminDashboard() {
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           </div>
-        </div>
+      </div>
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -511,34 +661,107 @@ export default function AdminDashboard() {
             changeType="increase"
             icon={ShoppingBag}
           />
-          <StatCard
-            title="Total Revenue"
+        <StatCard
+          title="Total Revenue"
             value={`$${stats?.overview?.totalRevenue?.toLocaleString() || 0}`}
             change="+8%"
-            changeType="increase"
-            icon={DollarSign}
-          />
-          <StatCard
-            title="Total Customers"
+          changeType="increase"
+          icon={DollarSign}
+        />
+        <StatCard
+          title="Total Customers"
             value={stats?.overview?.totalCustomers || 0}
             change="+15%"
-            changeType="increase"
-            icon={Users}
-          />
-          <StatCard
-            title="Total Products"
+          changeType="increase"
+          icon={Users}
+        />
+        <StatCard
+          title="Total Products"
             value={stats?.overview?.totalProducts || 0}
             change="+5%"
-            changeType="increase"
-            icon={Package}
-          />
-        </div>
+          changeType="increase"
+          icon={Package}
+        />
+      </div>
+
+        {/* Additional Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+            title="Active Customers"
+            value={stats?.customers?.active || 0}
+            subtitle={`${stats?.customers?.blocked || 0} blocked`}
+            color="green"
+            icon={Users}
+        />
+        <StatCard
+            title="Avg Order Value"
+            value={`$${(stats?.overview?.avgOrderValue || 0).toFixed(2)}`}
+            subtitle={`${stats?.overview?.totalOrders || 0} orders`}
+          color="purple"
+            icon={DollarSign}
+        />
+        <StatCard
+            title="Avg Rating"
+            value={(stats?.overview?.avgRating || 0).toFixed(1)}
+            subtitle={`${stats?.feedback?.total || 0} reviews`}
+            color="orange"
+            icon={Star}
+        />
+      </div>
+
+        {/* Top Selling Products */}
+        {stats?.topSellingProducts && stats.topSellingProducts.length > 0 && (
+          <Card>
+        <CardHeader>
+              <h3 className="text-lg font-semibold text-gray-900">Top Selling Products</h3>
+        </CardHeader>
+        <CardBody>
+              <div className="space-y-4">
+                {stats.topSellingProducts.slice(0, 5).map((product, index) => (
+                  <div key={product.productId || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">{index + 1}</span>
+              </div>
+              <div>
+                        <p className="font-medium text-gray-900">{product.name || 'Unknown Product'}</p>
+                        <p className="text-sm text-gray-500">{product.totalSold || 0} sold</p>
+              </div>
+              </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">${(product.revenue || 0).toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">Revenue</p>
+              </div>
+              </div>
+                ))}
+          </div>
+        </CardBody>
+      </Card>
+        )}
+
+        {/* Revenue Trends */}
+        {revenueData?.data && revenueData.data.length > 0 && (
+          <Card>
+        <CardHeader>
+              <h3 className="text-lg font-semibold text-gray-900">Revenue Trends</h3>
+              <p className="text-sm text-gray-600">
+                Daily revenue over the past {revenueData.data.length} days
+              </p>
+        </CardHeader>
+        <CardBody>
+              <RevenueChart trends={revenueData.data} />
+            </CardBody>
+          </Card>
+        )}
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <LowStockAlert products={stats?.lowStockProducts || []} />
           <RecentOrders orders={stats?.recentOrders || []} />
         </div>
+
+        {/* System Health */}
+        <SystemHealth health={healthData} />
       </div>
     </AdminLayout>
   );

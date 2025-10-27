@@ -374,19 +374,28 @@ export default function CustomersPage() {
       const response = await apiClient.get(`/api/admin/customer?${params}`);
       console.log('Customers response:', response);
       
-      if (response.success) {
-        setCustomers(response.customers || []);
-        setTotalPages(response.pagination?.totalPages || 1);
-        // Note: Admin API doesn't return stats, so we'll calculate basic stats from customers
-        const customersList = response.customers || [];
+      // Handle both possible response structures (response.data or direct response)
+      const responseData = response.data || response;
+      
+      if (responseData.success) {
+        const customersList = responseData.customers || [];
+        setCustomers(customersList);
+        setTotalPages(responseData.pagination?.totalPages || 1);
+        
+        // Calculate stats from customers array
+        const activeCount = customersList.filter(c => c.isActive !== false).length;
+        const inactiveCount = customersList.length - activeCount;
+        
         const stats = {
-          total: response.pagination?.total || customersList.length || 0,
-          active: customersList.length, // Assume all are active if no isActive field
-          inactive: 0,
+          total: responseData.pagination?.total || customersList.length || 0,
+          active: activeCount,
+          inactive: inactiveCount,
+          newThisMonth: 0, // Calculate from createdAt if needed
+          avgOrderValue: 0, // Would need additional API call
         };
         setStats(stats);
       } else {
-        console.error('Failed to fetch customers:', response.message);
+        console.error('Failed to fetch customers:', responseData.message);
         toast.error('Failed to load customers');
       }
     } catch (error) {
