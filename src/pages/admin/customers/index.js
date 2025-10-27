@@ -250,15 +250,17 @@ const Button = ({
 };
 
 // Customer Status Badge Component
-const CustomerStatusBadge = ({ status }) => {
+const CustomerStatusBadge = ({ isActive }) => {
+  // Default to active if isActive is undefined
+  const isActiveStatus = isActive !== undefined ? isActive : true;
+  
   const statusConfig = {
     active: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
     inactive: { color: 'bg-red-100 text-red-800', icon: X },
-    suspended: { color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-    pending: { color: 'bg-blue-100 text-blue-800', icon: Clock },
   };
 
-  const config = statusConfig[status] || statusConfig.active;
+  const status = isActiveStatus ? 'active' : 'inactive';
+  const config = statusConfig[status];
   const Icon = config.icon;
 
   return (
@@ -304,39 +306,43 @@ const CustomerCard = ({ customer, onView }) => {
               {customer.phone}
             </div>
           )}
-          {customer.address && (
+          {customer.dob && (
             <div className="flex items-center text-sm text-gray-600">
-              <MapPin className="h-4 w-4 mr-2" />
-              {customer.address.city}, {customer.address.state}
+              <Calendar className="h-4 w-4 mr-2" />
+              DOB: {new Date(customer.dob).toLocaleDateString()}
             </div>
           )}
-          <div className="flex items-center text-sm text-gray-600">
-            <Calendar className="h-4 w-4 mr-2" />
-            Joined {new Date(customer.createdAt).toLocaleDateString()}
-          </div>
+          {customer.createdAt && (
+            <div className="flex items-center text-sm text-gray-600">
+              <Calendar className="h-4 w-4 mr-2" />
+              Joined {new Date(customer.createdAt).toLocaleDateString()}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center justify-between mb-4">
-          <CustomerStatusBadge status={customer.status || 'active'} />
+          <CustomerStatusBadge isActive={customer.isActive} />
           <div className="text-right">
             <div className="text-sm font-medium text-gray-900">
-              {customer.totalOrders || 0} orders
+              {customer.gender || 'Not specified'}
             </div>
             <div className="text-sm text-gray-500">
-              ${customer.totalSpent?.toFixed(2) || '0.00'} spent
+              ID: {customer.id?.slice(-8) || 'Unknown'}
             </div>
           </div>
         </div>
         
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onView(customer)}
-          className="w-full"
-        >
-          <Eye className="h-4 w-4" />
-          View Details
-        </Button>
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onView(customer)}
+            className="w-full"
+          >
+            <Eye className="h-4 w-4" />
+            View Details
+          </Button>
+        </div>
       </CardBody>
     </Card>
   );
@@ -362,15 +368,26 @@ export default function CustomersPage() {
         page: currentPage.toString(),
         limit: '12',
         ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter && { status: statusFilter }),
+        ...(statusFilter && { isActive: statusFilter === 'active' ? 'true' : statusFilter === 'inactive' ? 'false' : '' }),
       });
 
-      const response = await apiClient.get(`/api/admin/customer?${params}`).catch(() => apiClient.get(`/admin/customer?${params}`));
+      const response = await apiClient.get(`/api/admin/customer?${params}`);
+      console.log('Customers response:', response);
       
       if (response.success) {
         setCustomers(response.customers || []);
         setTotalPages(response.pagination?.totalPages || 1);
-        setStats(response.stats || null);
+        // Note: Admin API doesn't return stats, so we'll calculate basic stats from customers
+        const customersList = response.customers || [];
+        const stats = {
+          total: response.pagination?.total || customersList.length || 0,
+          active: customersList.length, // Assume all are active if no isActive field
+          inactive: 0,
+        };
+        setStats(stats);
+      } else {
+        console.error('Failed to fetch customers:', response.message);
+        toast.error('Failed to load customers');
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -396,7 +413,7 @@ export default function CustomersPage() {
   };
 
   const handleView = (customer) => {
-    router.push(`/admin/customers/view/${customer._id}`);
+    router.push(`/admin/customers/view/${customer.id}`);
   };
 
   const handleRefresh = () => {
@@ -534,8 +551,6 @@ export default function CustomersPage() {
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-                <option value="pending">Pending</option>
               </select>
 
               {/* View Mode Toggle */}
@@ -588,7 +603,7 @@ export default function CustomersPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
               {customers.map((customer) => (
                 <CustomerCard
-                  key={customer._id}
+                  key={customer.id}
                   customer={customer}
                   onView={handleView}
                 />
@@ -608,16 +623,16 @@ export default function CustomersPage() {
                           Contact
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Location
+                          Gender
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Orders
+                          DOB
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total Spent
+                          Joined
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
@@ -626,7 +641,7 @@ export default function CustomersPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {customers.map((customer) => (
-                        <tr key={customer._id} className="hover:bg-gray-50">
+                        <tr key={customer.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-10 w-10">
@@ -641,7 +656,7 @@ export default function CustomersPage() {
                                   {customer.name || 'Unknown Customer'}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  Joined {formatDate(customer.createdAt)}
+                                  ID: {customer.id?.slice(-8) || 'Unknown'}
                                 </div>
                               </div>
                             </div>
@@ -652,20 +667,17 @@ export default function CustomersPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
-                              {customer.address ? 
-                                `${customer.address.city}, ${customer.address.state}` : 
-                                'No address'
-                              }
+                              {customer.gender || 'Not specified'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <CustomerStatusBadge status={customer.status || 'active'} />
+                            <CustomerStatusBadge isActive={customer.isActive} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {customer.totalOrders || 0}
+                            {customer.dob ? new Date(customer.dob).toLocaleDateString() : 'Not specified'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${customer.totalSpent?.toFixed(2) || '0.00'}
+                            {customer.createdAt ? formatDate(customer.createdAt) : 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <Button

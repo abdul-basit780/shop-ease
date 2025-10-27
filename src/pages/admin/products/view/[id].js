@@ -12,7 +12,8 @@ import {
   CheckCircle,
   Image as ImageIcon,
   LogOut,
-  Menu
+  Menu,
+  Settings
 } from 'lucide-react';
 import { apiClient } from '../../../../lib/api-client';
 
@@ -218,8 +219,8 @@ export default function ProductView() {
       console.log('Response product:', response.product);
 
       if (response.success) {
-        // The API returns the product directly, not nested under data
-        setProduct(response.product || response.data);
+        // The API returns the product nested under data
+        setProduct(response.data || response.product);
       } else {
         console.error('Failed to fetch product:', response.message);
         setError(response.message || 'Failed to load product');
@@ -341,6 +342,12 @@ export default function ProductView() {
           </div>
         </div>
         <div className="flex items-center space-x-3">
+          <Link href={`/admin/products/options/${product.id}`}>
+            <Button variant="outline">
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Options
+            </Button>
+          </Link>
           <Link href={`/admin/products/edit/${product.id}`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />
@@ -439,6 +446,12 @@ export default function ProductView() {
                 <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
               </CardHeader>
               <CardBody className="space-y-3">
+                <Link href={`/admin/products/options/${product.id}`} className="block">
+                  <Button className="w-full" variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Options
+                  </Button>
+                </Link>
                 <Link href={`/admin/products/edit/${product.id}`} className="block">
                   <Button className="w-full">
                     <Edit className="h-4 w-4 mr-2" />

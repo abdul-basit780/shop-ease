@@ -13,7 +13,9 @@ import {
   CheckCircle,
   Image as ImageIcon,
   LogOut,
-  Menu
+  Menu,
+  Settings,
+  Eye
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
 
@@ -459,7 +461,7 @@ export default function CreateProductPage() {
   const addOption = () => {
     setFormData(prev => ({
       ...prev,
-      options: [...prev.options, { name: '', values: [] }]
+      options: [...prev.options, { name: '', values: [{ value: '', name: '', price: 0, stock: 0, image: null }] }]
     }));
   };
 
@@ -482,13 +484,13 @@ export default function CreateProductPage() {
       ...prev,
       options: prev.options.map((option, i) => 
         i === optionIndex 
-          ? { ...option, values: [...option.values, { name: '', price: 0, stock: 0 }] }
+          ? { ...option, values: [...option.values, { value: '', name: '', price: 0, stock: 0, image: null }] }
           : option
       )
     }));
   };
 
-  const updateOptionValue = (optionIndex, valueIndex, value) => {
+  const updateOptionValue = (optionIndex, valueIndex, newValue) => {
     setFormData(prev => ({
       ...prev,
       options: prev.options.map((option, i) => 
@@ -497,7 +499,7 @@ export default function CreateProductPage() {
               ...option, 
               values: option.values.map((val, j) => 
                 j === valueIndex 
-                  ? { ...val, name: value }
+                  ? { ...val, name: newValue, value: newValue }
                   : val
               )
             }
@@ -667,19 +669,103 @@ export default function CreateProductPage() {
 
       if (response.success) {
         toast.success('Product created successfully! 🎉');
-        const product = response.data?.product || response.product;
+        const product = response.data || response.product;
         setCreatedProduct(product);
         
-        // Show option to manage product options
         const productId = product?.id;
-        if (productId) {
-          const manageOptions = confirm('Product created! Would you like to add option types (Size, Color, etc.) for product variants?');
-          if (manageOptions) {
-            router.push(`/admin/products/options/${productId}`);
-          } else {
-            // Redirect to main products page
-            router.push('/admin/products');
+        
+        // Create option types and values if any were added in the form
+        if (productId && formData.options && formData.options.length > 0) {
+          try {
+            console.log('Creating option types and values for product:', productId);
+            
+            // First, create option types and collect their IDs
+            const optionTypeResults = await Promise.all(
+              formData.options
+                .filter(option => option.name && option.name.trim()) // Only create option types with names
+                .map(async (option) => {
+                  try {
+                    const optionTypeResponse = await apiClient.post('/api/admin/option-type', {
+                      productId: productId,
+                      name: option.name.trim()
+                    });
+                    
+                    if (optionTypeResponse.success && optionTypeResponse.data) {
+                      const optionTypeId = optionTypeResponse.data.id;
+                      console.log(`Created option type "${option.name}" with ID: ${optionTypeId}`);
+                      
+                      // Now create option values for this option type
+                      if (option.values && option.values.length > 0) {
+                        const valuesResults = await Promise.all(
+                          option.values
+                            .filter(val => val.value && val.value.trim() && val.image) // Only values with text and image
+                            .map(async (val) => {
+                              try {
+                                const formData = new FormData();
+                                formData.append('optionTypeId', optionTypeId);
+                                formData.append('value', val.value.trim());
+                                formData.append('price', parseFloat(val.price) || 0);
+                                formData.append('stock', parseInt(val.stock) || 0);
+                                formData.append('image', val.image);
+                                
+                                const valueResponse = await apiClient.post('/api/admin/option-value', formData, {
+                                  headers: {
+                                    'Content-Type': 'multipart/form-data',
+                                  },
+                                });
+                                
+                                if (valueResponse.success) {
+                                  console.log(`Created option value "${val.value}"`);
+                                  return true;
+                                } else {
+                                  console.error(`Failed to create value "${val.value}":`, valueResponse.message);
+                                  return false;
+                                }
+                              } catch (error) {
+                                console.error(`Error creating value "${val.value}":`, error);
+                                return false;
+                              }
+                            })
+                        );
+                        
+                        return {
+                          optionType: option.name,
+                          valuesCreated: valuesResults.filter(r => r === true).length,
+                          valuesTotal: valuesResults.length
+                        };
+                      }
+                      
+                      return { optionType: option.name, valuesCreated: 0, valuesTotal: 0 };
+                    } else {
+                      console.error(`Failed to create option type "${option.name}":`, optionTypeResponse.message);
+                      return null;
+                    }
+                  } catch (error) {
+                    console.error(`Error creating option type "${option.name}":`, error);
+                    return null;
+                  }
+                })
+            );
+            
+            const validResults = optionTypeResults.filter(r => r !== null);
+            const totalValuesCreated = validResults.reduce((sum, r) => sum + r.valuesCreated, 0);
+            
+            if (validResults.length > 0) {
+              toast.success(
+                `Product created! Created ${validResults.length} option type(s) with ${totalValuesCreated} value(s).`
+              );
+            } else {
+              toast.success('Product created! Note: Failed to create option types. You can add them manually.');
+            }
+          } catch (error) {
+            console.error('Error creating option types and values:', error);
+            toast.success('Product created! Note: Failed to create options. You can add them manually.');
           }
+        }
+        
+        // Redirect to products list after successful creation
+        if (productId) {
+          router.push('/admin/products');
         }
       } else {
         toast.error(response.message || 'Failed to create product');
@@ -714,8 +800,9 @@ export default function CreateProductPage() {
     }
   };
 
-  // Show success state after product creation
-  if (createdProduct) {
+  // Note: Success state is removed as we redirect directly to products list
+  // Keeping this commented for reference
+  /*if (createdProduct) {
     return (
       <AdminLayout title="Product Created!" subtitle="Your product has been successfully added">
         <div className="max-w-2xl mx-auto">
@@ -736,7 +823,7 @@ export default function CreateProductPage() {
                     className="flex-1"
                   >
                     <Settings className="h-4 w-4 mr-2" />
-                    Add Variants (Size, Color)
+                    Manage Options & Values
                   </Button>
                   <Button
                     variant="outline"
@@ -795,7 +882,7 @@ export default function CreateProductPage() {
         </div>
       </AdminLayout>
     );
-  }
+  }*/
 
   return (
     <AdminLayout title="Create Product" subtitle="Add a new product to your catalog">
@@ -1034,14 +1121,14 @@ export default function CreateProductPage() {
             {/* Product Options */}
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900">Product Options</h3>
-                <p className="text-sm text-gray-600">Add options like Size, Color, Material, etc. for product variants with individual pricing and stock</p>
+                <h3 className="text-lg font-semibold text-gray-900">Product Options (Optional)</h3>
+                <p className="text-sm text-gray-600">Add product variants with their values, pricing, stock, and images. Examples: Size (Small, Medium, Large), Color (Red, Blue, Green), etc.</p>
               </CardHeader>
               <CardBody>
                 <div className="space-y-6">
                   {formData.options.map((option, optionIndex) => (
-                    <div key={optionIndex} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-3 mb-3">
+                    <div key={optionIndex} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center space-x-3">
                         <input
                           type="text"
                           value={option.name}
@@ -1058,6 +1145,7 @@ export default function CreateProductPage() {
                         </button>
                       </div>
                       
+                      {/* Values for this option */}
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">Values:</label>
                         {option.values.map((value, valueIndex) => (
@@ -1065,7 +1153,7 @@ export default function CreateProductPage() {
                             <div className="flex items-center space-x-2">
                               <input
                                 type="text"
-                                value={value.name || value}
+                                value={value.value || value.name || value}
                                 onChange={(e) => updateOptionValue(optionIndex, valueIndex, e.target.value)}
                                 placeholder="Option value (e.g., Small, Red, Cotton)"
                                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1079,7 +1167,7 @@ export default function CreateProductPage() {
                               </button>
                             </div>
                             
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-3">
                               <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Price Adjustment</label>
                                 <div className="relative">
@@ -1093,7 +1181,6 @@ export default function CreateProductPage() {
                                     className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                   />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">Additional price (can be negative for discounts)</p>
                               </div>
                               
                               <div>
@@ -1106,7 +1193,34 @@ export default function CreateProductPage() {
                                   placeholder="0"
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Available quantity for this option</p>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Image *</label>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        options: prev.options.map((opt, i) => 
+                                          i === optionIndex 
+                                            ? {
+                                                ...opt,
+                                                values: opt.values.map((val, j) => 
+                                                  j === valueIndex ? { ...val, image: file } : val
+                                                )
+                                              }
+                                            : opt
+                                        )
+                                      }));
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  required
+                                />
                               </div>
                             </div>
                           </div>

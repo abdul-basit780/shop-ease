@@ -13,7 +13,10 @@ import {
   CheckCircle,
   Image as ImageIcon,
   LogOut,
-  Menu
+  Menu,
+  Settings,
+  Tag,
+  Trash2
 } from 'lucide-react';
 import { apiClient } from '../../../../lib/api-client';
 
@@ -212,11 +215,14 @@ export default function ProductEdit() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [optionTypes, setOptionTypes] = useState([]);
+  const [newOptions, setNewOptions] = useState([]);
 
   useEffect(() => {
     if (id) {
       fetchProduct();
       fetchCategories();
+      fetchOptionTypes();
     }
   }, [id]);
 
@@ -227,8 +233,8 @@ export default function ProductEdit() {
       console.log('Product response:', response);
 
       if (response.success) {
-        // The API returns the product directly, not nested under data
-        const product = response.product || response.data;
+        // The API returns the product nested under data
+        const product = response.data || response.product;
         setFormData({
           name: product.name || '',
           description: product.description || '',
@@ -359,6 +365,107 @@ export default function ProductEdit() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const fetchOptionTypes = async () => {
+    try {
+      const response = await apiClient.get(`/api/admin/option-type?productId=${id}`);
+      if (response.success) {
+        setOptionTypes(response.data?.optionTypes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching option types:', error);
+    }
+  };
+
+
+  const handleDeleteOptionType = async (optionTypeId) => {
+    if (!confirm('Are you sure you want to delete this option type? This will also delete all its values.')) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.delete(`/api/admin/option-type/${optionTypeId}`);
+      if (response.success) {
+        toast.success('Option type deleted successfully!');
+        fetchOptionTypes();
+      } else {
+        toast.error(response.message || 'Failed to delete option type');
+      }
+    } catch (error) {
+      console.error('Error deleting option type:', error);
+      toast.error('Failed to delete option type');
+    }
+  };
+
+  // New option management functions (for adding new option types with values)
+  const addNewOption = () => {
+    setNewOptions([...newOptions, { name: '', values: [{ value: '', name: '', price: 0, stock: 0, image: null }] }]);
+  };
+
+  const updateNewOptionName = (index, value) => {
+    setNewOptions(newOptions.map((option, i) => i === index ? { ...option, name: value } : option));
+  };
+
+  const removeNewOption = (index) => {
+    setNewOptions(newOptions.filter((_, i) => i !== index));
+  };
+
+  const addNewOptionValue = (optionIndex) => {
+    setNewOptions(newOptions.map((option, i) => 
+      i === optionIndex 
+        ? { ...option, values: [...option.values, { value: '', name: '', price: 0, stock: 0, image: null }] }
+        : option
+    ));
+  };
+
+  const updateNewOptionValue = (optionIndex, valueIndex, newValue) => {
+    setNewOptions(newOptions.map((option, i) => 
+      i === optionIndex 
+        ? { 
+            ...option, 
+            values: option.values.map((val, j) => 
+              j === valueIndex 
+                ? { ...val, name: newValue, value: newValue }
+                : val
+            )
+          }
+        : option
+    ));
+  };
+
+  const updateNewOptionValuePrice = (optionIndex, valueIndex, price) => {
+    setNewOptions(newOptions.map((option, i) => 
+      i === optionIndex 
+        ? { 
+            ...option, 
+            values: option.values.map((val, j) => 
+              j === valueIndex ? { ...val, price: price } : val
+            )
+          }
+        : option
+    ));
+  };
+
+  const updateNewOptionValueStock = (optionIndex, valueIndex, stock) => {
+    setNewOptions(newOptions.map((option, i) => 
+      i === optionIndex 
+        ? { 
+            ...option, 
+            values: option.values.map((val, j) => 
+              j === valueIndex ? { ...val, stock: stock } : val
+            )
+          }
+        : option
+    ));
+  };
+
+  const removeNewOptionValue = (optionIndex, valueIndex) => {
+    setNewOptions(newOptions.map((option, i) => 
+      i === optionIndex 
+        ? { ...option, values: option.values.filter((_, j) => j !== valueIndex) }
+        : option
+    ));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -399,6 +506,82 @@ export default function ProductEdit() {
 
       if (response.success) {
         toast.success('Product updated successfully! 🎉');
+        
+        // Create new option types and values if any
+        if (newOptions && newOptions.length > 0) {
+          try {
+            console.log('Creating new option types and values');
+            
+            const optionTypeResults = await Promise.all(
+              newOptions
+                .filter(option => option.name && option.name.trim())
+                .map(async (option) => {
+                  try {
+                    const optionTypeResponse = await apiClient.post('/api/admin/option-type', {
+                      productId: id,
+                      name: option.name.trim()
+                    });
+                    
+                    if (optionTypeResponse.success && optionTypeResponse.data) {
+                      const optionTypeId = optionTypeResponse.data.id;
+                      
+                      if (option.values && option.values.length > 0) {
+                        const valuesResults = await Promise.all(
+                          option.values
+                            .filter(val => val.value && val.value.trim() && val.image)
+                            .map(async (val) => {
+                              try {
+                                const valueFormData = new FormData();
+                                valueFormData.append('optionTypeId', optionTypeId);
+                                valueFormData.append('value', val.value.trim());
+                                valueFormData.append('price', parseFloat(val.price) || 0);
+                                valueFormData.append('stock', parseInt(val.stock) || 0);
+                                valueFormData.append('image', val.image);
+                                
+                                const valueResponse = await apiClient.post('/api/admin/option-value', valueFormData, {
+                                  headers: {
+                                    'Content-Type': 'multipart/form-data',
+                                  },
+                                });
+                                
+                                if (valueResponse.success) {
+                                  console.log(`Created option value "${val.value}"`);
+                                  return true;
+                                } else {
+                                  return false;
+                                }
+                              } catch (error) {
+                                console.error(`Error creating value "${val.value}":`, error);
+                                return false;
+                              }
+                            })
+                        );
+                        
+                        return { valuesCreated: valuesResults.filter(r => r === true).length };
+                      }
+                      
+                      return { valuesCreated: 0 };
+                    }
+                    
+                    return null;
+                  } catch (error) {
+                    console.error(`Error creating option type "${option.name}":`, error);
+                    return null;
+                  }
+                })
+            );
+            
+            const validResults = optionTypeResults.filter(r => r !== null);
+            const totalValuesCreated = validResults.reduce((sum, r) => sum + r.valuesCreated, 0);
+            
+            if (validResults.length > 0) {
+              toast.success(`Created ${validResults.length} option type(s) with ${totalValuesCreated} value(s).`);
+            }
+          } catch (error) {
+            console.error('Error creating options:', error);
+          }
+        }
+        
         router.push('/admin/products');
       } else {
         toast.error(response.message || 'Failed to update product');
@@ -451,6 +634,14 @@ export default function ProductEdit() {
             <h2 className="text-2xl font-bold text-gray-900">Edit Product</h2>
             <p className="text-gray-600">Update the product information below</p>
           </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Link href={`/admin/products/options/${id}`}>
+            <Button variant="outline">
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Options
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -654,6 +845,175 @@ export default function ProductEdit() {
                         {errors.images}
                       </p>
                     )}
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* Existing Options */}
+              <Card>
+                <CardHeader>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Existing Options</h3>
+                    <p className="text-sm text-gray-600 mt-1">Manage existing product variants</p>
+                  </div>
+                </CardHeader>
+                <CardBody className="space-y-2">
+                  {optionTypes.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No options yet</p>
+                    </div>
+                  ) : (
+                    optionTypes.map((option) => (
+                      <div key={option.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Tag className="h-5 w-5 text-blue-500" />
+                          <span className="font-medium">{option.name}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Link href={`/admin/products/options/${id}/values/${option.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Settings className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                          <Button 
+                            variant="danger" 
+                            size="sm" 
+                            onClick={() => handleDeleteOptionType(option.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardBody>
+              </Card>
+
+              {/* Add New Options */}
+              <Card>
+                <CardHeader>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Add New Options</h3>
+                    <p className="text-sm text-gray-600 mt-1">Add new product variants with their values, pricing, and images</p>
+                  </div>
+                </CardHeader>
+                <CardBody>
+                  <div className="space-y-6">
+                    {newOptions.map((option, optionIndex) => (
+                      <div key={optionIndex} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="text"
+                            value={option.name}
+                            onChange={(e) => updateNewOptionName(optionIndex, e.target.value)}
+                            placeholder="Option name (e.g., Size, Color, Material)"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewOption(optionIndex)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">Values:</label>
+                          {option.values.map((value, valueIndex) => (
+                            <div key={valueIndex} className="border border-gray-200 rounded-lg p-3 space-y-3">
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="text"
+                                  value={value.value || value.name || value}
+                                  onChange={(e) => updateNewOptionValue(optionIndex, valueIndex, e.target.value)}
+                                  placeholder="Option value (e.g., Small, Red, Cotton)"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeNewOptionValue(optionIndex, valueIndex)}
+                                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Price Adjustment</label>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={value.price || 0}
+                                      onChange={(e) => updateNewOptionValuePrice(optionIndex, valueIndex, parseFloat(e.target.value) || 0)}
+                                      placeholder="0.00"
+                                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={value.stock || 0}
+                                    onChange={(e) => updateNewOptionValueStock(optionIndex, valueIndex, parseInt(e.target.value) || 0)}
+                                    placeholder="0"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Image *</label>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        setNewOptions(newOptions.map((opt, i) => 
+                                          i === optionIndex 
+                                            ? {
+                                                ...opt,
+                                                values: opt.values.map((val, j) => 
+                                                  j === valueIndex ? { ...val, image: file } : val
+                                                )
+                                              }
+                                            : opt
+                                        ));
+                                      }
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => addNewOptionValue(optionIndex)}
+                            className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Value
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <button
+                      type="button"
+                      onClick={addNewOption}
+                      className="flex items-center text-blue-600 hover:text-blue-700 font-medium border-2 border-dashed border-blue-300 hover:border-blue-400 rounded-lg p-4 w-full justify-center transition-colors"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Option Type
+                    </button>
                   </div>
                 </CardBody>
               </Card>

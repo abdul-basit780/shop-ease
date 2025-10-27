@@ -214,7 +214,8 @@ export default function OptionValues() {
   const [newValue, setNewValue] = useState({ 
     value: '', 
     price: 0, 
-    stock: 0 
+    stock: 0,
+    image: null
   });
 
   useEffect(() => {
@@ -238,9 +239,9 @@ export default function OptionValues() {
 
   const fetchOptionType = async () => {
     try {
-      const response = await apiClient.get(`/admin/option-type/${optionTypeId}`);
+      const response = await apiClient.get(`/api/admin/option-type/${optionTypeId}`);
       if (response.success) {
-        setOptionType(response.optionType || response.data);
+        setOptionType(response.data || response.optionType);
       }
     } catch (error) {
       console.error('Error fetching option type:', error);
@@ -250,11 +251,11 @@ export default function OptionValues() {
   const fetchOptionValues = async () => {
     try {
       console.log('Fetching option values for option type:', optionTypeId);
-      const response = await apiClient.get(`/admin/option-value?optionTypeId=${optionTypeId}`);
+      const response = await apiClient.get(`/api/admin/option-value?optionTypeId=${optionTypeId}`);
       console.log('Option values response:', response);
 
       if (response.success) {
-        setOptionValues(response.data?.optionValues || response.optionValues || []);
+        setOptionValues(response.data?.optionValues || []);
       } else {
         console.error('Failed to fetch option values:', response.message);
         toast.error('Failed to load option values');
@@ -275,19 +276,33 @@ export default function OptionValues() {
       return;
     }
 
+    if (!newValue.image) {
+      toast.error('Image is required');
+      return;
+    }
+
     try {
       console.log('Creating option value:', newValue);
-      const response = await apiClient.post('/api/admin/option-value', {
-        optionTypeId: optionTypeId,
-        value: newValue.value.trim(),
-        price: parseFloat(newValue.price) || 0,
-        stock: parseInt(newValue.stock) || 0
+      
+      const formData = new FormData();
+      formData.append('optionTypeId', optionTypeId);
+      formData.append('value', newValue.value.trim());
+      formData.append('price', parseFloat(newValue.price) || 0);
+      formData.append('stock', parseInt(newValue.stock) || 0);
+      if (newValue.image) {
+        formData.append('image', newValue.image);
+      }
+      
+      const response = await apiClient.post('/api/admin/option-value', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       console.log('Create option value response:', response);
 
       if (response.success) {
         toast.success('Option value created successfully!');
-        setNewValue({ value: '', price: 0, stock: 0 });
+        setNewValue({ value: '', price: 0, stock: 0, image: null });
         setShowCreateValue(false);
         fetchOptionValues();
       } else {
@@ -474,6 +489,26 @@ export default function OptionValues() {
                     />
                   </div>
                   
+                  {!editingValue && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Image *
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          setNewValue({ ...newValue, image: e.target.files[0] });
+                        }}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                        required
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        Image for this option value (required)
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="flex space-x-3">
                     <Button type="submit" className="flex-1">
                       <Save className="h-4 w-4 mr-2" />
@@ -487,7 +522,7 @@ export default function OptionValues() {
                           cancelEdit();
                         } else {
                           setShowCreateValue(false);
-                          setNewValue({ value: '', price: 0, stock: 0 });
+                          setNewValue({ value: '', price: 0, stock: 0, image: null });
                         }
                       }}
                     >

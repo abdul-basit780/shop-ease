@@ -267,13 +267,13 @@ export default function OrderViewPage() {
     try {
       setLoading(true);
       console.log('Fetching order:', id);
-      const response = await apiClient.get(`/api/admin/orders/${id}`).catch(() => apiClient.get(`/admin/orders/${id}`));
+      const response = await apiClient.get(`/api/admin/orders/${id}`);
       console.log('Order response:', response);
       
-      if (response.success) {
-        setOrder(response.data || response);
+      if (response.success && response.data) {
+        setOrder(response.data);
       } else {
-        toast.error('Order not found');
+        toast.error(response.message || 'Order not found');
         router.push('/admin/orders');
       }
     } catch (error) {
@@ -288,7 +288,7 @@ export default function OrderViewPage() {
         toast.error('Access denied');
         router.push('/admin');
       } else {
-        toast.error('Failed to load order details');
+        toast.error(error.response?.data?.message || 'Failed to load order details');
       }
     } finally {
       setLoading(false);
@@ -305,35 +305,41 @@ export default function OrderViewPage() {
       const response = await apiClient.put(`/api/admin/orders/${id}`, {
         status: newStatus
       });
+      console.log('Update status response:', response);
 
       if (response.success) {
         toast.success(`Order status updated to ${newStatus}`);
         setOrder(prev => ({ ...prev, status: newStatus }));
+      } else {
+        toast.error(response.message || 'Failed to update order status');
       }
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      toast.error(error.response?.data?.message || 'Failed to update order status');
     } finally {
       setUpdating(false);
     }
   };
 
   const handleCancelOrder = async () => {
-    if (!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to cancel this order? This will process a refund if payment was completed.')) {
       return;
     }
 
     try {
       setUpdating(true);
-      const response = await apiClient.post(`/api/admin/orders/${id}/cancel`).catch(() => apiClient.post(`/admin/orders/${id}/cancel`));
+      const response = await apiClient.post(`/api/admin/orders/${id}/cancel`);
+      console.log('Cancel order response:', response);
 
       if (response.success) {
         toast.success('Order cancelled successfully');
         setOrder(prev => ({ ...prev, status: 'cancelled' }));
+      } else {
+        toast.error(response.message || 'Failed to cancel order');
       }
     } catch (error) {
       console.error('Error cancelling order:', error);
-      toast.error('Failed to cancel order');
+      toast.error(error.response?.data?.message || 'Failed to cancel order');
     } finally {
       setUpdating(false);
     }

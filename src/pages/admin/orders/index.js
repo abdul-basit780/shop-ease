@@ -286,12 +286,16 @@ export default function OrdersPage() {
         ...(statusFilter && { status: statusFilter }),
       });
 
-      const response = await apiClient.get(`/api/admin/orders?${params}`).catch(() => apiClient.get(`/admin/orders?${params}`));
+      const response = await apiClient.get(`/api/admin/orders?${params}`);
+      console.log('Orders response:', response);
       
-      if (response.success) {
-        setOrders(response.orders || []);
-        setTotalPages(response.pagination?.totalPages || 1);
-        setStats(response.stats || null);
+      if (response.success && response.data) {
+        setOrders(response.data.orders || []);
+        setTotalPages(response.data.pagination?.totalPages || 1);
+        setStats(response.data.stats || null);
+      } else {
+        console.error('Failed to fetch orders:', response.message);
+        toast.error('Failed to load orders');
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -322,17 +326,41 @@ export default function OrdersPage() {
 
   const handleUpdateStatus = async (order, newStatus) => {
     try {
-      const response = await apiClient.put(`/api/admin/orders/${order._id}`, {
+      const response = await apiClient.put(`/api/admin/orders/${order.id || order._id}`, {
         status: newStatus
       });
+      console.log('Update status response:', response);
 
       if (response.success) {
         toast.success(`Order status updated to ${newStatus}`);
         fetchOrders();
+      } else {
+        toast.error(response.message || 'Failed to update order status');
       }
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      toast.error(error.response?.data?.message || 'Failed to update order status');
+    }
+  };
+
+  const handleCancelOrder = async (order) => {
+    if (!confirm('Are you sure you want to cancel this order? This will process a refund if payment was completed.')) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.post(`/api/admin/orders/${order.id || order._id}/cancel`);
+      console.log('Cancel order response:', response);
+
+      if (response.success) {
+        toast.success('Order cancelled successfully');
+        fetchOrders();
+      } else {
+        toast.error(response.message || 'Failed to cancel order');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error(error.response?.data?.message || 'Failed to cancel order');
     }
   };
 

@@ -269,13 +269,13 @@ export default function CustomerViewPage() {
     try {
       setLoading(true);
       console.log('Fetching customer:', id);
-      const response = await apiClient.get(`/api/admin/customer/${id}`).catch(() => apiClient.get(`/admin/customer/${id}`));
+      const response = await apiClient.get(`/api/admin/customer/${id}`);
       console.log('Customer response:', response);
       
-      if (response.success) {
-        setCustomer(response.data || response);
+      if (response.success && response.customer) {
+        setCustomer(response.customer);
       } else {
-        toast.error('Customer not found');
+        toast.error(response.message || 'Customer not found');
         router.push('/admin/customers');
       }
     } catch (error) {
@@ -290,7 +290,7 @@ export default function CustomerViewPage() {
         toast.error('Access denied');
         router.push('/admin');
       } else {
-        toast.error('Failed to load customer details');
+        toast.error(error.response?.data?.message || 'Failed to load customer details');
       }
     } finally {
       setLoading(false);
@@ -318,6 +318,34 @@ export default function CustomerViewPage() {
     fetchCustomer();
     fetchCustomerOrders();
   }, [id]);
+
+  const handleToggleStatus = async () => {
+    if (!customer) return;
+    
+    const newStatus = !customer.isActive;
+    const action = newStatus ? 'activate' : 'deactivate';
+    
+    if (!confirm(`Are you sure you want to ${action} this customer?`)) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.patch(`/api/admin/customer/${id}/status`, {
+        isActive: newStatus
+      });
+      console.log('Toggle status response:', response);
+
+      if (response.success) {
+        toast.success(`Customer ${action}d successfully`);
+        setCustomer(prev => ({ ...prev, isActive: newStatus }));
+      } else {
+        toast.error(response.message || `Failed to ${action} customer`);
+      }
+    } catch (error) {
+      console.error('Error toggling customer status:', error);
+      toast.error(error.response?.data?.message || `Failed to ${action} customer`);
+    }
+  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {

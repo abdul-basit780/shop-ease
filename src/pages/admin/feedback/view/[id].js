@@ -308,13 +308,13 @@ export default function FeedbackViewPage() {
     try {
       setLoading(true);
       console.log('Fetching feedback:', id);
-      const response = await apiClient.get(`/api/admin/feedback/${id}`).catch(() => apiClient.get(`/admin/feedback/${id}`));
+      const response = await apiClient.get(`/api/admin/feedback/${id}`);
       console.log('Feedback response:', response);
       
-      if (response.success) {
-        setFeedback(response.data || response);
+      if (response.success && response.data) {
+        setFeedback(response.data);
       } else {
-        toast.error('Feedback not found');
+        toast.error(response.message || 'Feedback not found');
         router.push('/admin/feedback');
       }
     } catch (error) {
@@ -329,7 +329,7 @@ export default function FeedbackViewPage() {
         toast.error('Access denied');
         router.push('/admin');
       } else {
-        toast.error('Failed to load feedback details');
+        toast.error(error.response?.data?.message || 'Failed to load feedback details');
       }
     } finally {
       setLoading(false);
@@ -344,14 +344,17 @@ export default function FeedbackViewPage() {
     try {
       setDeleting(true);
       const response = await apiClient.delete(`/api/admin/feedback/${id}`);
+      console.log('Delete feedback response:', response);
 
       if (response.success) {
         toast.success('Feedback deleted successfully');
         router.push('/admin/feedback');
+      } else {
+        toast.error(response.message || 'Failed to delete feedback');
       }
     } catch (error) {
       console.error('Error deleting feedback:', error);
-      toast.error('Failed to delete feedback');
+      toast.error(error.response?.data?.message || 'Failed to delete feedback');
     } finally {
       setDeleting(false);
     }
@@ -430,7 +433,7 @@ export default function FeedbackViewPage() {
               {feedback.subject || 'No Subject'}
             </h2>
             <p className="text-gray-600">
-              From {feedback.customer?.name || 'Anonymous'} • {formatDate(feedback.createdAt)}
+              From {feedback.customerId?.name || 'Anonymous'} • {formatDate(feedback.createdAt)}
             </p>
           </div>
         </div>
@@ -478,41 +481,21 @@ export default function FeedbackViewPage() {
                   </div>
                 )}
 
-                {/* Subject */}
+                {/* Product Information */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Subject</h4>
-                  <p className="text-gray-700">{feedback.subject || 'No subject provided'}</p>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Product</h4>
+                  <p className="text-gray-700">{feedback.productName || 'No product specified'}</p>
                 </div>
 
-                {/* Message */}
+                {/* Comment */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Message</h4>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Comment</h4>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-gray-700 whitespace-pre-wrap">
-                      {feedback.message || 'No message provided'}
+                      {feedback.comment || 'No comment provided'}
                     </p>
                   </div>
                 </div>
-
-                {/* Product Information */}
-                {feedback.product && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Related Product</h4>
-                    <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                      {feedback.product.img && (
-                        <img
-                          src={feedback.product.img}
-                          alt={feedback.product.name}
-                          className="h-12 w-12 object-cover rounded-lg"
-                        />
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">{feedback.product.name}</p>
-                        <p className="text-sm text-gray-500">Product ID: {feedback.product._id}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </CardBody>
           </Card>
@@ -567,10 +550,10 @@ export default function FeedbackViewPage() {
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900">
-                      {feedback.customer?.name || 'Anonymous'}
+                      {feedback.customerId?.name || 'Anonymous'}
                     </h4>
                     <p className="text-sm text-gray-500">
-                      {feedback.customer?.email || 'No email'}
+                      {feedback.customerId?.email || 'No email'}
                     </p>
                   </div>
                 </div>
@@ -578,13 +561,13 @@ export default function FeedbackViewPage() {
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <Mail className="h-4 w-4" />
-                    <span>{feedback.customer?.email || 'No email'}</span>
+                    <span>{feedback.customerId?.email || 'No email'}</span>
                   </div>
                   
-                  {feedback.customer?.phone && (
+                  {feedback.customerId?.phone && (
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Phone className="h-4 w-4" />
-                      <span>{feedback.customer.phone}</span>
+                      <span>{feedback.customerId.phone}</span>
                     </div>
                   )}
                   
@@ -646,16 +629,16 @@ export default function FeedbackViewPage() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => router.push(`/admin/customers/view/${feedback.customer?._id}`)}
+                  onClick={() => router.push(`/admin/customers/view/${feedback.customerId?._id}`)}
                 >
                   <User className="h-4 w-4 mr-2" />
                   View Customer
                 </Button>
-                {feedback.product && (
+                {feedback.productId && (
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => router.push(`/admin/products/view/${feedback.product._id}`)}
+                    onClick={() => router.push(`/admin/products/view/${feedback.productId}`)}
                   >
                     <Package className="h-4 w-4 mr-2" />
                     View Product

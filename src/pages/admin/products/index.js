@@ -593,8 +593,15 @@ export default function ProductsPage() {
       console.log('Fetching products with params:', params.toString());
       const response = await apiClient.get(`/api/admin/product?${params}`);
       console.log('Products response:', response);
+      console.log('Response structure:', {
+        success: response.success,
+        products: response.products,
+        data: response.data,
+        pagination: response.pagination
+      });
       
       if (response.success) {
+        // The API returns products and pagination inside data object
         setProducts(response.data?.products || []);
         setTotalPages(response.data?.pagination?.totalPages || 1);
       } else {
