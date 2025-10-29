@@ -30,7 +30,6 @@ export default function Cart() {
       return;
     }
 
-    // Add role check - redirect admins
     const user = authService.getCurrentUser();
     if (user?.role === "admin") {
       toast.error("This page is only accessible to customers", {
@@ -38,7 +37,6 @@ export default function Cart() {
         duration: 1000,
       });
 
-      // Redirect after 1 second
       setTimeout(() => {
         router.push("/admin");
       }, 1000);
@@ -75,17 +73,14 @@ export default function Cart() {
   const updateQuantity = async (productId, newQuantity, selectedOptions) => {
     if (newQuantity < 1) return;
 
-    // Create unique key for updating state
     const itemKey = `${productId}-${selectedOptions?.map(o => o.id).join('-') || 'no-options'}`;
     setUpdatingItems((prev) => new Set(prev).add(itemKey));
 
     try {
-      // Build request body
       const requestBody = {
         quantity: newQuantity,
       };
 
-      // Add selectedOptions if they exist
       if (selectedOptions && selectedOptions.length > 0) {
         requestBody.selectedOptions = selectedOptions.map(option => option.id);
       }
@@ -96,8 +91,17 @@ export default function Cart() {
       );
 
       if (response.success && response.data) {
+        // Update cart state directly without reloading
         setCart(response.data);
-        toast.success("Quantity updated");
+        
+        toast.success("Quantity updated", {
+          duration: 1500,
+          style: {
+            borderRadius: '12px',
+          },
+        });
+        
+        // Dispatch event for navbar update only
         window.dispatchEvent(new Event("cartUpdated"));
       }
     } catch (error) {
@@ -115,15 +119,12 @@ export default function Cart() {
   };
 
   const removeItem = async (productId, selectedOptions) => {
-    // Create unique key for updating state
     const itemKey = `${productId}-${selectedOptions?.map(o => o.id).join('-') || 'no-options'}`;
     setUpdatingItems((prev) => new Set(prev).add(itemKey));
 
     try {
-      // Build request body for delete
       const requestBody = {};
 
-      // Add selectedOptions if they exist
       if (selectedOptions && selectedOptions.length > 0) {
         requestBody.selectedOptions = selectedOptions.map(option => option.id);
       }
@@ -133,12 +134,19 @@ export default function Cart() {
         requestBody
       );
 
-      console.log("cart del", response);
       if (response.success) {
+        // Update cart state directly without reloading
         setCart(response.data);
+        
         toast.success("Item removed from cart", {
           icon: "🗑️",
+          duration: 2000,
+          style: {
+            borderRadius: '12px',
+          },
         });
+        
+        // Dispatch event for navbar update only
         window.dispatchEvent(new Event("cartUpdated"));
       }
     } catch (error) {
@@ -159,7 +167,6 @@ export default function Cart() {
     router.push("/checkout");
   };
 
-  // Helper function to check if item is being updated
   const isItemUpdating = (productId, selectedOptions) => {
     const itemKey = `${productId}-${selectedOptions?.map(o => o.id).join('-') || 'no-options'}`;
     return updatingItems.has(itemKey);
@@ -229,7 +236,9 @@ export default function Cart() {
               return (
                 <div
                   key={`${item.productId}-${item.selectedOptions?.map(o => o.id).join('-') || idx}`}
-                  className="bg-white rounded-2xl shadow-md p-6 transition-all hover:shadow-lg animate-fade-in"
+                  className={`bg-white rounded-2xl shadow-md p-6 transition-all hover:shadow-lg ${
+                    isUpdating ? 'opacity-60' : ''
+                  }`}
                   style={{ animationDelay: `${idx * 100}ms` }}
                 >
                   <div className="flex gap-6">
@@ -295,7 +304,11 @@ export default function Cart() {
                           className="text-red-500 hover:text-red-700 transition-colors disabled:opacity-50 p-2 hover:bg-red-50 rounded-lg"
                           title="Remove item"
                         >
-                          <Trash2 className="h-5 w-5" />
+                          {isUpdating ? (
+                            <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
+                          ) : (
+                            <Trash2 className="h-5 w-5" />
+                          )}
                         </button>
                       </div>
 
@@ -383,8 +396,7 @@ export default function Cart() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-gray-600">
                   <span>
-                    Subtotal ({cart.count} {cart.count === 1 ? "item" : "items"}
-                    )
+                    Subtotal ({cart.count} {cart.count === 1 ? "item" : "items"})
                   </span>
                   <span className="font-semibold">
                     ${cart.totalAmount.toFixed(2)}
