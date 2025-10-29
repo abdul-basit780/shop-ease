@@ -413,7 +413,7 @@ export const Navbar = () => {
                         </div>
 
                         <Link
-                          href="/profile"
+                          href="/customer/profile"
                           className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                           onClick={() => setShowUserMenu(false)}
                         >
@@ -577,7 +577,7 @@ export const Navbar = () => {
                       )}
                     </Link>
                     <Link
-                      href="/profile"
+                      href="/customer/profile"
                       className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >

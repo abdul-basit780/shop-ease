@@ -291,7 +291,7 @@ export default function Products() {
             </div>
           </div>
           {products.length > 0 && (
-            <Link href="/products">
+            <Link href="/customer/all-products">
               <button className="hidden md:inline-flex items-center px-6 py-3 text-blue-600 hover:text-blue-700 font-semibold border-2 border-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-300 transform hover:scale-105">
                 View All
               </button>
@@ -301,7 +301,7 @@ export default function Products() {
 
         {products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((product, idx) => {
+            {products.slice(0, 8).map((product, idx) => {
               const inWishlist = isInWishlist(product.id);
               
               return (
