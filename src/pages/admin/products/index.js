@@ -695,7 +695,53 @@ export default function ProductsPage() {
   };
 
   const handleBulkExport = () => {
-    toast.info('Bulk export feature coming soon!');
+    if (selectedProducts.length === 0) {
+      toast.error('Please select products to export');
+      return;
+    }
+
+    const selectedProductsData = products.filter(product => selectedProducts.includes(product.id));
+    exportProducts(selectedProductsData, 'selected-products');
+  };
+
+  const handleExportAll = () => {
+    if (products.length === 0) {
+      toast.error('No products to export');
+      return;
+    }
+
+    exportProducts(products, 'all-products');
+  };
+
+  const exportProducts = (productsToExport, exportType) => {
+    // Create CSV content
+    const headers = ['ID', 'Name', 'Description', 'Price', 'Stock', 'Category', 'Status', 'Created Date'];
+    const csvContent = [
+      headers.join(','),
+      ...productsToExport.map(product => [
+        `"${product.id || ''}"`,
+        `"${product.name || ''}"`,
+        `"${(product.description || '').replace(/"/g, '""')}"`,
+        `"${product.price || 0}"`,
+        `"${product.stock || 0}"`,
+        `"${product.category?.name || ''}"`,
+        `"${product.isActive ? 'Active' : 'Inactive'}"`,
+        `"${product.createdAt ? new Date(product.createdAt).toLocaleDateString() : ''}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${exportType}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success(`${exportType === 'selected-products' ? 'Selected products' : 'All products'} exported successfully!`);
   };
 
   const handleProductSelect = (productId) => {
@@ -746,7 +792,10 @@ export default function ProductsPage() {
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="secondary">
+          <Button 
+            variant="outline"
+            onClick={handleExportAll}
+          >
             <Download className="h-4 w-4" />
             Export All
           </Button>

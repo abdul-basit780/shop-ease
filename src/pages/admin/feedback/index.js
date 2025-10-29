@@ -416,6 +416,40 @@ export default function FeedbackPage() {
     fetchFeedbacks();
   };
 
+  const handleExport = () => {
+    if (feedbacks.length === 0) {
+      toast.error('No feedback to export');
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['Customer', 'Email', 'Rating', 'Comment', 'Product', 'Date'];
+    const csvContent = [
+      headers.join(','),
+      ...feedbacks.map(feedback => [
+        `"${feedback.customer?.name || ''}"`,
+        `"${feedback.customer?.email || ''}"`,
+        `"${feedback.rating || ''}"`,
+        `"${(feedback.comment || '').replace(/"/g, '""')}"`,
+        `"${feedback.product?.name || ''}"`,
+        `"${feedback.createdAt ? new Date(feedback.createdAt).toLocaleDateString() : ''}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `feedback-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Feedback exported successfully!');
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -458,7 +492,10 @@ export default function FeedbackPage() {
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="secondary">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4" />
             Export
           </Button>

@@ -275,10 +275,7 @@ const CustomerStatusBadge = ({ isActive }) => {
 };
 
 // Customer Card Component
-const CustomerCard = ({ customer, onView, onToggleStatus, customerStatuses }) => {
-  // Get current status from tracked statuses, default to true (active) for new customers
-  const isActive = customerStatuses[customer.id] !== undefined ? customerStatuses[customer.id] : true;
-  
+const CustomerCard = ({ customer, onView, onToggleStatus }) => {
   return (
     <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
@@ -315,13 +312,7 @@ const CustomerCard = ({ customer, onView, onToggleStatus, customerStatuses }) =>
           {customer.dob && (
             <div className="flex items-center text-sm text-gray-600">
               <Calendar className="h-4 w-4 mr-2" />
-              DOB: {new Date(customer.dob).toLocaleDateString()}
-            </div>
-          )}
-          {customer.createdAt && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Calendar className="h-4 w-4 mr-2" />
-              Joined {new Date(customer.createdAt).toLocaleDateString()}
+              DOB: {customer.dob.split('T')[0]}
             </div>
           )}
         </div>
@@ -354,12 +345,12 @@ const CustomerCard = ({ customer, onView, onToggleStatus, customerStatuses }) =>
             onClick={() => onToggleStatus(customer)}
             className="flex-1"
             style={{ 
-              backgroundColor: isActive ? '#EF4444' : '#10B981',
+              backgroundColor: customer.isActive ? '#EF4444' : '#10B981',
               color: 'white',
-              borderColor: isActive ? '#EF4444' : '#10B981'
+              borderColor: customer.isActive ? '#EF4444' : '#10B981'
             }}
           >
-            {isActive ? (
+            {customer.isActive ? (
               <>
                 <ToggleLeft className="h-4 w-4" />
                 Deactivate
@@ -390,51 +381,6 @@ export default function CustomersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState(null);
-  const [customerStatuses, setCustomerStatuses] = useState({}); // Track customer statuses locally
-
-  // Function to fetch actual customer statuses from API
-  const fetchCustomerStatuses = async (customersList) => {
-    try {
-      const authToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('auth_token='))
-        ?.split('=')[1];
-
-      if (!authToken) return;
-
-      const statusPromises = customersList.map(async (customer) => {
-        try {
-          const response = await fetch(`/api/admin/customer/${customer.id}`, {
-            headers: {
-              'Authorization': `Bearer ${authToken}`
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              id: customer.id,
-              isActive: data.customer?.isActive ?? true // Default to true if not found
-            };
-          }
-        } catch (error) {
-          console.error(`Error fetching status for customer ${customer.id}:`, error);
-        }
-        return { id: customer.id, isActive: true }; // Default to active on error
-      });
-
-      const statuses = await Promise.all(statusPromises);
-      const statusMap = {};
-      statuses.forEach(status => {
-        statusMap[status.id] = status.isActive;
-      });
-      
-      console.log('Fetched customer statuses:', statusMap);
-      setCustomerStatuses(statusMap);
-    } catch (error) {
-      console.error('Error fetching customer statuses:', error);
-    }
-  };
 
   const fetchCustomers = async () => {
     try {
@@ -446,34 +392,36 @@ export default function CustomersPage() {
         ...(statusFilter && { isActive: statusFilter === 'active' ? 'true' : statusFilter === 'inactive' ? 'false' : '' }),
       });
 
-      const response = await apiClient.get(`/api/admin/customer?${params}`);
-      console.log('Customers response:', response);
-      console.log('Customers data structure:', response.data);
-      console.log('First customer sample:', response.data?.customers?.[0]);
+      // Fetch both customer list and dashboard stats
+      const [customersResponse, dashboardResponse] = await Promise.all([
+        apiClient.get(`/api/admin/customer?${params}`),
+        apiClient.get('/api/admin/dashboard/stats').catch(() => ({ data: null }))
+      ]);
+
+      console.log('Customers response:', customersResponse);
+      console.log('Dashboard response:', dashboardResponse);
       
       // Handle both possible response structures (response.data or direct response)
-      const responseData = response.data || response;
+      const responseData = customersResponse.data || customersResponse;
       
       if (responseData.success) {
         const customersList = responseData.customers || [];
         setCustomers(customersList);
         setTotalPages(responseData.pagination?.totalPages || 1);
         
-        // Calculate stats from customers array
-        const activeCount = customersList.filter(c => c.isActive !== false).length;
-        const inactiveCount = customersList.length - activeCount;
+        // Use dashboard stats for accurate totals, fallback to page calculation
+        const dashboardData = dashboardResponse?.data;
+        const activeCount = customersList.filter(c => c.isActive === true).length;
+        const inactiveCount = customersList.filter(c => c.isActive === false).length;
         
         const stats = {
           total: responseData.pagination?.total || customersList.length || 0,
-          active: activeCount,
-          inactive: inactiveCount,
-          newThisMonth: 0, // Calculate from createdAt if needed
+          active: dashboardData?.overview?.customers?.active || activeCount,
+          inactive: dashboardData?.overview?.customers?.blocked || inactiveCount,
+          newThisMonth: dashboardData?.overview?.customers?.newCustomers || 0,
           avgOrderValue: 0, // Would need additional API call
         };
         setStats(stats);
-        
-        // Fetch actual customer statuses from API
-        await fetchCustomerStatuses(customersList);
       } else {
         console.error('Failed to fetch customers:', responseData.message);
         toast.error('Failed to load customers');
@@ -511,7 +459,7 @@ export default function CustomersPage() {
     try {
       console.log('=== TOGGLE STATUS DEBUG ===');
       console.log('Customer ID:', customer.id);
-      console.log('Current tracked status:', customerStatuses[customer.id]);
+      console.log('Current status from API:', customer.isActive);
       
       // Get auth token
       const authToken = document.cookie
@@ -524,10 +472,8 @@ export default function CustomersPage() {
         return;
       }
 
-      console.log('Auth token found, length:', authToken.length);
-
       // Determine what action to take based on current status
-      const currentStatus = customerStatuses[customer.id] !== false; // Default to true (active)
+      const currentStatus = customer.isActive;
       const newStatus = !currentStatus;
       
       console.log('Current status:', currentStatus, 'New status:', newStatus);
@@ -545,11 +491,12 @@ export default function CustomersPage() {
       console.log('API Response ok:', response.ok);
 
       if (response.ok) {
-        // Update local status immediately
-        setCustomerStatuses(prev => ({ ...prev, [customer.id]: newStatus }));
+        // Update customer in the local state immediately
+        setCustomers(prev => prev.map(c => 
+          c.id === customer.id ? { ...c, isActive: newStatus } : c
+        ));
         toast.success(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
         console.log('SUCCESS: Status updated in database');
-        // Don't refresh customers list to avoid losing our local status tracking
       } else {
         console.log('API Error - Status:', response.status);
         const errorData = await response.json().catch(() => ({}));
@@ -565,6 +512,40 @@ export default function CustomersPage() {
 
   const handleRefresh = () => {
     fetchCustomers();
+  };
+
+  const handleExport = () => {
+    if (customers.length === 0) {
+      toast.error('No customers to export');
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['Name', 'Email', 'Phone', 'DOB', 'Gender', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...customers.map(customer => [
+        `"${customer.name || ''}"`,
+        `"${customer.email || ''}"`,
+        `"${customer.phone || ''}"`,
+        `"${customer.dob ? customer.dob.split('T')[0] : ''}"`,
+        `"${customer.gender || ''}"`,
+        `"${customer.isActive ? 'Active' : 'Inactive'}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `customers-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Customers exported successfully!');
   };
 
   const formatDate = (dateString) => {
@@ -607,7 +588,10 @@ export default function CustomersPage() {
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="secondary">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -759,7 +743,6 @@ export default function CustomersPage() {
                   customer={customer}
                   onView={handleView}
                   onToggleStatus={handleToggleStatus}
-                  customerStatuses={customerStatuses}
                 />
               ))}
             </div>
@@ -784,9 +767,6 @@ export default function CustomersPage() {
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           DOB
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Joined
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
@@ -828,10 +808,7 @@ export default function CustomersPage() {
                             <CustomerStatusBadge isActive={customer.isActive} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {customer.dob ? new Date(customer.dob).toLocaleDateString() : 'Not specified'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {customer.createdAt ? formatDate(customer.createdAt) : 'N/A'}
+                            {customer.dob ? customer.dob.split('T')[0] : 'Not specified'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex space-x-2">
@@ -847,12 +824,12 @@ export default function CustomersPage() {
                                 size="sm"
                                 onClick={() => handleToggleStatus(customer)}
                                 style={{ 
-                                  backgroundColor: customerStatuses[customer.id] !== false ? '#EF4444' : '#10B981',
+                                  backgroundColor: customer.isActive ? '#EF4444' : '#10B981',
                                   color: 'white',
-                                  borderColor: customerStatuses[customer.id] !== false ? '#EF4444' : '#10B981'
+                                  borderColor: customer.isActive ? '#EF4444' : '#10B981'
                                 }}
                               >
-                                {customerStatuses[customer.id] !== false ? (
+                                {customer.isActive ? (
                                   <ToggleLeft className="h-4 w-4" />
                                 ) : (
                                   <ToggleRight className="h-4 w-4" />

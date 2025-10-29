@@ -496,7 +496,11 @@ export default function AdminDashboard() {
         customers: {
           newToday: 0,
           newThisWeek: 0,
-          newThisMonth: 0
+          newThisMonth: 0,
+          active: 0,
+          inactive: 0, // Maps to API 'blocked' field
+          verified: 0,
+          unverified: 0
         },
         products: {
           total: 0,
@@ -528,7 +532,7 @@ export default function AdminDashboard() {
             },
             customers: {
               active: data.overview?.customers?.active || 0,
-              blocked: data.overview?.customers?.blocked || 0,
+              inactive: data.overview?.customers?.blocked || 0, // API returns 'blocked' field
               verified: data.overview?.customers?.verified || 0,
               unverified: data.overview?.customers?.unverified || 0,
               newCustomers: data.overview?.customers?.newCustomers || 0,
@@ -702,7 +706,7 @@ export default function AdminDashboard() {
         <StatCard
             title="Active Customers"
             value={stats?.customers?.active || 0}
-            subtitle={`${stats?.customers?.blocked || 0} blocked`}
+            subtitle={`${stats?.customers?.inactive || 0} inactive`}
             color="green"
             icon={Users}
         />
