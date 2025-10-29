@@ -13,7 +13,9 @@ import {
   CheckCircle,
   Image as ImageIcon,
   LogOut,
-  Menu
+  Menu,
+  Settings,
+  Eye
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
 
@@ -310,16 +312,13 @@ export default function CreateProductPage() {
     price: '',
     stock: '',
     category: '',
-    brand: '',
-    sku: '',
-    weight: '',
-    dimensions: {
-      length: '',
-      width: '',
-      height: ''
-    },
-    features: [],
-    tags: [],
+    subcategory: '',
+    material: '',
+    careInstructions: '',
+    fitType: '',
+    season: '',
+    sizeGuide: '',
+    options: [],
     isActive: true,
     isFeatured: false,
   });
@@ -327,39 +326,129 @@ export default function CreateProductPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [categories, setCategories] = useState([]);
+  const [parentCategories, setParentCategories] = useState([]);
+  const [createdProduct, setCreatedProduct] = useState(null);
 
   useEffect(() => {
     fetchCategories();
+    fetchParentCategories();
   }, []);
 
-  const fetchCategories = async () => {
+
+  const fetchParentCategories = async () => {
     try {
-      const response = await apiClient.get('/admin/category');
+      console.log('Fetching parent categories...');
+      const response = await apiClient.get('/api/admin/category?parentId=null&limit=100');
+      console.log('Parent categories response:', response);
       if (response.success) {
-        setCategories(response.categories || []);
+        const parentCats = response.data?.categories || [];
+        console.log('Parent categories loaded:', parentCats);
+        setParentCategories(parentCats);
+      }
+    } catch (error) {
+      console.error('Error fetching parent categories:', error);
+    }
+  };
+
+  const fetchCategories = async (parentId = null) => {
+    try {
+      console.log('Fetching categories...', parentId ? `for parent: ${parentId}` : 'all categories');
+      const url = parentId ? `/api/admin/category?parentId=${parentId}&limit=100` : '/api/admin/category?limit=100';
+      console.log('API URL:', url);
+      
+      // Check authentication token
+      const token = document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1];
+      console.log('Auth token exists:', !!token);
+      console.log('Auth token preview:', token ? token.substring(0, 10) + '...' : 'No token');
+      
+      const response = await apiClient.get(url);
+      console.log('Categories response:', response);
+      console.log('Response success:', response.success);
+      console.log('Response data:', response.data);
+      console.log('Response categories:', response.data?.categories || response.categories);
+      
+      if (response.success) {
+        const categoriesData = response.data?.categories || [];
+        console.log('Setting categories:', categoriesData);
+        
+        // WORKAROUND: Since backend doesn't return parentId, we'll track it locally
+        // Get stored hierarchy from localStorage
+        const storedHierarchy = JSON.parse(localStorage.getItem('categoryHierarchy') || '{}');
+        console.log('Stored hierarchy from localStorage:', storedHierarchy);
+        
+        const processedCategories = categoriesData.map(cat => {
+          // Check if we have stored parentId for this category
+          const storedParentId = storedHierarchy[cat.id];
+          const actualParentId = cat.parentId || storedParentId || null;
+          
+          return {
+            ...cat,
+            parentId: actualParentId,
+            isParentCategory: !actualParentId
+          };
+        });
+        
+        setCategories(processedCategories);
+        console.log('Categories set:', processedCategories);
+        
+        if (parentId && categoriesData.length === 0) {
+          console.log('No subcategories found for parent:', parentId);
+          console.log('Testing direct API call...');
+          
+          // Test direct API call to verify
+          fetch(`/api/admin/category?parentId=${parentId}`)
+            .then(response => response.json())
+            .then(data => {
+              console.log('Direct API test result:', data);
+            })
+            .catch(error => {
+              console.error('Direct API test failed:', error);
+            });
+            
+          toast('No subcategories found for this parent category. Create subcategories first.', {
+            icon: 'ℹ️',
+            style: {
+              background: '#3B82F6',
+              color: '#fff',
+            },
+          });
+        }
+      } else {
+        console.error('Failed to fetch categories:', response.message);
+        toast.error('Failed to load categories');
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      console.error('Error details:', error.response?.data);
+      toast.error('Failed to load categories. Please check your connection.');
     }
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    if (name.startsWith('dimensions.')) {
-      const dimensionField = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        dimensions: {
-          ...prev.dimensions,
-          [dimensionField]: value
-        }
-      }));
-    } else {
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
+    
+    // If category changes, reset subcategory
+    if (name === 'category') {
       setFormData(prev => ({ 
         ...prev, 
-        [name]: type === 'checkbox' ? checked : value 
+        category: value,
+        subcategory: '' // Reset subcategory when category changes
       }));
+      
+      // Clear subcategory error when parent changes
+      if (errors.subcategory) {
+        setErrors(prev => ({ ...prev, subcategory: '' }));
+      }
+    }
+    
+    // Clear subcategory error when subcategory changes
+    if (name === 'subcategory' && errors.subcategory) {
+      setErrors(prev => ({ ...prev, subcategory: '' }));
     }
     
     if (errors[name]) {
@@ -367,47 +456,109 @@ export default function CreateProductPage() {
     }
   };
 
-  const addFeature = () => {
+
+  // Option management functions
+  const addOption = () => {
     setFormData(prev => ({
       ...prev,
-      features: [...prev.features, '']
+      options: [...prev.options, { name: '', values: [{ value: '', name: '', price: 0, stock: 0, image: null }] }]
     }));
   };
 
-  const updateFeature = (index, value) => {
+  const updateOptionName = (index, value) => {
     setFormData(prev => ({
       ...prev,
-      features: prev.features.map((feature, i) => i === index ? value : feature)
+      options: prev.options.map((option, i) => i === index ? { ...option, name: value } : option)
     }));
   };
 
-  const removeFeature = (index) => {
+  const removeOption = (index) => {
     setFormData(prev => ({
       ...prev,
-      features: prev.features.filter((_, i) => i !== index)
+      options: prev.options.filter((_, i) => i !== index)
     }));
   };
 
-  const addTag = () => {
+  const addOptionValue = (optionIndex) => {
     setFormData(prev => ({
       ...prev,
-      tags: [...prev.tags, '']
+      options: prev.options.map((option, i) => 
+        i === optionIndex 
+          ? { ...option, values: [...option.values, { value: '', name: '', price: 0, stock: 0, image: null }] }
+          : option
+      )
     }));
   };
 
-  const updateTag = (index, value) => {
+  const updateOptionValue = (optionIndex, valueIndex, newValue) => {
     setFormData(prev => ({
       ...prev,
-      tags: prev.tags.map((tag, i) => i === index ? value : tag)
+      options: prev.options.map((option, i) => 
+        i === optionIndex 
+          ? { 
+              ...option, 
+              values: option.values.map((val, j) => 
+                j === valueIndex 
+                  ? { ...val, name: newValue, value: newValue }
+                  : val
+              )
+            }
+          : option
+      )
     }));
   };
 
-  const removeTag = (index) => {
+  const updateOptionValuePrice = (optionIndex, valueIndex, price) => {
     setFormData(prev => ({
       ...prev,
-      tags: prev.tags.filter((_, i) => i !== index)
+      options: prev.options.map((option, i) => 
+        i === optionIndex 
+          ? { 
+              ...option, 
+              values: option.values.map((val, j) => 
+                j === valueIndex 
+                  ? { ...val, price: price }
+                  : val
+              )
+            }
+          : option
+      )
     }));
   };
+
+  const updateOptionValueStock = (optionIndex, valueIndex, stock) => {
+    setFormData(prev => ({
+      ...prev,
+      options: prev.options.map((option, i) => 
+        i === optionIndex 
+          ? { 
+              ...option, 
+              values: option.values.map((val, j) => 
+                j === valueIndex 
+                  ? { ...val, stock: stock }
+                  : val
+              )
+            }
+          : option
+      )
+    }));
+  };
+
+  const removeOptionValue = (optionIndex, valueIndex) => {
+    setFormData(prev => ({
+      ...prev,
+      options: prev.options.map((option, i) => 
+        i === optionIndex 
+          ? { ...option, values: option.values.filter((_, j) => j !== valueIndex) }
+          : option
+      )
+    }));
+  };
+
+
+
+
+
 
   const validate = () => {
     const newErrors = {};
@@ -454,13 +605,19 @@ export default function CreateProductPage() {
     
     // Category validation
     if (!formData.category) {
-      newErrors.category = 'Category is required';
+      newErrors.category = 'Parent category is required';
     }
     
-    // Images validation (optional - backend doesn't require images)
-    // if (images.length === 0) {
-    //   newErrors.images = 'At least one product image is required';
-    // }
+    // Subcategory validation - required if parent has subcategories
+    const availableSubcategories = categories.filter(cat => cat.parentId === formData.category);
+    if (formData.category && availableSubcategories.length > 0 && !formData.subcategory) {
+      newErrors.subcategory = 'Subcategory is required for this parent category';
+    }
+    
+    // Images validation (backend requires image)
+    if (images.length === 0) {
+      newErrors.images = 'Product image is required';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -477,6 +634,8 @@ export default function CreateProductPage() {
     setLoading(true);
 
     try {
+      console.log('Creating product with data:', formData);
+      
       // Create FormData for file upload
       const submitData = new FormData();
       
@@ -485,39 +644,154 @@ export default function CreateProductPage() {
       submitData.append('description', formData.description);
       submitData.append('price', formData.price);
       submitData.append('stock', formData.stock);
-      submitData.append('categoryId', formData.category); // Map 'category' to 'categoryId'
+      // Use subcategory if selected, otherwise use parent category
+      const selectedCategoryId = formData.subcategory || formData.category;
+      submitData.append('categoryId', selectedCategoryId);
 
-      // Add images
-      images.forEach((image, index) => {
-        if (typeof image === 'object') {
-          submitData.append('images', image);
-        }
-      });
+      // Add image (backend expects single 'image' field, not 'images')
+      if (images.length > 0 && typeof images[0] === 'object') {
+        submitData.append('image', images[0]);
+      }
 
-      const response = await apiClient.post('/admin/product', submitData, {
+      console.log('Submitting to /admin/product');
+      console.log('FormData contents:');
+      for (let [key, value] of submitData.entries()) {
+        console.log(key, ':', value);
+      }
+      
+      const response = await apiClient.post('/api/admin/product', submitData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
+      console.log('Product creation response:', response);
+
       if (response.success) {
         toast.success('Product created successfully! 🎉');
-        router.push('/admin/products');
+        const product = response.data || response.product;
+        setCreatedProduct(product);
+        
+        const productId = product?.id;
+        
+        // Create option types and values if any were added in the form
+        if (productId && formData.options && formData.options.length > 0) {
+          try {
+            console.log('Creating option types and values for product:', productId);
+            
+            // First, create option types and collect their IDs
+            const optionTypeResults = await Promise.all(
+              formData.options
+                .filter(option => option.name && option.name.trim()) // Only create option types with names
+                .map(async (option) => {
+                  try {
+                    const optionTypeResponse = await apiClient.post('/api/admin/option-type', {
+                      productId: productId,
+                      name: option.name.trim()
+                    });
+                    
+                    if (optionTypeResponse.success && optionTypeResponse.data) {
+                      const optionTypeId = optionTypeResponse.data.id;
+                      console.log(`Created option type "${option.name}" with ID: ${optionTypeId}`);
+                      
+                      // Now create option values for this option type
+                      if (option.values && option.values.length > 0) {
+                        const valuesResults = await Promise.all(
+                          option.values
+                            .filter(val => val.value && val.value.trim() && val.image) // Only values with text and image
+                            .map(async (val) => {
+                              try {
+                                const formData = new FormData();
+                                formData.append('optionTypeId', optionTypeId);
+                                formData.append('value', val.value.trim());
+                                formData.append('price', parseFloat(val.price) || 0);
+                                formData.append('stock', parseInt(val.stock) || 0);
+                                formData.append('image', val.image);
+                                
+                                const valueResponse = await apiClient.post('/api/admin/option-value', formData, {
+                                  headers: {
+                                    'Content-Type': 'multipart/form-data',
+                                  },
+                                });
+                                
+                                if (valueResponse.success) {
+                                  console.log(`Created option value "${val.value}"`);
+                                  return true;
+                                } else {
+                                  console.error(`Failed to create value "${val.value}":`, valueResponse.message);
+                                  return false;
+                                }
+                              } catch (error) {
+                                console.error(`Error creating value "${val.value}":`, error);
+                                return false;
+                              }
+                            })
+                        );
+                        
+                        return {
+                          optionType: option.name,
+                          valuesCreated: valuesResults.filter(r => r === true).length,
+                          valuesTotal: valuesResults.length
+                        };
+                      }
+                      
+                      return { optionType: option.name, valuesCreated: 0, valuesTotal: 0 };
+                    } else {
+                      console.error(`Failed to create option type "${option.name}":`, optionTypeResponse.message);
+                      return null;
+                    }
+                  } catch (error) {
+                    console.error(`Error creating option type "${option.name}":`, error);
+                    return null;
+                  }
+                })
+            );
+            
+            const validResults = optionTypeResults.filter(r => r !== null);
+            const totalValuesCreated = validResults.reduce((sum, r) => sum + r.valuesCreated, 0);
+            
+            if (validResults.length > 0) {
+              toast.success(
+                `Product created! Created ${validResults.length} option type(s) with ${totalValuesCreated} value(s).`
+              );
+            } else {
+              toast.success('Product created! Note: Failed to create option types. You can add them manually.');
+            }
+          } catch (error) {
+            console.error('Error creating option types and values:', error);
+            toast.success('Product created! Note: Failed to create options. You can add them manually.');
+          }
+        }
+        
+        // Redirect to products list after successful creation
+        if (productId) {
+          router.push('/admin/products');
+        }
       } else {
         toast.error(response.message || 'Failed to create product');
       }
     } catch (error) {
       console.error('Error creating product:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       
       // Handle specific validation errors from backend
       if (error.response?.status === 400) {
         const errorMessage = error.response?.data?.message || 'Validation failed. Please check your input.';
+        console.error('400 Error details:', error.response?.data);
         toast.error(errorMessage);
         
         // If there are specific field errors, show them
         if (error.response?.data?.errors) {
           setErrors(error.response.data.errors);
         }
+      } else if (error.response?.status === 401) {
+        toast.error('You are not authorized. Please login again.');
+        router.push('/auth/login');
+      } else if (error.response?.status === 403) {
+        toast.error('You do not have permission to create products.');
+      } else if (error.response?.status === 409) {
+        toast.error('A product with this name already exists in this category. Please choose a different name.');
       } else {
         toast.error('Failed to create product. Please try again.');
       }
@@ -525,6 +799,90 @@ export default function CreateProductPage() {
       setLoading(false);
     }
   };
+
+  // Note: Success state is removed as we redirect directly to products list
+  // Keeping this commented for reference
+  /*if (createdProduct) {
+    return (
+      <AdminLayout title="Product Created!" subtitle="Your product has been successfully added">
+        <div className="max-w-2xl mx-auto">
+          <Card className="text-center">
+            <CardBody className="py-12">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Product Created Successfully!</h2>
+              <p className="text-gray-600 mb-6">
+                "{createdProduct.name}" has been added to your catalog and is now available for customers.
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex space-x-4">
+                  <Button
+                    onClick={() => router.push(`/admin/products/options/${createdProduct.id}`)}
+                    className="flex-1"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Options & Values
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/admin/products/view/${createdProduct.id}`)}
+                    className="flex-1"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Product
+                  </Button>
+                </div>
+                
+                <div className="flex space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/admin/products')}
+                    className="flex-1"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Back to Products
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setCreatedProduct(null);
+                      setFormData({
+                        name: '',
+                        description: '',
+                        price: '',
+                        stock: '',
+                        category: '',
+                        brand: '',
+                        sku: '',
+                        weight: '',
+                        material: '',
+                        careInstructions: '',
+                        fitType: '',
+                        season: '',
+                        sizeGuide: '',
+                        features: [],
+                        tags: [],
+                        isActive: true,
+                        isFeatured: false,
+                      });
+                      setImages([]);
+                      setErrors({});
+                    }}
+                    className="flex-1"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Another
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }*/
 
   return (
     <AdminLayout title="Create Product" subtitle="Add a new product to your catalog">
@@ -653,11 +1011,12 @@ export default function CreateProductPage() {
                   </div>
                 </div>
 
-                {/* Category and Brand */}
+
+                {/* Category Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Category *
+                      Parent Category *
                     </label>
                     <select
                       name="category"
@@ -667,12 +1026,22 @@ export default function CreateProductPage() {
                         errors.category ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
                       }`}
                     >
-                      <option value="">Select a category</option>
-                      {categories.map((category) => (
-                        <option key={category._id} value={category._id}>
-                          {category.name}
-                        </option>
-                      ))}
+                      {console.log('Total categories:', categories.length, 'Parent categories:', categories.filter(cat => !cat.parentId).length)}
+                      <option value="">Select a parent category</option>
+                      {categories.length === 0 ? (
+                        <option value="" disabled>No categories found. Create categories first.</option>
+                      ) : (
+                        categories
+                          .filter(category => !category.parentId) // Only show parent categories
+                          .map((category) => {
+                            console.log('Rendering category option:', category);
+                            return (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            );
+                          })
+                      )}
                     </select>
                     {errors.category && (
                       <p className="mt-2 text-sm text-red-600 flex items-center">
@@ -684,51 +1053,48 @@ export default function CreateProductPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Brand
+                      Subcategory *
                     </label>
-                    <input
-                      type="text"
-                      name="brand"
-                      value={formData.brand}
+                    <select
+                      name="subcategory"
+                      value={formData.subcategory}
                       onChange={handleChange}
-                      placeholder="Enter brand name"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
-                  </div>
+                      disabled={!formData.category || categories.filter(cat => cat.parentId === formData.category).length === 0}
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all ${
+                        errors.subcategory ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
+                      } ${(!formData.category || categories.filter(cat => cat.parentId === formData.category).length === 0) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    >
+                      <option value="">Select a subcategory</option>
+                      {formData.category ? (
+                        categories
+                          .filter(cat => cat.parentId === formData.category)
+                          .map((subcategory) => (
+                            <option key={subcategory.id} value={subcategory.id}>
+                              {subcategory.name}
+                            </option>
+                          ))
+                      ) : (
+                        <option value="" disabled>Select a parent category first</option>
+                      )}
+                    </select>
+                    {errors.subcategory && (
+                      <p className="mt-2 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.subcategory}
+                      </p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-500">
+                      {formData.category ? 
+                        (categories.filter(cat => cat.parentId === formData.category).length > 0 ? 
+                          'Available subcategories for the selected parent' : 
+                          'No subcategories available for this parent category - subcategory selection disabled') :
+                        'Choose a parent category to see available subcategories'
+                      }
+                    </p>
                 </div>
 
-                {/* SKU and Weight */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      SKU
-                    </label>
-                    <input
-                      type="text"
-                      name="sku"
-                      value={formData.sku}
-                      onChange={handleChange}
-                      placeholder="Product SKU"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Weight (kg)
-                    </label>
-                    <input
-                      type="number"
-                      name="weight"
-                      value={formData.weight}
-                      onChange={handleChange}
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
-                  </div>
-                </div>
               </CardBody>
             </Card>
 
@@ -752,79 +1118,138 @@ export default function CreateProductPage() {
               </CardBody>
             </Card>
 
-            {/* Features */}
+            {/* Product Options */}
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900">Product Features</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Product Options (Optional)</h3>
+                <p className="text-sm text-gray-600">Add product variants with their values, pricing, stock, and images. Examples: Size (Small, Medium, Large), Color (Red, Blue, Green), etc.</p>
               </CardHeader>
               <CardBody>
-                <div className="space-y-3">
-                  {formData.features.map((feature, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <input
-                        type="text"
-                        value={feature}
-                        onChange={(e) => updateFeature(index, e.target.value)}
-                        placeholder="Enter feature"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFeature(index)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                <div className="space-y-6">
+                  {formData.options.map((option, optionIndex) => (
+                    <div key={optionIndex} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="text"
+                          value={option.name}
+                          onChange={(e) => updateOptionName(optionIndex, e.target.value)}
+                          placeholder="Option name (e.g., Size, Color, Material)"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeOption(optionIndex)}
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      {/* Values for this option */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">Values:</label>
+                        {option.values.map((value, valueIndex) => (
+                          <div key={valueIndex} className="border border-gray-200 rounded-lg p-3 space-y-3">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={value.value || value.name || value}
+                                onChange={(e) => updateOptionValue(optionIndex, valueIndex, e.target.value)}
+                                placeholder="Option value (e.g., Small, Red, Cotton)"
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeOptionValue(optionIndex, valueIndex)}
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Price Adjustment</label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={value.price || 0}
+                                    onChange={(e) => updateOptionValuePrice(optionIndex, valueIndex, parseFloat(e.target.value) || 0)}
+                                    placeholder="0.00"
+                                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={value.stock || 0}
+                                  onChange={(e) => updateOptionValueStock(optionIndex, valueIndex, parseInt(e.target.value) || 0)}
+                                  placeholder="0"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Image *</label>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        options: prev.options.map((opt, i) => 
+                                          i === optionIndex 
+                                            ? {
+                                                ...opt,
+                                                values: opt.values.map((val, j) => 
+                                                  j === valueIndex ? { ...val, image: file } : val
+                                                )
+                                              }
+                                            : opt
+                                        )
+                                      }));
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addOptionValue(optionIndex)}
+                          className="flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Value
+                        </button>
+                      </div>
                     </div>
                   ))}
+                  
                   <button
                     type="button"
-                    onClick={addFeature}
-                    className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
+                    onClick={addOption}
+                    className="flex items-center text-blue-600 hover:text-blue-700 font-medium border-2 border-dashed border-blue-300 hover:border-blue-400 rounded-lg p-4 w-full justify-center transition-colors"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Feature
+                    Add Option Type
                   </button>
                 </div>
               </CardBody>
             </Card>
 
-            {/* Tags */}
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900">Product Tags</h3>
-              </CardHeader>
-              <CardBody>
-                <div className="space-y-3">
-                  {formData.tags.map((tag, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <input
-                        type="text"
-                        value={tag}
-                        onChange={(e) => updateTag(index, e.target.value)}
-                        placeholder="Enter tag"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeTag(index)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addTag}
-                    className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Tag
-                  </button>
-                </div>
-              </CardBody>
-            </Card>
+
           </div>
 
           {/* Sidebar */}
@@ -858,48 +1283,79 @@ export default function CreateProductPage() {
               </CardBody>
             </Card>
 
-            {/* Dimensions */}
+            {/* Clothing Details */}
             <Card>
               <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900">Dimensions (cm)</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Clothing Details</h3>
+                <p className="text-sm text-gray-600">Add specific details for clothing items</p>
               </CardHeader>
               <CardBody className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Length</label>
-                  <input
-                    type="number"
-                    name="dimensions.length"
-                    value={formData.dimensions.length}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    placeholder="0.0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
+                    <input
+                      type="text"
+                      name="material"
+                      value={formData.material || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., 100% Cotton, Polyester, Denim"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Care Instructions</label>
+                    <input
+                      type="text"
+                      name="careInstructions"
+                      value={formData.careInstructions || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., Machine wash cold, Hang dry"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fit Type</label>
+                    <select
+                      name="fitType"
+                      value={formData.fitType || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select fit type</option>
+                      <option value="Slim">Slim</option>
+                      <option value="Regular">Regular</option>
+                      <option value="Relaxed">Relaxed</option>
+                      <option value="Oversized">Oversized</option>
+                      <option value="Athletic">Athletic</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
+                    <select
+                      name="season"
+                      value={formData.season || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select season</option>
+                      <option value="All Season">All Season</option>
+                      <option value="Summer">Summer</option>
+                      <option value="Winter">Winter</option>
+                      <option value="Spring">Spring</option>
+                      <option value="Fall">Fall</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
-                  <input
-                    type="number"
-                    name="dimensions.width"
-                    value={formData.dimensions.width}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Size Guide</label>
+                  <textarea
+                    name="sizeGuide"
+                    value={formData.sizeGuide || ''}
                     onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    placeholder="0.0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
-                  <input
-                    type="number"
-                    name="dimensions.height"
-                    value={formData.dimensions.height}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    placeholder="0.0"
+                    rows="3"
+                    placeholder="e.g., Small: Chest 34-36, Medium: Chest 38-40, Large: Chest 42-44"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>

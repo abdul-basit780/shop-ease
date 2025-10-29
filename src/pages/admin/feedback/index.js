@@ -27,7 +27,8 @@ import {
   Flag,
   Reply,
   Grid,
-  List
+  List,
+  Trash2
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
 
@@ -265,49 +266,8 @@ const RatingStars = ({ rating, maxRating = 5 }) => {
   );
 };
 
-// Feedback Type Badge Component
-const FeedbackTypeBadge = ({ type }) => {
-  const typeConfig = {
-    review: { color: 'bg-blue-100 text-blue-800', icon: Star },
-    complaint: { color: 'bg-red-100 text-red-800', icon: AlertCircle },
-    suggestion: { color: 'bg-green-100 text-green-800', icon: ThumbsUp },
-    question: { color: 'bg-purple-100 text-purple-800', icon: MessageSquare },
-    bug: { color: 'bg-orange-100 text-orange-800', icon: Flag },
-  };
-
-  const config = typeConfig[type] || typeConfig.review;
-  const Icon = config.icon;
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-      <Icon className="w-3 h-3 mr-1" />
-      {type.charAt(0).toUpperCase() + type.slice(1)}
-    </span>
-  );
-};
-
-// Feedback Status Badge Component
-const FeedbackStatusBadge = ({ status }) => {
-  const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    reviewed: { color: 'bg-blue-100 text-blue-800', icon: Eye },
-    resolved: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    closed: { color: 'bg-gray-100 text-gray-800', icon: X },
-  };
-
-  const config = statusConfig[status] || statusConfig.pending;
-  const Icon = config.icon;
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-      <Icon className="w-3 h-3 mr-1" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
-  );
-};
-
 // Feedback Card Component
-const FeedbackCard = ({ feedback, onView, onReply }) => {
+const FeedbackCard = ({ feedback, onView, onDelete }) => {
   return (
     <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
@@ -315,12 +275,12 @@ const FeedbackCard = ({ feedback, onView, onReply }) => {
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
               <span className="text-white font-semibold text-sm">
-                {feedback.customer?.name?.charAt(0) || 'U'}
+                {feedback.customerId?.name?.charAt(0) || 'U'}
               </span>
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-900">
-                {feedback.customer?.name || 'Anonymous'}
+                {feedback.customerId?.name || 'Anonymous'}
               </h3>
               <p className="text-xs text-gray-500">
                 {new Date(feedback.createdAt).toLocaleDateString()}
@@ -328,34 +288,18 @@ const FeedbackCard = ({ feedback, onView, onReply }) => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <FeedbackTypeBadge type={feedback.type} />
-            <FeedbackStatusBadge status={feedback.status} />
-          </div>
-        </div>
-        
-        {feedback.rating && (
-          <div className="mb-3">
             <RatingStars rating={feedback.rating} />
           </div>
-        )}
+        </div>
         
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-900 mb-2">
-            {feedback.subject || 'No Subject'}
+            {feedback.productName || 'Product Review'}
           </h4>
           <p className="text-sm text-gray-600 line-clamp-3">
-            {feedback.message || 'No message provided'}
+            {feedback.comment || 'No comment provided'}
           </p>
         </div>
-        
-        {feedback.product && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">Product:</p>
-            <p className="text-sm font-medium text-gray-900">
-              {feedback.product.name}
-            </p>
-          </div>
-        )}
         
         <div className="flex space-x-2">
           <Button
@@ -367,17 +311,15 @@ const FeedbackCard = ({ feedback, onView, onReply }) => {
             <Eye className="h-4 w-4" />
             View
           </Button>
-          {feedback.status === 'pending' && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => onReply(feedback)}
-              className="flex-1"
-            >
-              <Reply className="h-4 w-4" />
-              Reply
-            </Button>
-          )}
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => onDelete(feedback)}
+            className="flex-1"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </Button>
         </div>
       </CardBody>
     </Card>
@@ -392,8 +334,7 @@ export default function FeedbackPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [ratingFilter, setRatingFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState(null);
@@ -405,16 +346,19 @@ export default function FeedbackPage() {
         page: currentPage.toString(),
         limit: '12',
         ...(searchTerm && { search: searchTerm }),
-        ...(typeFilter && { type: typeFilter }),
-        ...(statusFilter && { status: statusFilter }),
+        ...(ratingFilter && { rating: ratingFilter }),
       });
 
-      const response = await apiClient.get(`/admin/feedback?${params}`);
+      const response = await apiClient.get(`/api/admin/feedback?${params}`);
+      console.log('Feedbacks response:', response);
       
-      if (response.success) {
-        setFeedbacks(response.feedbacks || []);
-        setTotalPages(response.pagination?.totalPages || 1);
-        setStats(response.stats || null);
+      if (response.success && response.data) {
+        setFeedbacks(response.data.feedbacks || []);
+        setTotalPages(response.data.pagination?.totalPages || 1);
+        setStats(response.data.stats || null);
+      } else {
+        console.error('Failed to fetch feedbacks:', response.message);
+        toast.error('Failed to load feedback');
       }
     } catch (error) {
       console.error('Error fetching feedbacks:', error);
@@ -427,20 +371,15 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     fetchFeedbacks();
-  }, [currentPage, searchTerm, typeFilter, statusFilter]);
+  }, [currentPage, searchTerm, ratingFilter]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
 
-  const handleTypeFilter = (type) => {
-    setTypeFilter(type);
-    setCurrentPage(1);
-  };
-
-  const handleStatusFilter = (status) => {
-    setStatusFilter(status);
+  const handleRatingFilter = (rating) => {
+    setRatingFilter(rating);
     setCurrentPage(1);
   };
 
@@ -448,8 +387,25 @@ export default function FeedbackPage() {
     router.push(`/admin/feedback/view/${feedback._id}`);
   };
 
-  const handleReply = (feedback) => {
-    router.push(`/admin/feedback/reply/${feedback._id}`);
+  const handleDelete = async (feedback) => {
+    if (!confirm('Are you sure you want to delete this feedback? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.delete(`/api/admin/feedback/${feedback._id}`);
+      console.log('Delete feedback response:', response);
+
+      if (response.success) {
+        toast.success('Feedback deleted successfully');
+        fetchFeedbacks();
+      } else {
+        toast.error(response.message || 'Failed to delete feedback');
+      }
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete feedback');
+    }
   };
 
   const handleRefresh = () => {
@@ -482,7 +438,7 @@ export default function FeedbackPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Customer Feedback</h2>
-          <p className="text-gray-600">Review and respond to customer feedback</p>
+          <p className="text-gray-600">Review and manage customer feedback</p>
         </div>
         <div className="flex items-center space-x-3">
           <Button
@@ -507,8 +463,8 @@ export default function FeedbackPage() {
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Feedback</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.total || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Reviews</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalReviews || 0}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                   <MessageSquare className="h-6 w-6 text-blue-600" />
@@ -520,11 +476,11 @@ export default function FeedbackPage() {
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-600">{stats.pending || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                  <p className="text-3xl font-bold text-yellow-600">{stats.averageRating || 0}</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-yellow-600" />
+                  <Star className="h-6 w-6 text-yellow-600" />
                 </div>
               </div>
             </CardBody>
@@ -533,8 +489,8 @@ export default function FeedbackPage() {
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Resolved</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.resolved || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">5-Star Reviews</p>
+                  <p className="text-3xl font-bold text-green-600">{stats.ratingBreakdown?.['5'] || 0}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                   <CheckCircle className="h-6 w-6 text-green-600" />
@@ -546,11 +502,11 @@ export default function FeedbackPage() {
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg. Rating</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.averageRating || 0}</p>
+                  <p className="text-sm font-medium text-gray-600">1-Star Reviews</p>
+                  <p className="text-3xl font-bold text-red-600">{stats.ratingBreakdown?.['1'] || 0}</p>
                 </div>
-                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                  <Star className="h-6 w-6 text-yellow-600" />
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
                 </div>
               </div>
             </CardBody>
@@ -576,31 +532,18 @@ export default function FeedbackPage() {
 
             {/* Filters */}
             <div className="flex items-center space-x-4">
-              {/* Type Filter */}
+              {/* Rating Filter */}
               <select
-                value={typeFilter}
-                onChange={(e) => handleTypeFilter(e.target.value)}
+                value={ratingFilter}
+                onChange={(e) => handleRatingFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">All Types</option>
-                <option value="review">Review</option>
-                <option value="complaint">Complaint</option>
-                <option value="suggestion">Suggestion</option>
-                <option value="question">Question</option>
-                <option value="bug">Bug Report</option>
-              </select>
-
-              {/* Status Filter */}
-              <select
-                value={statusFilter}
-                onChange={(e) => handleStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="reviewed">Reviewed</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
+                <option value="">All Ratings</option>
+                <option value="5">5 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
               </select>
 
               {/* View Mode Toggle */}
@@ -639,7 +582,7 @@ export default function FeedbackPage() {
               <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No feedback found</h3>
               <p className="text-gray-600 mb-6">
-                {searchTerm || typeFilter || statusFilter 
+                {searchTerm || ratingFilter 
                   ? 'Try adjusting your search or filter criteria'
                   : 'Customer feedback will appear here'
                 }
@@ -656,7 +599,7 @@ export default function FeedbackPage() {
                   key={feedback._id}
                   feedback={feedback}
                   onView={handleView}
-                  onReply={handleReply}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -671,16 +614,13 @@ export default function FeedbackPage() {
                           Customer
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Subject
+                          Product
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Rating
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
+                          Comment
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Date
@@ -698,37 +638,32 @@ export default function FeedbackPage() {
                               <div className="flex-shrink-0 h-8 w-8">
                                 <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                                   <span className="text-white font-semibold text-xs">
-                                    {feedback.customer?.name?.charAt(0) || 'U'}
+                                    {feedback.customerId?.name?.charAt(0) || 'U'}
                                   </span>
                                 </div>
                               </div>
                               <div className="ml-3">
                                 <div className="text-sm font-medium text-gray-900">
-                                  {feedback.customer?.name || 'Anonymous'}
+                                  {feedback.customerId?.name || 'Anonymous'}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  {feedback.customer?.email || 'No email'}
+                                  {feedback.customerId?.email || 'No email'}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <FeedbackTypeBadge type={feedback.type} />
-                          </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-gray-900 max-w-xs truncate">
-                              {feedback.subject || 'No subject'}
+                              {feedback.productName || 'Unknown Product'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {feedback.rating ? (
-                              <RatingStars rating={feedback.rating} />
-                            ) : (
-                              <span className="text-sm text-gray-500">No rating</span>
-                            )}
+                            <RatingStars rating={feedback.rating} />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <FeedbackStatusBadge status={feedback.status} />
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900 max-w-xs truncate">
+                              {feedback.comment || 'No comment'}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {formatDate(feedback.createdAt)}
@@ -742,15 +677,13 @@ export default function FeedbackPage() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {feedback.status === 'pending' && (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => handleReply(feedback)}
-                                >
-                                  <Reply className="h-4 w-4" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleDelete(feedback)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
