@@ -216,6 +216,60 @@ export default function ProductDetails() {
     }
   };
 
+  // Calculate effective price and stock based on selected options
+  const getEffectivePrice = () => {
+    // Add null check for product
+    if (!product) return 0;
+    
+    if (!product.optionTypes || product.optionTypes.length === 0) {
+      return product.price;
+    }
+
+    // If options exist but none selected yet, show base price
+    const selectedOptionValues = Object.values(selectedOptions).filter(opt => opt && opt.id);
+    if (selectedOptionValues.length === 0) {
+      return product.price;
+    }
+
+    // Use the price from the first selected option that has a price
+    // (Assuming only one option will have a price, or use the first one found)
+    for (const opt of selectedOptionValues) {
+      if (opt.price !== undefined && opt.price > 0) {
+        return opt.price;
+      }
+    }
+
+    // If no option has a price, return base price
+    return product.price;
+  };
+
+  const getEffectiveStock = () => {
+    // Add null check for product
+    if (!product) return 0;
+    
+    if (!product.optionTypes || product.optionTypes.length === 0) {
+      return product.stock;
+    }
+
+    // If options exist but none selected yet, show base stock
+    const selectedOptionValues = Object.values(selectedOptions).filter(opt => opt && opt.id);
+    if (selectedOptionValues.length === 0) {
+      return product.stock;
+    }
+
+    // Find minimum stock among selected options (bottleneck)
+    let minStock = product.stock;
+    selectedOptionValues.forEach(opt => {
+      if (opt.stock !== undefined && opt.stock < minStock) {
+        minStock = opt.stock;
+      }
+    });
+
+    return minStock;
+  };
+
+  const effectivePrice = product ? getEffectivePrice() : 0;
+  const effectiveStock = product ? getEffectiveStock() : 0;
   const displayedReviews = showAllReviews ? feedbacks : feedbacks.slice(0, 2);
 
   if (isLoading) {
@@ -243,7 +297,7 @@ export default function ProductDetails() {
         <div className="text-center">
           <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h2>
-          <Link href="/products">
+          <Link href="/customer/all-products">
             <button className="text-blue-600 hover:text-blue-700 font-medium">
               Back to Products
             </button>
@@ -262,7 +316,7 @@ export default function ProductDetails() {
             Home
           </Link>
           <ChevronRight className="inline h-4 w-4 mx-2 text-gray-400" />
-          <Link href="/products" className="text-blue-600 hover:text-blue-700 font-medium">
+          <Link href="/customer/all-products" className="text-blue-600 hover:text-blue-700 font-medium">
             Products
           </Link>
           <ChevronRight className="inline h-4 w-4 mx-2 text-gray-400" />
@@ -294,13 +348,13 @@ export default function ProductDetails() {
                 </div>
               </div>
               
-              {product.stock < 5 && product.stock > 0 && (
+              {effectiveStock < 5 && effectiveStock > 0 && (
                 <div className="bg-orange-100 border border-orange-300 rounded-lg p-3 text-orange-800 text-sm font-medium">
-                  ⚠️ Only {product.stock} left in stock!
+                  ⚠️ Only {effectiveStock} left in stock!
                 </div>
               )}
               
-              {product.stock === 0 && (
+              {effectiveStock === 0 && (
                 <div className="bg-red-100 border border-red-300 rounded-lg p-3 text-red-800 text-sm font-bold">
                   ❌ Out of Stock
                 </div>
@@ -342,9 +396,16 @@ export default function ProductDetails() {
             )}
 
             <div className="mb-6">
-              <span className="text-5xl font-bold text-blue-600">
-                ${product.price.toFixed(2)}
-              </span>
+              <div className="flex items-baseline space-x-3">
+                <span className="text-5xl font-bold text-blue-600">
+                  ${effectivePrice.toFixed(2)}
+                </span>
+                {product.optionTypes && product.optionTypes.length > 0 && effectivePrice !== product.price && (
+                  <span className="text-2xl text-gray-400 line-through">
+                    ${product.price.toFixed(2)}
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
@@ -364,13 +425,14 @@ export default function ProductDetails() {
                         // Handle if value is an object or string
                         const displayValue = typeof value === 'object' ? value.value : value;
                         const valueObj = typeof value === 'object' ? value : { id: value, value: value };
+                        const isSelected = selectedOptions[option.name]?.value === displayValue;
                         
                         return (
                           <button
                             key={valueIdx}
                             onClick={() => handleOptionChange(option.name, valueObj)}
-                            className={`px-6 py-3 rounded-xl border-2 font-semibold transition-all transform hover:scale-105 ${
-                              selectedOptions[option.name]?.value === displayValue
+                            className={`relative px-6 py-3 rounded-xl border-2 font-semibold transition-all transform hover:scale-105 ${
+                              isSelected
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
                                 : 'border-gray-300 text-gray-700 hover:border-blue-400'
                             }`}
@@ -410,24 +472,24 @@ export default function ProductDetails() {
                     value={quantity}
                     onChange={(e) => {
                       const val = parseInt(e.target.value);
-                      if (val >= 1 && val <= product.stock) {
+                      if (val >= 1 && val <= effectiveStock) {
                         setQuantity(val);
                       }
                     }}
                     className="w-20 text-center font-bold text-lg py-3 border-0 focus:outline-none"
                     min="1"
-                    max={product.stock}
+                    max={effectiveStock}
                   />
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    disabled={quantity >= product.stock}
+                    onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
+                    disabled={quantity >= effectiveStock}
                     className="p-3 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-5 w-5" />
                   </button>
                 </div>
                 <span className="text-gray-600">
-                  {product.stock} available
+                  {effectiveStock} available
                 </span>
               </div>
             </div>
@@ -436,7 +498,7 @@ export default function ProductDetails() {
             <div className="flex gap-4 mb-8">
               <button
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
+                disabled={effectiveStock === 0}
                 className="flex-1 flex items-center justify-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart className="h-5 w-5" />
@@ -559,7 +621,7 @@ export default function ProductDetails() {
               {similarProducts.map((similar, idx) => (
                 <Link
                   key={similar.id}
-                  href={`/products/${similar.id}`}
+                  href={`/customer/product/${similar.id}`}
                   className="group"
                 >
                   <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-scale-in"
