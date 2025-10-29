@@ -1,0 +1,33 @@
+[1mdiff --git a/src/lib/api-client.js b/src/lib/api-client.js[m
+[1mindex 860cfd1..0d96420 100644[m
+[1m--- a/src/lib/api-client.js[m
+[1m+++ b/src/lib/api-client.js[m
+[36m@@ -60,12 +60,22 @@[m [mclass ApiClient {[m
+       const response = await this.client.post(url, data, config);[m
+       return response.data;[m
+     } catch (error) {[m
+[31m-      console.error("API Error:", error.message);[m
+[31m-      return {[m
+[31m-        success: false,[m
+[31m-        error: error.response?.data?.message || error.message || "API Error",[m
+[31m-        data: null,[m
+[31m-      };[m
+[32m+[m[32m      // Log the full error details for debugging[m
+[32m+[m[32m      console.error('API POST Error:', {[m
+[32m+[m[32m        url,[m
+[32m+[m[32m        data,[m
+[32m+[m[32m        status: error.response?.status,[m
+[32m+[m[32m        statusText: error.response?.statusText,[m
+[32m+[m[32m        data: error.response?.data,[m
+[32m+[m[32m        message: error.message[m
+[32m+[m[32m      });[m
+[32m+[m[41m      [m
+[32m+[m[32m      // Re-throw the error with more details[m
+[32m+[m[32m      const enhancedError = new Error(error.message);[m
+[32m+[m[32m      enhancedError.response = error.response;[m
+[32m+[m[32m      enhancedError.status = error.response?.status;[m
+[32m+[m[32m      enhancedError.data = error.response?.data;[m
+[32m+[m[32m      throw enhancedError;[m
+     }[m
+   }[m
+ [m
