@@ -1,0 +1,363 @@
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { toast } from 'react-hot-toast';
+import { useAdminAuth } from '../../utils/adminAuth';
+
+const AdminLayout = ({ children, title, subtitle }) => {
+  const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isLoading, isAdmin, user, handleLogout } = useAdminAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null; // Redirect if not admin
+  }
+
+  const sidebarItems = [
+    { name: 'Dashboard', href: '/admin', icon: '📊' },
+    { name: 'Products', href: '/admin/products', icon: '📦' },
+    { name: 'Categories', href: '/admin/categories', icon: '📂' },
+    { name: 'Orders', href: '/admin/orders', icon: '🛒' },
+    { name: 'Customers', href: '/admin/customers', icon: '👥' },
+    { name: 'Feedback', href: '/admin/feedback', icon: '💬' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile sidebar */}
+      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)}></div>
+        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+          <div className="absolute top-0 right-0 -mr-12 pt-2">
+            <button
+              type="button"
+              className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <span className="sr-only">Close sidebar</span>
+              <svg className="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+            <div className="flex-shrink-0 flex items-center px-4">
+              <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+            </div>
+            <nav className="mt-5 px-2 space-y-1">
+              {sidebarItems.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
+                    router.pathname === item.href
+                      ? 'bg-blue-100 text-blue-900'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="mr-3 text-lg">{item.icon}</span>
+                  {item.name}
+                </a>
+              ))}
+            </nav>
+          </div>
+          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+            <div className="flex items-center">
+              <div className="ml-3">
+                <p className="text-base font-medium text-gray-700">{user?.name}</p>
+                <p className="text-sm font-medium text-gray-500">{user?.email}</p>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-red-600 hover:text-red-500"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:flex lg:flex-shrink-0">
+        <div className="flex flex-col w-64">
+          <div className="flex flex-col h-0 flex-1 border-r border-gray-200 bg-white">
+            <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+              <div className="flex items-center flex-shrink-0 px-4">
+                <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+              </div>
+              <nav className="mt-5 flex-1 px-2 space-y-1">
+                {sidebarItems.map((item) => (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                      router.pathname === item.href
+                        ? 'bg-blue-100 text-blue-900'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="mr-3 text-lg">{item.icon}</span>
+                    {item.name}
+                  </a>
+                ))}
+              </nav>
+            </div>
+            <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+              <div className="flex items-center">
+                <div className="ml-3">
+                  <p className="text-base font-medium text-gray-700">{user?.name}</p>
+                  <p className="text-sm font-medium text-gray-500">{user?.email}</p>
+                  <button
+                    onClick={handleLogout}
+                    className="text-sm text-red-600 hover:text-red-500"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="lg:pl-64 flex flex-col flex-1">
+        <div className="sticky top-0 z-10 lg:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-50">
+          <button
+            type="button"
+            className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <span className="sr-only">Open sidebar</span>
+            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+          </button>
+        </div>
+        <main className="flex-1">
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+                {subtitle && <p className="mt-2 text-lg text-gray-600">{subtitle}</p>}
+              </div>
+              {children}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default function FeedbackEdit() {
+  const router = useRouter();
+  const { id } = router.query;
+  const { isLoading, isAdmin } = useAdminAuth();
+  
+  const [feedback, setFeedback] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    if (id && isAdmin) {
+      fetchFeedback();
+    }
+  }, [id, isAdmin]);
+
+  const fetchFeedback = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/admin/feedback/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1]}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setFeedback(data.feedback);
+      } else {
+        toast.error('Failed to fetch feedback details');
+        router.push('/admin/feedback');
+      }
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      toast.error('Error fetching feedback details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      const response = await fetch(`/api/admin/feedback/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1]}`
+        }
+      });
+
+      if (response.ok) {
+        toast.success('Feedback deleted successfully!');
+        router.push('/admin/feedback');
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to delete feedback');
+      }
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      toast.error('Error deleting feedback');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  if (isLoading || !isAdmin) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <AdminLayout title="Manage Feedback" subtitle="View and manage customer feedback">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!feedback) {
+    return (
+      <AdminLayout title="Manage Feedback" subtitle="Feedback not found">
+        <div className="text-center py-12">
+          <p className="text-gray-500">Feedback not found</p>
+          <button
+            onClick={() => router.push('/admin/feedback')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Back to Feedback
+          </button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout title="Manage Feedback" subtitle={`Feedback from ${feedback.customer?.name || 'Anonymous'}`}>
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Feedback Details</h3>
+        </div>
+        
+        <div className="px-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
+              <p className="text-gray-900">{feedback.customer?.name || 'Anonymous'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <p className="text-gray-900">{feedback.customer?.email || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
+                  <span
+                    key={i}
+                    className={`text-2xl ${
+                      i < feedback.rating ? 'text-yellow-400' : 'text-gray-300'
+                    }`}
+                  >
+                    ★
+                  </span>
+                ))}
+                <span className="ml-2 text-gray-600">({feedback.rating}/5)</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+              <p className="text-gray-900">{new Date(feedback.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Product</label>
+              <p className="text-gray-900">{feedback.product?.name || 'N/A'}</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Feedback Message</label>
+            <div className="bg-gray-50 p-4 rounded-md">
+              <p className="text-gray-900 whitespace-pre-wrap">{feedback.message}</p>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => router.push('/admin/feedback')}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Back to Feedback
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Delete Feedback
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mt-4">Delete Feedback</h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Are you sure you want to delete this feedback? This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex justify-center space-x-3 mt-4">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
+  );
+}

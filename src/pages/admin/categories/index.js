@@ -25,6 +25,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
+import { useAdminAuth } from '../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -438,6 +439,7 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
 // Main Categories Component
 export default function CategoriesPage() {
   const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -677,8 +679,10 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
-    fetchCategories();
-  }, [currentPage, searchTerm, selectedParent, showSubcategories]);
+    if (isAdmin) {
+      fetchCategories();
+    }
+  }, [currentPage, searchTerm, selectedParent, showSubcategories, isAdmin]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -727,6 +731,10 @@ export default function CategoriesPage() {
     router.push(`/admin/categories/create?parentId=${parentCategory.id}`);
   };
 
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (

@@ -33,6 +33,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
+import { useAdminAuth } from '../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -567,6 +568,7 @@ const BulkActions = ({ selectedProducts, onBulkDelete, onBulkEdit, onBulkExport 
 // Main Products Component
 export default function ProductsPage() {
   const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -625,8 +627,10 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, [currentPage, searchTerm, selectedCategory]);
+    if (isAdmin) {
+      fetchProducts();
+    }
+  }, [currentPage, searchTerm, selectedCategory, isAdmin]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -709,6 +713,11 @@ export default function ProductsPage() {
       setSelectedProducts(products.map(p => p.id));
     }
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (

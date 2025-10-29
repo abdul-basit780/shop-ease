@@ -31,6 +31,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
+import { useAdminAuth } from '../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -329,6 +330,7 @@ const FeedbackCard = ({ feedback, onView, onDelete }) => {
 // Main Feedback Component
 export default function FeedbackPage() {
   const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -370,8 +372,10 @@ export default function FeedbackPage() {
   };
 
   useEffect(() => {
-    fetchFeedbacks();
-  }, [currentPage, searchTerm, ratingFilter]);
+    if (isAdmin) {
+      fetchFeedbacks();
+    }
+  }, [currentPage, searchTerm, ratingFilter, isAdmin]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -421,6 +425,11 @@ export default function FeedbackPage() {
       minute: '2-digit'
     });
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (

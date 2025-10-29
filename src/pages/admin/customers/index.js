@@ -28,9 +28,12 @@ import {
   DollarSign,
   Star,
   Grid,
-  List
+  List,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
+import { useAdminAuth } from '../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -272,7 +275,10 @@ const CustomerStatusBadge = ({ isActive }) => {
 };
 
 // Customer Card Component
-const CustomerCard = ({ customer, onView }) => {
+const CustomerCard = ({ customer, onView, onToggleStatus, customerStatuses }) => {
+  // Get current status from tracked statuses, default to true (active) for new customers
+  const isActive = customerStatuses[customer.id] !== undefined ? customerStatuses[customer.id] : true;
+  
   return (
     <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
@@ -337,10 +343,33 @@ const CustomerCard = ({ customer, onView }) => {
             variant="outline"
             size="sm"
             onClick={() => onView(customer)}
-            className="w-full"
+            className="flex-1"
           >
             <Eye className="h-4 w-4" />
-            View Details
+            View
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onToggleStatus(customer)}
+            className="flex-1"
+            style={{ 
+              backgroundColor: isActive ? '#EF4444' : '#10B981',
+              color: 'white',
+              borderColor: isActive ? '#EF4444' : '#10B981'
+            }}
+          >
+            {isActive ? (
+              <>
+                <ToggleLeft className="h-4 w-4" />
+                Deactivate
+              </>
+            ) : (
+              <>
+                <ToggleRight className="h-4 w-4" />
+                Activate
+              </>
+            )}
           </Button>
         </div>
       </CardBody>
@@ -351,6 +380,7 @@ const CustomerCard = ({ customer, onView }) => {
 // Main Customers Component
 export default function CustomersPage() {
   const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -360,6 +390,51 @@ export default function CustomersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState(null);
+  const [customerStatuses, setCustomerStatuses] = useState({}); // Track customer statuses locally
+
+  // Function to fetch actual customer statuses from API
+  const fetchCustomerStatuses = async (customersList) => {
+    try {
+      const authToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      if (!authToken) return;
+
+      const statusPromises = customersList.map(async (customer) => {
+        try {
+          const response = await fetch(`/api/admin/customer/${customer.id}`, {
+            headers: {
+              'Authorization': `Bearer ${authToken}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            return {
+              id: customer.id,
+              isActive: data.customer?.isActive ?? true // Default to true if not found
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching status for customer ${customer.id}:`, error);
+        }
+        return { id: customer.id, isActive: true }; // Default to active on error
+      });
+
+      const statuses = await Promise.all(statusPromises);
+      const statusMap = {};
+      statuses.forEach(status => {
+        statusMap[status.id] = status.isActive;
+      });
+      
+      console.log('Fetched customer statuses:', statusMap);
+      setCustomerStatuses(statusMap);
+    } catch (error) {
+      console.error('Error fetching customer statuses:', error);
+    }
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -373,6 +448,8 @@ export default function CustomersPage() {
 
       const response = await apiClient.get(`/api/admin/customer?${params}`);
       console.log('Customers response:', response);
+      console.log('Customers data structure:', response.data);
+      console.log('First customer sample:', response.data?.customers?.[0]);
       
       // Handle both possible response structures (response.data or direct response)
       const responseData = response.data || response;
@@ -394,6 +471,9 @@ export default function CustomersPage() {
           avgOrderValue: 0, // Would need additional API call
         };
         setStats(stats);
+        
+        // Fetch actual customer statuses from API
+        await fetchCustomerStatuses(customersList);
       } else {
         console.error('Failed to fetch customers:', responseData.message);
         toast.error('Failed to load customers');
@@ -408,8 +488,10 @@ export default function CustomersPage() {
   };
 
   useEffect(() => {
-    fetchCustomers();
-  }, [currentPage, searchTerm, statusFilter]);
+    if (isAdmin) {
+      fetchCustomers();
+    }
+  }, [currentPage, searchTerm, statusFilter, isAdmin]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -425,6 +507,62 @@ export default function CustomersPage() {
     router.push(`/admin/customers/view/${customer.id}`);
   };
 
+  const handleToggleStatus = async (customer) => {
+    try {
+      console.log('=== TOGGLE STATUS DEBUG ===');
+      console.log('Customer ID:', customer.id);
+      console.log('Current tracked status:', customerStatuses[customer.id]);
+      
+      // Get auth token
+      const authToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      if (!authToken) {
+        toast.error('Authentication token not found. Please login again.');
+        return;
+      }
+
+      console.log('Auth token found, length:', authToken.length);
+
+      // Determine what action to take based on current status
+      const currentStatus = customerStatuses[customer.id] !== false; // Default to true (active)
+      const newStatus = !currentStatus;
+      
+      console.log('Current status:', currentStatus, 'New status:', newStatus);
+
+      const response = await fetch(`/api/admin/customer/${customer.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ isActive: newStatus })
+      });
+
+      console.log('API Response status:', response.status);
+      console.log('API Response ok:', response.ok);
+
+      if (response.ok) {
+        // Update local status immediately
+        setCustomerStatuses(prev => ({ ...prev, [customer.id]: newStatus }));
+        toast.success(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+        console.log('SUCCESS: Status updated in database');
+        // Don't refresh customers list to avoid losing our local status tracking
+      } else {
+        console.log('API Error - Status:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.log('API Error data:', errorData);
+        toast.error(errorData.message || `Failed to update customer status (${response.status})`);
+      }
+
+    } catch (error) {
+      console.error('CATCH ERROR:', error);
+      toast.error('Error updating customer status');
+    }
+  };
+
   const handleRefresh = () => {
     fetchCustomers();
   };
@@ -436,6 +574,11 @@ export default function CustomersPage() {
       day: 'numeric'
     });
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -615,6 +758,8 @@ export default function CustomersPage() {
                   key={customer.id}
                   customer={customer}
                   onView={handleView}
+                  onToggleStatus={handleToggleStatus}
+                  customerStatuses={customerStatuses}
                 />
               ))}
             </div>
@@ -689,13 +834,31 @@ export default function CustomersPage() {
                             {customer.createdAt ? formatDate(customer.createdAt) : 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleView(customer)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleView(customer)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleStatus(customer)}
+                                style={{ 
+                                  backgroundColor: customerStatuses[customer.id] !== false ? '#EF4444' : '#10B981',
+                                  color: 'white',
+                                  borderColor: customerStatuses[customer.id] !== false ? '#EF4444' : '#10B981'
+                                }}
+                              >
+                                {customerStatuses[customer.id] !== false ? (
+                                  <ToggleLeft className="h-4 w-4" />
+                                ) : (
+                                  <ToggleRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}

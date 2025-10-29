@@ -24,6 +24,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
+import { useAdminAuth } from '../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -267,6 +268,7 @@ const OrderStatusBadge = ({ status }) => {
 // Main Orders Component
 export default function OrdersPage() {
   const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -307,8 +309,10 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [currentPage, searchTerm, statusFilter]);
+    if (isAdmin) {
+      fetchOrders();
+    }
+  }, [currentPage, searchTerm, statusFilter, isAdmin]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -377,6 +381,11 @@ export default function OrdersPage() {
       minute: '2-digit'
     });
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (
