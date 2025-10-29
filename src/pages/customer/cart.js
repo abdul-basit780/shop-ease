@@ -70,6 +70,21 @@ export default function Cart() {
     }
   };
 
+  // Helper function to get the correct item price
+  const getItemPrice = (item) => {
+    // If item has selected options with prices, use the option price
+    if (item.selectedOptions && item.selectedOptions.length > 0) {
+      // Find the first option that has a price greater than 0
+      const optionWithPrice = item.selectedOptions.find(opt => opt.price > 0);
+      if (optionWithPrice) {
+        return optionWithPrice.price;
+      }
+    }
+    
+    // Otherwise use the base product price
+    return item.price;
+  };
+
   const updateQuantity = async (productId, newQuantity, selectedOptions) => {
     if (newQuantity < 1) return;
 
@@ -91,7 +106,6 @@ export default function Cart() {
       );
 
       if (response.success && response.data) {
-        // Update cart state directly without reloading
         setCart(response.data);
         
         toast.success("Quantity updated", {
@@ -101,7 +115,6 @@ export default function Cart() {
           },
         });
         
-        // Dispatch event for navbar update only
         window.dispatchEvent(new Event("cartUpdated"));
       }
     } catch (error) {
@@ -135,7 +148,6 @@ export default function Cart() {
       );
 
       if (response.success) {
-        // Update cart state directly without reloading
         setCart(response.data);
         
         toast.success("Item removed from cart", {
@@ -146,7 +158,6 @@ export default function Cart() {
           },
         });
         
-        // Dispatch event for navbar update only
         window.dispatchEvent(new Event("cartUpdated"));
       }
     } catch (error) {
@@ -243,7 +254,7 @@ export default function Cart() {
                 >
                   <div className="flex gap-6">
                     {/* Product Image */}
-                    <Link href={`/products/${item.productId}`}>
+                    <Link href={`/customer/product/${item.productId}`}>
                       <div className="w-32 h-32 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
                         {item.img ? (
                           <img
@@ -269,7 +280,7 @@ export default function Cart() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <Link href={`/products/${item.productId}`}>
+                          <Link href={`/customer/product/${item.productId}`}>
                             <h3 className="text-lg font-bold text-gray-900 mb-1 hover:text-blue-600 transition-colors cursor-pointer">
                               {item.name}
                             </h3>
@@ -290,9 +301,6 @@ export default function Cart() {
                                     <span className="font-semibold mr-1">{option.optionTypeName}:</span>
                                   )}
                                   {option.value}
-                                  {option.price > 0 && (
-                                    <span className="ml-1 text-purple-600">+${option.price.toFixed(2)}</span>
-                                  )}
                                 </span>
                               ))}
                             </div>
@@ -369,10 +377,10 @@ export default function Cart() {
                           </button>
                         </div>
 
-                        {/* Price */}
+                        {/* Price - Using the helper function */}
                         <div className="text-right">
                           <div className="text-sm text-gray-500">
-                            ${item.price.toFixed(2)} each
+                            ${getItemPrice(item).toFixed(2)} each
                           </div>
                           <div className="text-xl font-bold text-blue-600">
                             ${item.subtotal.toFixed(2)}
