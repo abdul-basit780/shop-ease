@@ -13,6 +13,17 @@ export interface WishlistProductResponse {
   categoryName?: string;
   addedAt: Date;
   isAvailable: boolean;
+  optionTypes?: Array<{
+    id: string;
+    name: string;
+    values: Array<{
+      id: string;
+      value: string;
+      img: string;
+      price: number;
+      stock: number;
+    }>;
+  }>;
 }
 
 export interface WishlistResponse {

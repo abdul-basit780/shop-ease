@@ -3,6 +3,8 @@ import { NextApiResponse } from "next";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { Wishlist } from "../models/Wishlist";
 import { Product } from "../models/Product";
+import { OptionType } from "../models/OptionType";
+import { OptionValue } from "../models/OptionValue";
 import connectToDatabase from "../db/mongodb";
 import mongoose from "mongoose";
 import {
@@ -21,6 +23,54 @@ interface Response {
   wishlist?: WishlistResponse;
   statusCode: number | undefined;
 }
+
+// Helper function to enrich wishlist response with option types
+const enrichWishlistWithOptions = async (fullResponse: WishlistResponse): Promise<WishlistResponse> => {
+  const productIds = fullResponse.products.map((p) => new mongoose.Types.ObjectId(p.productId));
+  
+  if (productIds.length > 0) {
+    const optionTypes = await OptionType.find({
+      productId: { $in: productIds },
+      deletedAt: null,
+    }).sort({ name: 1 });
+
+    if (optionTypes.length > 0) {
+      // Fetch option values for all option types
+      const optionTypeIds = optionTypes.map((ot) => ot._id);
+      const optionValues = await OptionValue.find({
+        optionTypeId: { $in: optionTypeIds },
+        deletedAt: null,
+      }).sort({ value: 1 });
+
+      // Group option values by option type and attach to products
+      fullResponse.products = fullResponse.products.map((product) => {
+        const productOptionTypes = optionTypes.filter(
+          (ot) => ot.productId.toString() === product.productId
+        );
+
+        if (productOptionTypes.length > 0) {
+          product.optionTypes = productOptionTypes.map((ot) => ({
+            id: ot._id.toString(),
+            name: ot.name,
+            values: optionValues
+              .filter((ov) => ov.optionTypeId.toString() === ot._id.toString())
+              .map((ov) => ({
+                id: ov._id.toString(),
+                value: ov.value,
+                img: ov.img,
+                price: ov.price,
+                stock: ov.stock,
+              })),
+          }));
+        }
+
+        return product;
+      });
+    }
+  }
+
+  return fullResponse;
+};
 
 // Get customer's wishlist with populated products
 export const getWishlist = async (
@@ -60,10 +110,13 @@ export const getWishlist = async (
     // Build full response with product details
     const fullResponse = buildWishlistResponse(wishlist);
 
-    wishlistResponse.wishlist = fullResponse;
+    // Enrich with option types
+    const enrichedResponse = await enrichWishlistWithOptions(fullResponse);
+
+    wishlistResponse.wishlist = enrichedResponse;
     wishlistResponse.success = true;
     wishlistResponse.message =
-      fullResponse.count > 0
+      enrichedResponse.count > 0
         ? WISHLIST_MESSAGES.RETRIEVED
         : WISHLIST_MESSAGES.WISHLIST_EMPTY;
     wishlistResponse.statusCode = 200;
@@ -149,7 +202,12 @@ export const addProduct = async (
       },
     });
 
-    wishlistResponse.wishlist = buildWishlistResponse(updatedWishlist);
+    const fullResponse = buildWishlistResponse(updatedWishlist);
+
+    // Enrich with option types
+    const enrichedResponse = await enrichWishlistWithOptions(fullResponse);
+
+    wishlistResponse.wishlist = enrichedResponse;
     wishlistResponse.success = true;
     wishlistResponse.message = WISHLIST_MESSAGES.PRODUCT_ADDED;
     wishlistResponse.statusCode = 200;
@@ -218,7 +276,12 @@ export const removeProduct = async (
       },
     });
 
-    wishlistResponse.wishlist = buildWishlistResponse(updatedWishlist!);
+    const fullResponse = buildWishlistResponse(updatedWishlist!);
+
+    // Enrich with option types
+    const enrichedResponse = await enrichWishlistWithOptions(fullResponse);
+
+    wishlistResponse.wishlist = enrichedResponse;
     wishlistResponse.success = true;
     wishlistResponse.message = WISHLIST_MESSAGES.PRODUCT_REMOVED;
     wishlistResponse.statusCode = 200;
