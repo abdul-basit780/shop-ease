@@ -29,6 +29,32 @@ export default function AllProducts() {
     limit: 12
   });
 
+  // Calculate minimum price: base + minimum price from each option type
+  const getMinimumPrice = (product) => {
+    let minPrice = product.price; // Start with base price
+    
+    // If product has option types, add the minimum price from each option type
+    if (product.optionTypes && product.optionTypes.length > 0) {
+      product.optionTypes.forEach(optionType => {
+        if (optionType.values && optionType.values.length > 0) {
+          // Find the minimum price among all values in this option type
+          const minOptionPrice = Math.min(
+            ...optionType.values.map(val => {
+              if (typeof val === 'object' && val.price !== undefined) {
+                return val.price;
+              }
+              return 0;
+            })
+          );
+          
+          minPrice += minOptionPrice;
+        }
+      });
+    }
+    
+    return minPrice;
+  };
+
   // Fetch products whenever filters or router query changes
   useEffect(() => {
     if (router.isReady) {
@@ -72,7 +98,6 @@ export default function AllProducts() {
   };
 
   const handleWishlistUpdated = () => {
-    // Delay slightly to ensure API has processed the change
     setTimeout(() => {
       loadWishlist();
     }, 300);
@@ -96,7 +121,6 @@ export default function AllProducts() {
     
     try {
       const response = await apiClient.get('/api/customer/wishlist');
-      // Handle various response structures
       let productIds = [];
       if (response.success) {
         const wishlistProducts = response.data?.products || response.wishlist?.products || [];
@@ -113,7 +137,6 @@ export default function AllProducts() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // Build query string from URL params
       const queryParams = new URLSearchParams();
       
       if (search) queryParams.append('search', search);
@@ -160,7 +183,6 @@ export default function AllProducts() {
       queryParams.delete(key);
     }
     
-    // Reset to page 1 when filters change
     if (key !== 'page') {
       queryParams.set('page', '1');
     }
@@ -214,7 +236,6 @@ export default function AllProducts() {
       });
       
       if (response.success) {
-        // Immediately update local state
         setWishlistProductIds(prev => {
           if (!prev.includes(product.id)) {
             return [...prev, product.id];
@@ -231,7 +252,6 @@ export default function AllProducts() {
           },
         });
         
-        // Reload full wishlist to stay in sync
         loadWishlist();
         window.dispatchEvent(new Event('wishlistUpdated'));
       } else {
@@ -244,7 +264,6 @@ export default function AllProducts() {
               color: '#fff',
             },
           });
-          // Ensure state is updated
           setWishlistProductIds(prev => {
             if (!prev.includes(product.id)) {
               return [...prev, product.id];
@@ -469,6 +488,8 @@ export default function AllProducts() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   {products.map((product, idx) => {
                     const inWishlist = isInWishlist(product.id);
+                    const minPrice = getMinimumPrice(product);
+                    const hasOptions = product.optionTypes && product.optionTypes.length > 0;
                     
                     return (
                       <div
@@ -530,9 +551,20 @@ export default function AllProducts() {
                           )}
 
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-2xl font-bold text-blue-600">
-                              ${product.price.toFixed(2)}
-                            </span>
+                            <div>
+                              {hasOptions ? (
+                                <div>
+                                  <span className="text-sm font-normal text-gray-500 block">From</span>
+                                  <span className="text-2xl font-bold text-blue-600">
+                                    ${minPrice.toFixed(2)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-2xl font-bold text-blue-600">
+                                  ${product.price.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-sm text-gray-500">
                               Stock: {product.stock}
                             </span>

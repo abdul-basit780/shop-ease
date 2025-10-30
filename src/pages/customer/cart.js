@@ -70,21 +70,6 @@ export default function Cart() {
     }
   };
 
-  // Helper function to get the correct item price
-  const getItemPrice = (item) => {
-    // If item has selected options with prices, use the option price
-    if (item.selectedOptions && item.selectedOptions.length > 0) {
-      // Find the first option that has a price greater than 0
-      const optionWithPrice = item.selectedOptions.find(opt => opt.price > 0);
-      if (optionWithPrice) {
-        return optionWithPrice.price;
-      }
-    }
-    
-    // Otherwise use the base product price
-    return item.price;
-  };
-
   const updateQuantity = async (productId, newQuantity, selectedOptions) => {
     if (newQuantity < 1) return;
 
@@ -243,6 +228,8 @@ export default function Cart() {
           <div className="lg:col-span-2 space-y-4">
             {cart.products.map((item, idx) => {
               const isUpdating = isItemUpdating(item.productId, item.selectedOptions);
+              // Calculate unit price from subtotal (backend already calculated base + options)
+              const unitPrice = item.subtotal / item.quantity;
               
               return (
                 <div
@@ -377,10 +364,10 @@ export default function Cart() {
                           </button>
                         </div>
 
-                        {/* Price - Using the helper function */}
+                        {/* Price - Backend already calculated base + options */}
                         <div className="text-right">
                           <div className="text-sm text-gray-500">
-                            ${getItemPrice(item).toFixed(2)} each
+                            ${unitPrice.toFixed(2)} each
                           </div>
                           <div className="text-xl font-bold text-blue-600">
                             ${item.subtotal.toFixed(2)}

@@ -18,7 +18,6 @@ export default function Products() {
     checkUser();
     loadWishlist();
     
-    // Listen for auth changes
     window.addEventListener('userLoggedIn', handleUserLogin);
     window.addEventListener('userLoggedOut', handleLogout);
     window.addEventListener('wishlistUpdated', handleWishlistUpdated);
@@ -36,7 +35,6 @@ export default function Products() {
   };
 
   const handleWishlistUpdated = () => {
-    // Delay slightly to ensure API has processed the change
     setTimeout(() => {
       loadWishlist();
     }, 300);
@@ -60,7 +58,6 @@ export default function Products() {
     
     try {
       const response = await apiClient.get('/api/customer/wishlist');
-      // Handle various response structures
       let productIds = [];
       if (response.success) {
         const wishlistProducts = response.data?.products || response.wishlist?.products || [];
@@ -69,7 +66,6 @@ export default function Products() {
       
       setWishlistProductIds(productIds);
     } catch (error) {
-      console.error('Error loading wishlist:', error);
       setWishlistProductIds([]);
     }
   };
@@ -78,77 +74,41 @@ export default function Products() {
     try {
       setIsLoading(true);
       const response = await apiClient.get('/api/public/products');
-      console.log('products',response)
       if (response.success && response.data?.products) {
         setProducts(response.data.products.slice(0, 8));
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
       toast.error('Failed to load products');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // const handleAddToCart = async (e, product) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
+  // Calculate minimum price: base + minimum price from each option type
+  const getMinimumPrice = (product) => {
+    let minPrice = product.price; // Start with base price
     
-  //   if (!authService.isAuthenticated()) {
-  //     toast.error('Please login to add items to cart', {
-  //       icon: '🔒',
-  //       style: {
-  //         borderRadius: '12px',
-  //         background: '#ef4444',
-  //         color: '#fff',
-  //       },
-  //     });
-      
-  //     setTimeout(() => {
-  //       router.push(`/auth/login?returnUrl=${encodeURIComponent(router.asPath)}`);
-  //     }, 1500);
-  //     return;
-  //   }
+    // If product has option types, add the minimum price from each option type
+    if (product.optionTypes && product.optionTypes.length > 0) {
+      product.optionTypes.forEach(optionType => {
+        if (optionType.values && optionType.values.length > 0) {
+          // Find the minimum price among all values in this option type
+          const minOptionPrice = Math.min(
+            ...optionType.values.map(val => {
+              if (typeof val === 'object' && val.price !== undefined) {
+                return val.price;
+              }
+              return 0;
+            })
+          );
+          
+          minPrice += minOptionPrice;
+        }
+      });
+    }
     
-  //   try {
-  //     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  //     const existingItem = cart.find(item => item.id === product.id);
-      
-  //     if (existingItem) {
-  //       existingItem.quantity += 1;
-  //       toast.success('Quantity updated in cart!', {
-  //         icon: '🛒',
-  //         style: {
-  //           borderRadius: '12px',
-  //           background: '#0ea5e9',
-  //           color: '#fff',
-  //         },
-  //       });
-  //     } else {
-  //       cart.push({ ...product, quantity: 1 });
-  //       toast.success('Added to cart!', {
-  //         icon: '🛒',
-  //         style: {
-  //           borderRadius: '12px',
-  //           background: '#0ea5e9',
-  //           color: '#fff',
-  //         },
-  //       });
-  //     }
-      
-  //     localStorage.setItem('cart', JSON.stringify(cart));
-  //     window.dispatchEvent(new Event('cartUpdated'));
-  //   } catch (error) {
-  //     console.error('Error adding to cart:', error);
-  //     toast.error('Failed to add to cart', {
-  //       style: {
-  //         borderRadius: '12px',
-  //         background: '#ef4444',
-  //         color: '#fff',
-  //       },
-  //     });
-  //   }
-  // };
+    return minPrice;
+  };
 
   const handleAddToWishlist = async (e, product) => {
     e.preventDefault();
@@ -176,7 +136,6 @@ export default function Products() {
       });
       
       if (response.success) {
-        // Immediately update local state
         setWishlistProductIds(prev => {
           if (!prev.includes(product.id)) {
             return [...prev, product.id];
@@ -193,7 +152,6 @@ export default function Products() {
           },
         });
         
-        // Reload full wishlist to stay in sync
         loadWishlist();
       } else {
         if (response.error && (response.error.includes('already') || response.error.includes('exists'))) {
@@ -205,7 +163,6 @@ export default function Products() {
               color: '#fff',
             },
           });
-          // Ensure state is updated
           setWishlistProductIds(prev => {
             if (!prev.includes(product.id)) {
               return [...prev, product.id];
@@ -223,7 +180,6 @@ export default function Products() {
         }
       }
     } catch (error) {
-      console.error('Error adding to wishlist:', error);
       toast.error('Failed to add to wishlist. Please try again.', {
         style: {
           borderRadius: '12px',
@@ -301,8 +257,10 @@ export default function Products() {
 
         {products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.slice(0, 8).map((product, idx) => {
+            {products.map((product, idx) => {
               const inWishlist = isInWishlist(product.id);
+              const minPrice = getMinimumPrice(product);
+              const hasOptions = product.optionTypes && product.optionTypes.length > 0;
               
               return (
                 <div 
@@ -313,11 +271,11 @@ export default function Products() {
                     animationFillMode: 'both'
                   }}
                 >
-                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2  border border-gray-100">
+                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100">
                     <div className="relative h-64 bg-gray-100 overflow-hidden">
                       {product.img ? (
                         <img
-                          src={product?.img}
+                          src={product.img}
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                           onError={(e) => {
@@ -398,17 +356,26 @@ export default function Products() {
 
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-2xl font-bold text-blue-600">
-                            ${product.price}
-                          </span>
+                          {hasOptions ? (
+                            <div>
+                              <span className="text-sm font-normal text-gray-500 block">From</span>
+                              <span className="text-2xl font-bold text-blue-600">
+                                ${minPrice.toFixed(2)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-2xl font-bold text-blue-600">
+                              ${product.price.toFixed(2)}
+                            </span>
+                          )}
                         </div>
                         
                         <Link
-                          // onClick={(e) => handleAddToCart(e, product)}
                           href={`/customer/product/${product.id}`}
-                          disabled={product.stock === 0}
-                          className="p-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl transition-all transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed duration-300"
-                          title="Add to cart"
+                          className={`p-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl transition-all transform hover:scale-110 duration-300 ${
+                            product.stock === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          title="View product"
                         >
                           <ShoppingCart className="h-5 w-5" />
                         </Link>
@@ -435,7 +402,7 @@ export default function Products() {
 
         {products.length > 0 && (
           <div className="text-center mt-12 md:hidden">
-            <Link href="/products">
+            <Link href="/customer/all-products">
               <button className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transform hover:scale-105 transition-all">
                 View All Products
               </button>

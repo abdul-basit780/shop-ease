@@ -40,12 +40,37 @@ export default function ProductDetails() {
       if (response.success && response.data) {
         setProduct(response.data);
         
-        // Initialize selected options with null values
+        // Initialize selected options - auto-select first available option
         if (response.data.optionTypes && response.data.optionTypes.length > 0) {
           const initialOptions = {};
+          
           response.data.optionTypes.forEach(option => {
-            initialOptions[option.name] = null;
+            // Find first value with stock > 0, or just use first value
+            let selectedValue = null;
+            
+            if (option.values && option.values.length > 0) {
+              // Try to find a value with stock
+              selectedValue = option.values.find(val => {
+                if (typeof val === 'object') {
+                  return val.stock === undefined || val.stock > 0;
+                }
+                return true;
+              });
+              
+              // If no value with stock found, use first value
+              if (!selectedValue) {
+                selectedValue = option.values[0];
+              }
+              
+              // Convert to object format if it's a string
+              if (typeof selectedValue === 'string') {
+                selectedValue = { id: selectedValue, value: selectedValue, price: 0, stock: undefined };
+              }
+            }
+            
+            initialOptions[option.name] = selectedValue;
           });
+          
           setSelectedOptions(initialOptions);
         }
       }
@@ -103,7 +128,7 @@ export default function ProductDetails() {
   const handleOptionChange = (optionName, valueObj) => {
     setSelectedOptions(prev => ({
       ...prev,
-      [optionName]: valueObj // Store the entire value object (which contains id)
+      [optionName]: valueObj
     }));
   };
 
@@ -137,29 +162,20 @@ export default function ProductDetails() {
     }
 
     try {
-      console.log('Selected Options State:', selectedOptions);
-      console.log('Product Option Types:', product.optionTypes);
-      
-      // Build cart data with productId and quantity
       const cartData = {
         productId: product.id,
         quantity: quantity
       };
 
-      // Extract option IDs from selected options and add to selectedOptions array
       if (product.optionTypes && product.optionTypes.length > 0) {
         const optionIds = Object.values(selectedOptions)
-          .filter(opt => opt && opt.id) // Filter out empty selections
-          .map(opt => opt.id); // Extract IDs
-        
-        console.log('Extracted Option IDs:', optionIds);
+          .filter(opt => opt && opt.id)
+          .map(opt => opt.id);
         
         if (optionIds.length > 0) {
           cartData.selectedOptions = optionIds;
         }
       }
-
-      console.log('Cart data being sent:', cartData);
 
       const response = await apiClient.post('/api/customer/cart', cartData);
       
@@ -171,14 +187,6 @@ export default function ProductDetails() {
         });
         
         setQuantity(1);
-        
-        if (product.optionTypes && product.optionTypes.length > 0) {
-          const resetOptions = {};
-          product.optionTypes.forEach(option => {
-            resetOptions[option.name] = null;
-          });
-          setSelectedOptions(resetOptions);
-        }
       } else {
         toast.error(response.error || 'Failed to add to cart');
       }
@@ -216,42 +224,33 @@ export default function ProductDetails() {
     }
   };
 
-  // Calculate effective price and stock based on selected options
+  // Calculate effective price: base price + sum of all selected option prices
   const getEffectivePrice = () => {
-    // Add null check for product
     if (!product) return 0;
     
-    if (!product.optionTypes || product.optionTypes.length === 0) {
-      return product.price;
+    let totalPrice = product.price; // Start with base price
+    
+    if (product.optionTypes && product.optionTypes.length > 0) {
+      const selectedOptionValues = Object.values(selectedOptions).filter(opt => opt && opt.id);
+      
+      // Add each option's price to the total
+      selectedOptionValues.forEach(opt => {
+        if (opt.price !== undefined && opt.price > 0) {
+          totalPrice += opt.price;
+        }
+      });
     }
 
-    // If options exist but none selected yet, show base price
-    const selectedOptionValues = Object.values(selectedOptions).filter(opt => opt && opt.id);
-    if (selectedOptionValues.length === 0) {
-      return product.price;
-    }
-
-    // Use the price from the first selected option that has a price
-    // (Assuming only one option will have a price, or use the first one found)
-    for (const opt of selectedOptionValues) {
-      if (opt.price !== undefined && opt.price > 0) {
-        return opt.price;
-      }
-    }
-
-    // If no option has a price, return base price
-    return product.price;
+    return totalPrice;
   };
 
   const getEffectiveStock = () => {
-    // Add null check for product
     if (!product) return 0;
     
     if (!product.optionTypes || product.optionTypes.length === 0) {
       return product.stock;
     }
 
-    // If options exist but none selected yet, show base stock
     const selectedOptionValues = Object.values(selectedOptions).filter(opt => opt && opt.id);
     if (selectedOptionValues.length === 0) {
       return product.stock;
@@ -395,17 +394,30 @@ export default function ProductDetails() {
               </div>
             )}
 
+            {/* Price Display */}
             <div className="mb-6">
               <div className="flex items-baseline space-x-3">
                 <span className="text-5xl font-bold text-blue-600">
                   ${effectivePrice.toFixed(2)}
                 </span>
-                {product.optionTypes && product.optionTypes.length > 0 && effectivePrice !== product.price && (
-                  <span className="text-2xl text-gray-400 line-through">
-                    ${product.price.toFixed(2)}
-                  </span>
-                )}
               </div>
+              {product.optionTypes && product.optionTypes.length > 0 && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">Base: ${product.price.toFixed(2)}</span>
+                    {Object.entries(selectedOptions).map(([optionName, optionValue]) => {
+                      if (optionValue && optionValue.price > 0) {
+                        return (
+                          <span key={optionName} className="text-purple-600 font-medium">
+                            + {optionName}: ${optionValue.price.toFixed(2)}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
@@ -422,22 +434,28 @@ export default function ProductDetails() {
                     </label>
                     <div className="flex flex-wrap gap-3">
                       {option.values.map((value, valueIdx) => {
-                        // Handle if value is an object or string
                         const displayValue = typeof value === 'object' ? value.value : value;
                         const valueObj = typeof value === 'object' ? value : { id: value, value: value };
                         const isSelected = selectedOptions[option.name]?.value === displayValue;
+                        const isOutOfStock = typeof value === 'object' && value.stock !== undefined && value.stock === 0;
                         
                         return (
                           <button
                             key={valueIdx}
-                            onClick={() => handleOptionChange(option.name, valueObj)}
+                            onClick={() => !isOutOfStock && handleOptionChange(option.name, valueObj)}
+                            disabled={isOutOfStock}
                             className={`relative px-6 py-3 rounded-xl border-2 font-semibold transition-all transform hover:scale-105 ${
                               isSelected
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
+                                : isOutOfStock
+                                ? 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
                                 : 'border-gray-300 text-gray-700 hover:border-blue-400'
                             }`}
                           >
                             {displayValue}
+                            {isOutOfStock && (
+                              <span className="absolute top-1 right-1 text-xs text-red-500">✕</span>
+                            )}
                           </button>
                         );
                       })}
@@ -448,7 +466,7 @@ export default function ProductDetails() {
                 {/* Option validation hint */}
                 <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-600" />
-                  <span>Please select all required options before adding to cart</span>
+                  <span>All options are required. Price shown includes selected options.</span>
                 </div>
               </div>
             )}
