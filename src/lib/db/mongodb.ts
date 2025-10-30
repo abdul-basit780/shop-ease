@@ -1,5 +1,6 @@
 // lib/db/mongodb.ts
 import mongoose from "mongoose";
+import "../models"; // Ensure all models are registered on cold start
 
 interface MongooseCache {
   conn: mongoose.Connection | null;
