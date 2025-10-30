@@ -22,34 +22,45 @@ export default function WishlistPage() {
   const hasCheckedAuth = useRef(false);
 
   useEffect(() => {
-    if (hasCheckedAuth.current) return;
-    hasCheckedAuth.current = true;
+    let isMounted = true;
+    let hasRun = false;
 
-    if (!authService.isAuthenticated()) {
-      toast.error("Please login to view your wishlist", {
-        icon: "🔒",
-      });
-      router.push("/auth/login?returnUrl=/wishlist");
-      return;
-    }
+    const initPage = async () => {
+      // Prevent multiple executions
+      if (hasRun) return;
+      hasRun = true;
 
-    // Add role check - redirect admins
-    const user = authService.getCurrentUser();
-    if (user?.role === "admin") {
-      toast.error("This page is only accessible to customers", {
-        icon: "🚫",
-        duration: 1000,
-      });
+      if (!authService.isAuthenticated()) {
+        toast.error("Please login to view your wishlist", {
+          icon: "🔒",
+        });
+        router.push("/auth/login?returnUrl=/wishlist");
+        return;
+      }
 
-      // Redirect after 1 second
-      setTimeout(() => {
-        router.push("/admin");
-      }, 1000);
-      return;
-    }
+      const user = authService.getCurrentUser();
+      if (user?.role === "admin") {
+        toast.error("This page is only accessible to customers", {
+          icon: "🚫",
+          duration: 1000,
+        });
+        setTimeout(() => {
+          router.push("/admin");
+        }, 1000);
+        return;
+      }
 
-    fetchWishlist();
-  }, []);
+      if (isMounted) {
+        await fetchWishlist();
+      }
+    };
+
+    initPage();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Keep empty dependency array
 
   const fetchWishlist = async () => {
     try {

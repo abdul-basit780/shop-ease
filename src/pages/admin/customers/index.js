@@ -28,9 +28,12 @@ import {
   DollarSign,
   Star,
   Grid,
-  List
+  List,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
+import { useAdminAuth } from '../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -272,7 +275,7 @@ const CustomerStatusBadge = ({ isActive }) => {
 };
 
 // Customer Card Component
-const CustomerCard = ({ customer, onView }) => {
+const CustomerCard = ({ customer, onView, onToggleStatus }) => {
   return (
     <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
@@ -309,13 +312,7 @@ const CustomerCard = ({ customer, onView }) => {
           {customer.dob && (
             <div className="flex items-center text-sm text-gray-600">
               <Calendar className="h-4 w-4 mr-2" />
-              DOB: {new Date(customer.dob).toLocaleDateString()}
-            </div>
-          )}
-          {customer.createdAt && (
-            <div className="flex items-center text-sm text-gray-600">
-              <Calendar className="h-4 w-4 mr-2" />
-              Joined {new Date(customer.createdAt).toLocaleDateString()}
+              DOB: {customer.dob.split('T')[0]}
             </div>
           )}
         </div>
@@ -337,10 +334,33 @@ const CustomerCard = ({ customer, onView }) => {
             variant="outline"
             size="sm"
             onClick={() => onView(customer)}
-            className="w-full"
+            className="flex-1"
           >
             <Eye className="h-4 w-4" />
-            View Details
+            View
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onToggleStatus(customer)}
+            className="flex-1"
+            style={{ 
+              backgroundColor: customer.isActive ? '#EF4444' : '#10B981',
+              color: 'white',
+              borderColor: customer.isActive ? '#EF4444' : '#10B981'
+            }}
+          >
+            {customer.isActive ? (
+              <>
+                <ToggleLeft className="h-4 w-4" />
+                Deactivate
+              </>
+            ) : (
+              <>
+                <ToggleRight className="h-4 w-4" />
+                Activate
+              </>
+            )}
           </Button>
         </div>
       </CardBody>
@@ -351,6 +371,7 @@ const CustomerCard = ({ customer, onView }) => {
 // Main Customers Component
 export default function CustomersPage() {
   const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -371,26 +392,33 @@ export default function CustomersPage() {
         ...(statusFilter && { isActive: statusFilter === 'active' ? 'true' : statusFilter === 'inactive' ? 'false' : '' }),
       });
 
-      const response = await apiClient.get(`/api/admin/customer?${params}`);
-      console.log('Customers response:', response);
+      // Fetch both customer list and dashboard stats
+      const [customersResponse, dashboardResponse] = await Promise.all([
+        apiClient.get(`/api/admin/customer?${params}`),
+        apiClient.get('/api/admin/dashboard/stats').catch(() => ({ data: null }))
+      ]);
+
+      console.log('Customers response:', customersResponse);
+      console.log('Dashboard response:', dashboardResponse);
       
       // Handle both possible response structures (response.data or direct response)
-      const responseData = response.data || response;
+      const responseData = customersResponse.data || customersResponse;
       
       if (responseData.success) {
         const customersList = responseData.customers || [];
         setCustomers(customersList);
         setTotalPages(responseData.pagination?.totalPages || 1);
         
-        // Calculate stats from customers array
-        const activeCount = customersList.filter(c => c.isActive !== false).length;
-        const inactiveCount = customersList.length - activeCount;
+        // Use dashboard stats for accurate totals, fallback to page calculation
+        const dashboardData = dashboardResponse?.data;
+        const activeCount = customersList.filter(c => c.isActive === true).length;
+        const inactiveCount = customersList.filter(c => c.isActive === false).length;
         
         const stats = {
           total: responseData.pagination?.total || customersList.length || 0,
-          active: activeCount,
-          inactive: inactiveCount,
-          newThisMonth: 0, // Calculate from createdAt if needed
+          active: dashboardData?.overview?.customers?.active || activeCount,
+          inactive: dashboardData?.overview?.customers?.blocked || inactiveCount,
+          newThisMonth: dashboardData?.overview?.customers?.newCustomers || 0,
           avgOrderValue: 0, // Would need additional API call
         };
         setStats(stats);
@@ -408,8 +436,10 @@ export default function CustomersPage() {
   };
 
   useEffect(() => {
-    fetchCustomers();
-  }, [currentPage, searchTerm, statusFilter]);
+    if (isAdmin) {
+      fetchCustomers();
+    }
+  }, [currentPage, searchTerm, statusFilter, isAdmin]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -425,8 +455,97 @@ export default function CustomersPage() {
     router.push(`/admin/customers/view/${customer.id}`);
   };
 
+  const handleToggleStatus = async (customer) => {
+    try {
+      console.log('=== TOGGLE STATUS DEBUG ===');
+      console.log('Customer ID:', customer.id);
+      console.log('Current status from API:', customer.isActive);
+      
+      // Get auth token
+      const authToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+
+      if (!authToken) {
+        toast.error('Authentication token not found. Please login again.');
+        return;
+      }
+
+      // Determine what action to take based on current status
+      const currentStatus = customer.isActive;
+      const newStatus = !currentStatus;
+      
+      console.log('Current status:', currentStatus, 'New status:', newStatus);
+
+      const response = await fetch(`/api/admin/customer/${customer.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ isActive: newStatus })
+      });
+
+      console.log('API Response status:', response.status);
+      console.log('API Response ok:', response.ok);
+
+      if (response.ok) {
+        // Update customer in the local state immediately
+        setCustomers(prev => prev.map(c => 
+          c.id === customer.id ? { ...c, isActive: newStatus } : c
+        ));
+        toast.success(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+        console.log('SUCCESS: Status updated in database');
+      } else {
+        console.log('API Error - Status:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.log('API Error data:', errorData);
+        toast.error(errorData.message || `Failed to update customer status (${response.status})`);
+      }
+
+    } catch (error) {
+      console.error('CATCH ERROR:', error);
+      toast.error('Error updating customer status');
+    }
+  };
+
   const handleRefresh = () => {
     fetchCustomers();
+  };
+
+  const handleExport = () => {
+    if (customers.length === 0) {
+      toast.error('No customers to export');
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['Name', 'Email', 'Phone', 'DOB', 'Gender', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...customers.map(customer => [
+        `"${customer.name || ''}"`,
+        `"${customer.email || ''}"`,
+        `"${customer.phone || ''}"`,
+        `"${customer.dob ? customer.dob.split('T')[0] : ''}"`,
+        `"${customer.gender || ''}"`,
+        `"${customer.isActive ? 'Active' : 'Inactive'}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `customers-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Customers exported successfully!');
   };
 
   const formatDate = (dateString) => {
@@ -436,6 +555,11 @@ export default function CustomersPage() {
       day: 'numeric'
     });
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -464,7 +588,10 @@ export default function CustomersPage() {
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="secondary">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -615,6 +742,7 @@ export default function CustomersPage() {
                   key={customer.id}
                   customer={customer}
                   onView={handleView}
+                  onToggleStatus={handleToggleStatus}
                 />
               ))}
             </div>
@@ -639,9 +767,6 @@ export default function CustomersPage() {
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           DOB
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Joined
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
@@ -683,19 +808,34 @@ export default function CustomersPage() {
                             <CustomerStatusBadge isActive={customer.isActive} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {customer.dob ? new Date(customer.dob).toLocaleDateString() : 'Not specified'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {customer.createdAt ? formatDate(customer.createdAt) : 'N/A'}
+                            {customer.dob ? customer.dob.split('T')[0] : 'Not specified'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleView(customer)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleView(customer)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleStatus(customer)}
+                                style={{ 
+                                  backgroundColor: customer.isActive ? '#EF4444' : '#10B981',
+                                  color: 'white',
+                                  borderColor: customer.isActive ? '#EF4444' : '#10B981'
+                                }}
+                              >
+                                {customer.isActive ? (
+                                  <ToggleLeft className="h-4 w-4" />
+                                ) : (
+                                  <ToggleRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}

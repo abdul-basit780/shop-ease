@@ -7,6 +7,7 @@ export interface CustomerResponse {
   phone: string;
   dob: string;
   gender: string;
+  isActive: boolean
 }
 
 export const buildCustomerResponse = (customer: any): CustomerResponse => {
@@ -17,6 +18,7 @@ export const buildCustomerResponse = (customer: any): CustomerResponse => {
     phone: customer.phone,
     dob: customer.dob,
     gender: customer.gender,
+    isActive: customer.isActive
   };
 };
   

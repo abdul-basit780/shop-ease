@@ -24,6 +24,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { apiClient } from '../../../lib/api-client';
+import { useAdminAuth } from '../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
@@ -267,6 +268,7 @@ const OrderStatusBadge = ({ status }) => {
 // Main Orders Component
 export default function OrdersPage() {
   const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -307,8 +309,10 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [currentPage, searchTerm, statusFilter]);
+    if (isAdmin) {
+      fetchOrders();
+    }
+  }, [currentPage, searchTerm, statusFilter, isAdmin]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -368,6 +372,41 @@ export default function OrdersPage() {
     fetchOrders();
   };
 
+  const handleExport = () => {
+    if (orders.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['Order ID', 'Customer', 'Email', 'Total', 'Status', 'Payment Method', 'Date'];
+    const csvContent = [
+      headers.join(','),
+      ...orders.map(order => [
+        `"${order.orderNumber || order._id?.slice(-8) || ''}"`,
+        `"${order.customer?.name || ''}"`,
+        `"${order.customer?.email || ''}"`,
+        `"${order.total || 0}"`,
+        `"${order.status || ''}"`,
+        `"${order.paymentMethod || ''}"`,
+        `"${order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ''}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `orders-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Orders exported successfully!');
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -377,6 +416,11 @@ export default function OrdersPage() {
       minute: '2-digit'
     });
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -405,7 +449,10 @@ export default function OrdersPage() {
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="secondary">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4" />
             Export
           </Button>

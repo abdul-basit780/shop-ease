@@ -16,26 +16,30 @@ import {
   LogOut
 } from 'lucide-react';
 import { apiClient } from '../../../../lib/api-client';
+import { useAdminAuth } from '../../utils/adminAuth';
 
 // Layout Component (reusing from dashboard)
 const AdminLayout = ({ children, title, subtitle }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const { isLoading, isAdmin, user, handleLogout } = useAdminAuth();
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    document.cookie = 'auth_token=; max-age=0; path=/';
-    toast.success('Logged out successfully! 👋');
-    router.push('/auth/login');
-  };
+  // Don't render anything if user is not admin
+  if (!isAdmin) {
+    return null;
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: Package, current: router.pathname === '/admin' },
@@ -198,6 +202,7 @@ const Button = ({ children, variant = "primary", size = "md", className = "", on
 export default function CategoryView() {
   const router = useRouter();
   const { id } = router.query;
+  const { isLoading, isAdmin } = useAdminAuth();
   const [category, setCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -209,11 +214,11 @@ export default function CategoryView() {
   });
 
   useEffect(() => {
-    if (id) {
+    if (id && isAdmin) {
       fetchCategory();
       fetchCategoryStats();
     }
-  }, [id]);
+  }, [id, isAdmin]);
 
   // Refresh stats when page becomes visible (e.g., when navigating back from product creation)
   useEffect(() => {
@@ -363,6 +368,11 @@ export default function CategoryView() {
       }
     }
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (

@@ -62,6 +62,14 @@ export const index = async (
 
   // Build filter and sort objects (will exclude soft-deleted by default)
   const filter = buildMongoFilter(params);
+
+  // Support filtering by active status
+  if (req.query.isActive !== undefined) {
+    if (req.query.isActive === "true" || req.query.isActive === "false") {
+      filter.isActive = req.query.isActive === "true";
+    }
+  }
+
   const sort = buildMongoSort(params);
 
   try {

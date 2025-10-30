@@ -28,26 +28,30 @@ import {
   Truck
 } from 'lucide-react';
 import { apiClient } from '../../../../lib/api-client';
+import { useAdminAuth } from '../../utils/adminAuth';
 
 // Layout Component
 const AdminLayout = ({ children, title, subtitle }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const { isLoading, isAdmin, user, handleLogout } = useAdminAuth();
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    document.cookie = 'auth_token=; max-age=0; path=/';
-    toast.success('Logged out successfully! 👋');
-    router.push('/auth/login');
-  };
+  // Don't render anything if user is not admin
+  if (!isAdmin) {
+    return null;
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: Package, current: router.pathname === '/admin' },
@@ -235,15 +239,14 @@ const Button = ({
 };
 
 // Customer Status Badge Component
-const CustomerStatusBadge = ({ status }) => {
+const CustomerStatusBadge = ({ isActive }) => {
+  const status = isActive ? 'active' : 'inactive';
   const statusConfig = {
     active: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
     inactive: { color: 'bg-red-100 text-red-800', icon: X },
-    suspended: { color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-    pending: { color: 'bg-blue-100 text-blue-800', icon: Clock },
   };
 
-  const config = statusConfig[status] || statusConfig.active;
+  const config = statusConfig[status];
   const Icon = config.icon;
 
   return (
@@ -258,6 +261,7 @@ const CustomerStatusBadge = ({ status }) => {
 export default function CustomerViewPage() {
   const router = useRouter();
   const { id } = router.query;
+  const { isLoading, isAdmin } = useAdminAuth();
   const [customer, setCustomer] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -321,9 +325,11 @@ export default function CustomerViewPage() {
   };
 
   useEffect(() => {
-    fetchCustomer();
-    fetchCustomerOrders();
-  }, [id]);
+    if (id && isAdmin) {
+      fetchCustomer();
+      fetchCustomerOrders();
+    }
+  }, [id, isAdmin]);
 
   const handleToggleStatus = async () => {
     if (!customer) return;
@@ -373,6 +379,11 @@ export default function CustomerViewPage() {
     }).format(amount);
   };
 
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
+
   if (loading) {
     return (
       <AdminLayout title="Customer Details" subtitle="Loading customer information...">
@@ -416,7 +427,7 @@ export default function CustomerViewPage() {
               {customer.name || 'Unknown Customer'}
             </h2>
             <p className="text-gray-600">
-              Customer since {formatDate(customer.createdAt)}
+              Customer Details
             </p>
           </div>
         </div>
@@ -429,10 +440,6 @@ export default function CustomerViewPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button variant="secondary">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Customer
-          </Button>
         </div>
       </div>
 
@@ -444,7 +451,7 @@ export default function CustomerViewPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
-                <CustomerStatusBadge status={customer.status || 'active'} />
+                <CustomerStatusBadge isActive={customer.isActive} />
               </div>
             </CardHeader>
             <CardBody>
@@ -477,30 +484,25 @@ export default function CustomerViewPage() {
                       </div>
                     )}
                     
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>Joined {formatDate(customer.createdAt)}</span>
-                    </div>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
-                  <h5 className="font-medium text-gray-900">Address Information</h5>
-                  {customer.address ? (
-                    <div className="space-y-2">
-                      <div className="flex items-start space-x-2">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-1" />
-                        <div className="text-sm text-gray-600">
-                          <p className="font-medium">{customer.address.name}</p>
-                          <p>{customer.address.street}</p>
-                          <p>{customer.address.city}, {customer.address.state} {customer.address.zipCode}</p>
-                          <p>{customer.address.country}</p>
-                        </div>
-                      </div>
+                  <h5 className="font-medium text-gray-900">Additional Information</h5>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Calendar className="h-4 w-4" />
+                      <span>DOB: {customer.dob ? customer.dob.split('T')[0] : 'Not specified'}</span>
                     </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No address information available</p>
-                  )}
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <User className="h-4 w-4" />
+                      <span>Gender: {customer.gender || 'Not specified'}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Email Verified: {customer.emailVerified ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardBody>
@@ -515,17 +517,21 @@ export default function CustomerViewPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <ShoppingBag className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-blue-900">{customer.totalOrders || 0}</p>
+                  <p className="text-2xl font-bold text-blue-900">{orders.length}</p>
                   <p className="text-sm text-blue-600">Total Orders</p>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-green-900">{formatCurrency(customer.totalSpent || 0)}</p>
+                  <p className="text-2xl font-bold text-green-900">
+                    {formatCurrency(orders.reduce((sum, order) => sum + (order.total || 0), 0))}
+                  </p>
                   <p className="text-sm text-green-600">Total Spent</p>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <Star className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-purple-900">{customer.avgOrderValue || 0}</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {orders.length > 0 ? formatCurrency(orders.reduce((sum, order) => sum + (order.total || 0), 0) / orders.length) : '$0.00'}
+                  </p>
                   <p className="text-sm text-purple-600">Avg. Order Value</p>
                 </div>
               </div>
@@ -596,29 +602,25 @@ export default function CustomerViewPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Quick Actions */}
+          {/* Customer Status */}
           <Card>
             <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Account Status</h3>
             </CardHeader>
             <CardBody>
-              <div className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => router.push(`/admin/orders?customerId=${id}`)}
-                >
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  View All Orders
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => router.push(`/admin/feedback?customerId=${id}`)}
-                >
-                  <Star className="h-4 w-4 mr-2" />
-                  View Feedback
-                </Button>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Status</span>
+                  <CustomerStatusBadge isActive={customer.isActive} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Email Verified</span>
+                  <span className={`text-sm font-medium ${
+                    customer.emailVerified ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {customer.emailVerified ? 'Yes' : 'No'}
+                  </span>
+                </div>
                 <Button
                   variant={customer?.isActive ? "danger" : "success"}
                   className="w-full"
@@ -636,48 +638,6 @@ export default function CustomerViewPage() {
                     </>
                   )}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Customer Activity */}
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Activity Summary</h3>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Last Order</span>
-                  <span className="text-sm font-medium">
-                    {customer.lastOrderDate ? formatDate(customer.lastOrderDate) : 'Never'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Account Status</span>
-                  <CustomerStatusBadge status={customer.status || 'active'} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Member Since</span>
-                  <span className="text-sm font-medium">
-                    {formatDate(customer.createdAt)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Email Verified</span>
-                  <span className={`text-sm font-medium ${
-                    customer.emailVerified ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {customer.emailVerified ? 'Yes' : 'No'}
-                  </span>
-                </div>
               </div>
             </CardBody>
           </Card>
@@ -699,15 +659,16 @@ export default function CustomerViewPage() {
                     <span className="text-gray-900">{customer.phone}</span>
                   </div>
                 )}
-                {customer.address && (
-                  <div className="flex items-start space-x-2 text-sm">
-                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                    <div className="text-gray-900">
-                      <p>{customer.address.street}</p>
-                      <p>{customer.address.city}, {customer.address.state}</p>
-                    </div>
-                  </div>
-                )}
+                <div className="flex items-center space-x-2 text-sm">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-900">
+                    DOB: {customer.dob ? customer.dob.split('T')[0] : 'Not specified'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm">
+                  <User className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-900">Gender: {customer.gender || 'Not specified'}</span>
+                </div>
               </div>
             </CardBody>
           </Card>

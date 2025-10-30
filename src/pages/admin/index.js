@@ -21,26 +21,30 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../lib/api-client';
 import { toast } from 'react-hot-toast';
+import { useAdminAuth } from './utils/adminAuth';
 
 // AdminLayout Component
 const AdminLayout = ({ children, title, subtitle }) => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const { isLoading, isAdmin, user, handleLogout } = useAdminAuth();
 
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    document.cookie = 'auth_token=; max-age=0; path=/';
-    toast.success('Logged out successfully! 👋');
-    router.push('/auth/login');
-  };
+  // Don't render anything if user is not admin
+  if (!isAdmin) {
+    return null;
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: Package, current: router.pathname === '/admin' },
@@ -458,6 +462,8 @@ const SystemHealth = ({ health }) => {
 
 // Main Dashboard Component
 export default function AdminDashboard() {
+  const router = useRouter();
+  const { isLoading, isAdmin } = useAdminAuth();
   const [stats, setStats] = useState(null);
   const [revenueData, setRevenueData] = useState(null);
   const [healthData, setHealthData] = useState(null);
@@ -490,7 +496,11 @@ export default function AdminDashboard() {
         customers: {
           newToday: 0,
           newThisWeek: 0,
-          newThisMonth: 0
+          newThisMonth: 0,
+          active: 0,
+          inactive: 0, // Maps to API 'blocked' field
+          verified: 0,
+          unverified: 0
         },
         products: {
           total: 0,
@@ -522,7 +532,7 @@ export default function AdminDashboard() {
             },
             customers: {
               active: data.overview?.customers?.active || 0,
-              blocked: data.overview?.customers?.blocked || 0,
+              inactive: data.overview?.customers?.blocked || 0, // API returns 'blocked' field
               verified: data.overview?.customers?.verified || 0,
               unverified: data.overview?.customers?.unverified || 0,
               newCustomers: data.overview?.customers?.newCustomers || 0,
@@ -591,12 +601,19 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (isAdmin) {
+      fetchDashboardData();
+    }
+  }, [isAdmin]);
 
   const handleRefresh = () => {
     fetchDashboardData();
   };
+
+  // Don't render anything if authentication is still loading or user is not admin
+  if (isLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -689,7 +706,7 @@ export default function AdminDashboard() {
         <StatCard
             title="Active Customers"
             value={stats?.customers?.active || 0}
-            subtitle={`${stats?.customers?.blocked || 0} blocked`}
+            subtitle={`${stats?.customers?.inactive || 0} inactive`}
             color="green"
             icon={Users}
         />
