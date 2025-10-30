@@ -22,6 +22,10 @@ const updateAddressHandler = async (
   res: NextApiResponse
 ) => {
   // Add addressId from path to request body for controller
+  if (!req.body || typeof req.body !== "object") {
+    // Ensure body is an object (DELETE/empty body can be a string)
+    req.body = {} as any;
+  }
   req.body.addressId = req.query.id as string;
 
   const response = await updateAddress(req, res);
@@ -44,6 +48,10 @@ const deleteAddressHandler = async (
   res: NextApiResponse
 ) => {
   // Add addressId from path to request body for controller
+  if (!req.body || typeof req.body !== "object") {
+    // Ensure body is an object (DELETE/empty body can be a string)
+    req.body = {} as any;
+  }
   req.body.addressId = req.query.id as string;
 
   const response = await deleteAddress(req, res);
