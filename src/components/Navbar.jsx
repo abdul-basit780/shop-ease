@@ -216,14 +216,21 @@ export const Navbar = () => {
 
               {/* Mega Menu */}
               {showCategoryMenu && categories.length > 0 && (
-                <>
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 top-full pt-2 z-50"
+                  style={{ width: "80vw", maxWidth: "1200px" }}
+                >
                   <div
-                    className="fixed inset-0 z-40 bg-black/10"
-                    onClick={() => setShowCategoryMenu(false)}
-                  ></div>
-
-                  <div className="fixed left-1/2 -translate-x-1/2 top-24 w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden" style={{ maxHeight: 'calc(100vh - 120px)' }}>
-                    <div className="grid grid-cols-4 gap-0" style={{ height: '600px', maxHeight: 'calc(100vh - 120px)' }}>
+                    className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+                    style={{ maxHeight: "calc(100vh - 120px)" }}
+                  >
+                    <div
+                      className="grid grid-cols-4 gap-0"
+                      style={{
+                        height: "600px",
+                        maxHeight: "calc(100vh - 120px)",
+                      }}
+                    >
                       {/* Categories List with Scroll */}
                       <div className="col-span-1 bg-gray-50 border-r border-gray-200 flex flex-col h-full">
                         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide px-3 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
@@ -289,7 +296,10 @@ export const Navbar = () => {
                                       <Link
                                         key={subcategory.id}
                                         href={`/customer/all-products?categoryId=${hoveredCategory}&subcategoryId=${subcategory.id}`}
-                                        onClick={() => setShowCategoryMenu(false)}
+                                        onClick={() => {
+                                          setShowCategoryMenu(false);
+                                          setHoveredCategory(null);
+                                        }}
                                         className="text-left p-3 rounded-lg hover:bg-blue-50 transition-all group block border border-gray-100 hover:border-blue-200"
                                       >
                                         <div className="font-semibold text-gray-900 group-hover:text-blue-600 capitalize">
@@ -302,7 +312,10 @@ export const Navbar = () => {
                                 <div className="space-y-3">
                                   <Link
                                     href={`/customer/all-products?categoryId=${hoveredCategory}`}
-                                    onClick={() => setShowCategoryMenu(false)}
+                                    onClick={() => {
+                                      setShowCategoryMenu(false);
+                                      setHoveredCategory(null);
+                                    }}
                                     className="block p-4 rounded-lg bg-blue-50 hover:bg-blue-100 transition-all border border-blue-200"
                                   >
                                     <div className="flex items-center justify-between">
@@ -342,7 +355,7 @@ export const Navbar = () => {
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
@@ -413,7 +426,7 @@ export const Navbar = () => {
                         </div>
 
                         <Link
-                          href="/profile"
+                          href="/customer/profile"
                           className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                           onClick={() => setShowUserMenu(false)}
                         >
@@ -577,7 +590,7 @@ export const Navbar = () => {
                       )}
                     </Link>
                     <Link
-                      href="/profile"
+                      href="/customer/profile"
                       className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >

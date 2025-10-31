@@ -87,10 +87,11 @@ export default function RegisterPage() {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password =
-        "Password must contain uppercase, lowercase, and number";
-    }
+    } 
+    // else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+    //   newErrors.password =
+    //     "Password must contain uppercase, lowercase, and number";
+    // }
 
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password";
@@ -320,7 +321,7 @@ export default function RegisterPage() {
     );
   }
 
-  // REGISTRATION FORM (original code continues...)
+  // REGISTRATION FORM
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-secondary-50 via-white to-primary-50 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -702,7 +703,7 @@ export default function RegisterPage() {
                   {/* Address Section */}
                   <div className="animate-fade-in-up animation-delay-600">
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Address (Optional)
+                      Address
                     </label>
 
                     {/* Street */}

@@ -40,12 +40,37 @@ export default function ProductDetails() {
       if (response.success && response.data) {
         setProduct(response.data);
         
-        // Initialize selected options with null values
+        // Initialize selected options - auto-select first available option
         if (response.data.optionTypes && response.data.optionTypes.length > 0) {
           const initialOptions = {};
+          
           response.data.optionTypes.forEach(option => {
-            initialOptions[option.name] = null;
+            // Find first value with stock > 0, or just use first value
+            let selectedValue = null;
+            
+            if (option.values && option.values.length > 0) {
+              // Try to find a value with stock
+              selectedValue = option.values.find(val => {
+                if (typeof val === 'object') {
+                  return val.stock === undefined || val.stock > 0;
+                }
+                return true;
+              });
+              
+              // If no value with stock found, use first value
+              if (!selectedValue) {
+                selectedValue = option.values[0];
+              }
+              
+              // Convert to object format if it's a string
+              if (typeof selectedValue === 'string') {
+                selectedValue = { id: selectedValue, value: selectedValue, price: 0, stock: undefined };
+              }
+            }
+            
+            initialOptions[option.name] = selectedValue;
           });
+          
           setSelectedOptions(initialOptions);
         }
       }
@@ -103,7 +128,7 @@ export default function ProductDetails() {
   const handleOptionChange = (optionName, valueObj) => {
     setSelectedOptions(prev => ({
       ...prev,
-      [optionName]: valueObj // Store the entire value object (which contains id)
+      [optionName]: valueObj
     }));
   };
 
@@ -137,29 +162,20 @@ export default function ProductDetails() {
     }
 
     try {
-      console.log('Selected Options State:', selectedOptions);
-      console.log('Product Option Types:', product.optionTypes);
-      
-      // Build cart data with productId and quantity
       const cartData = {
         productId: product.id,
         quantity: quantity
       };
 
-      // Extract option IDs from selected options and add to selectedOptions array
       if (product.optionTypes && product.optionTypes.length > 0) {
         const optionIds = Object.values(selectedOptions)
-          .filter(opt => opt && opt.id) // Filter out empty selections
-          .map(opt => opt.id); // Extract IDs
-        
-        console.log('Extracted Option IDs:', optionIds);
+          .filter(opt => opt && opt.id)
+          .map(opt => opt.id);
         
         if (optionIds.length > 0) {
           cartData.selectedOptions = optionIds;
         }
       }
-
-      console.log('Cart data being sent:', cartData);
 
       const response = await apiClient.post('/api/customer/cart', cartData);
       
@@ -171,14 +187,6 @@ export default function ProductDetails() {
         });
         
         setQuantity(1);
-        
-        if (product.optionTypes && product.optionTypes.length > 0) {
-          const resetOptions = {};
-          product.optionTypes.forEach(option => {
-            resetOptions[option.name] = null;
-          });
-          setSelectedOptions(resetOptions);
-        }
       } else {
         toast.error(response.error || 'Failed to add to cart');
       }
@@ -216,6 +224,51 @@ export default function ProductDetails() {
     }
   };
 
+  // Calculate effective price: base price + sum of all selected option prices
+  const getEffectivePrice = () => {
+    if (!product) return 0;
+    
+    let totalPrice = product.price; // Start with base price
+    
+    if (product.optionTypes && product.optionTypes.length > 0) {
+      const selectedOptionValues = Object.values(selectedOptions).filter(opt => opt && opt.id);
+      
+      // Add each option's price to the total
+      selectedOptionValues.forEach(opt => {
+        if (opt.price !== undefined && opt.price > 0) {
+          totalPrice += opt.price;
+        }
+      });
+    }
+
+    return totalPrice;
+  };
+
+  const getEffectiveStock = () => {
+    if (!product) return 0;
+    
+    if (!product.optionTypes || product.optionTypes.length === 0) {
+      return product.stock;
+    }
+
+    const selectedOptionValues = Object.values(selectedOptions).filter(opt => opt && opt.id);
+    if (selectedOptionValues.length === 0) {
+      return product.stock;
+    }
+
+    // Find minimum stock among selected options (bottleneck)
+    let minStock = product.stock;
+    selectedOptionValues.forEach(opt => {
+      if (opt.stock !== undefined && opt.stock < minStock) {
+        minStock = opt.stock;
+      }
+    });
+
+    return minStock;
+  };
+
+  const effectivePrice = product ? getEffectivePrice() : 0;
+  const effectiveStock = product ? getEffectiveStock() : 0;
   const displayedReviews = showAllReviews ? feedbacks : feedbacks.slice(0, 2);
 
   if (isLoading) {
@@ -243,7 +296,7 @@ export default function ProductDetails() {
         <div className="text-center">
           <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h2>
-          <Link href="/products">
+          <Link href="/customer/all-products">
             <button className="text-blue-600 hover:text-blue-700 font-medium">
               Back to Products
             </button>
@@ -262,7 +315,7 @@ export default function ProductDetails() {
             Home
           </Link>
           <ChevronRight className="inline h-4 w-4 mx-2 text-gray-400" />
-          <Link href="/products" className="text-blue-600 hover:text-blue-700 font-medium">
+          <Link href="/customer/all-products" className="text-blue-600 hover:text-blue-700 font-medium">
             Products
           </Link>
           <ChevronRight className="inline h-4 w-4 mx-2 text-gray-400" />
@@ -294,13 +347,13 @@ export default function ProductDetails() {
                 </div>
               </div>
               
-              {product.stock < 5 && product.stock > 0 && (
+              {effectiveStock < 5 && effectiveStock > 0 && (
                 <div className="bg-orange-100 border border-orange-300 rounded-lg p-3 text-orange-800 text-sm font-medium">
-                  ⚠️ Only {product.stock} left in stock!
+                  ⚠️ Only {effectiveStock} left in stock!
                 </div>
               )}
               
-              {product.stock === 0 && (
+              {effectiveStock === 0 && (
                 <div className="bg-red-100 border border-red-300 rounded-lg p-3 text-red-800 text-sm font-bold">
                   ❌ Out of Stock
                 </div>
@@ -341,10 +394,30 @@ export default function ProductDetails() {
               </div>
             )}
 
+            {/* Price Display */}
             <div className="mb-6">
-              <span className="text-5xl font-bold text-blue-600">
-                ${product.price.toFixed(2)}
-              </span>
+              <div className="flex items-baseline space-x-3">
+                <span className="text-5xl font-bold text-blue-600">
+                  ${effectivePrice.toFixed(2)}
+                </span>
+              </div>
+              {product.optionTypes && product.optionTypes.length > 0 && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">Base: ${product.price.toFixed(2)}</span>
+                    {Object.entries(selectedOptions).map(([optionName, optionValue]) => {
+                      if (optionValue && optionValue.price > 0) {
+                        return (
+                          <span key={optionName} className="text-purple-600 font-medium">
+                            + {optionName}: ${optionValue.price.toFixed(2)}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
@@ -361,21 +434,28 @@ export default function ProductDetails() {
                     </label>
                     <div className="flex flex-wrap gap-3">
                       {option.values.map((value, valueIdx) => {
-                        // Handle if value is an object or string
                         const displayValue = typeof value === 'object' ? value.value : value;
                         const valueObj = typeof value === 'object' ? value : { id: value, value: value };
+                        const isSelected = selectedOptions[option.name]?.value === displayValue;
+                        const isOutOfStock = typeof value === 'object' && value.stock !== undefined && value.stock === 0;
                         
                         return (
                           <button
                             key={valueIdx}
-                            onClick={() => handleOptionChange(option.name, valueObj)}
-                            className={`px-6 py-3 rounded-xl border-2 font-semibold transition-all transform hover:scale-105 ${
-                              selectedOptions[option.name]?.value === displayValue
+                            onClick={() => !isOutOfStock && handleOptionChange(option.name, valueObj)}
+                            disabled={isOutOfStock}
+                            className={`relative px-6 py-3 rounded-xl border-2 font-semibold transition-all transform hover:scale-105 ${
+                              isSelected
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
+                                : isOutOfStock
+                                ? 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'
                                 : 'border-gray-300 text-gray-700 hover:border-blue-400'
                             }`}
                           >
                             {displayValue}
+                            {isOutOfStock && (
+                              <span className="absolute top-1 right-1 text-xs text-red-500">✕</span>
+                            )}
                           </button>
                         );
                       })}
@@ -386,7 +466,7 @@ export default function ProductDetails() {
                 {/* Option validation hint */}
                 <div className="flex items-start space-x-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-600" />
-                  <span>Please select all required options before adding to cart</span>
+                  <span>All options are required. Price shown includes selected options.</span>
                 </div>
               </div>
             )}
@@ -410,24 +490,24 @@ export default function ProductDetails() {
                     value={quantity}
                     onChange={(e) => {
                       const val = parseInt(e.target.value);
-                      if (val >= 1 && val <= product.stock) {
+                      if (val >= 1 && val <= effectiveStock) {
                         setQuantity(val);
                       }
                     }}
                     className="w-20 text-center font-bold text-lg py-3 border-0 focus:outline-none"
                     min="1"
-                    max={product.stock}
+                    max={effectiveStock}
                   />
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    disabled={quantity >= product.stock}
+                    onClick={() => setQuantity(Math.min(effectiveStock, quantity + 1))}
+                    disabled={quantity >= effectiveStock}
                     className="p-3 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-5 w-5" />
                   </button>
                 </div>
                 <span className="text-gray-600">
-                  {product.stock} available
+                  {effectiveStock} available
                 </span>
               </div>
             </div>
@@ -436,7 +516,7 @@ export default function ProductDetails() {
             <div className="flex gap-4 mb-8">
               <button
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
+                disabled={effectiveStock === 0}
                 className="flex-1 flex items-center justify-center space-x-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart className="h-5 w-5" />
@@ -559,7 +639,7 @@ export default function ProductDetails() {
               {similarProducts.map((similar, idx) => (
                 <Link
                   key={similar.id}
-                  href={`/products/${similar.id}`}
+                  href={`/customer/product/${similar.id}`}
                   className="group"
                 >
                   <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-scale-in"

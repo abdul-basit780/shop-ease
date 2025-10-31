@@ -78,7 +78,7 @@ function Banner() {
                     <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
-                <Link href="/categories">
+                <Link href="/customer/all-categories">
                   <Button
                     size="lg"
                     variant="outline"
