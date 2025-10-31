@@ -21,6 +21,32 @@ export default function WishlistPage() {
   const [removingId, setRemovingId] = useState(null);
   const hasCheckedAuth = useRef(false);
 
+  // Calculate minimum price: base + minimum price from each option type
+  const getMinimumPrice = (product) => {
+    let minPrice = product.price; // Start with base price
+    
+    // If product has option types, add the minimum price from each option type
+    if (product.optionTypes && product.optionTypes.length > 0) {
+      product.optionTypes.forEach(optionType => {
+        if (optionType.values && optionType.values.length > 0) {
+          // Find the minimum price among all values in this option type
+          const minOptionPrice = Math.min(
+            ...optionType.values.map(val => {
+              if (typeof val === 'object' && val.price !== undefined) {
+                return val.price;
+              }
+              return 0;
+            })
+          );
+          
+          minPrice += minOptionPrice;
+        }
+      });
+    }
+    
+    return minPrice;
+  };
+
   useEffect(() => {
     let isMounted = true;
     let hasRun = false;
@@ -66,12 +92,38 @@ export default function WishlistPage() {
     try {
       setIsLoading(true);
       const response = await apiClient.get("/api/customer/wishlist");
+      console.log(response)
       if (response.success && response.data) {
-        setWishlist(response.data);
+        // Fetch full product details for each wishlist item to get optionTypes
+        const productsWithDetails = await Promise.all(
+          response.data.products.map(async (product) => {
+            try {
+              const productResponse = await apiClient.get(`/api/public/products/${product.productId}`);
+              if (productResponse.success && productResponse.data) {
+                // Merge wishlist data with full product data
+                return {
+                  ...product,
+                  optionTypes: productResponse.data.optionTypes || [],
+                };
+              }
+              return product;
+            } catch (err) {
+              console.error(`Error fetching product ${product.productId}:`, err);
+              return product;
+            }
+          })
+        );
+
+        const updatedWishlist = {
+          ...response.data,
+          products: productsWithDetails,
+        };
+
+        setWishlist(updatedWishlist);
         if (typeof window !== "undefined") {
           localStorage.setItem(
             "wishlist",
-            JSON.stringify(response.data.products || [])
+            JSON.stringify(productsWithDetails)
           );
           window.dispatchEvent(new Event("wishlistUpdated"));
         }
@@ -185,6 +237,14 @@ export default function WishlistPage() {
     await router.push(`/customer/product/${product.productId}`);
   };
 
+  // Calculate total with minimum prices
+  const calculateTotalValue = () => {
+    if (!wishlist?.products) return 0;
+    return wishlist.products.reduce((total, product) => {
+      return total + getMinimumPrice(product);
+    }, 0);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
@@ -205,6 +265,8 @@ export default function WishlistPage() {
       </div>
     );
   }
+
+  const totalValue = calculateTotalValue();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
@@ -230,11 +292,11 @@ export default function WishlistPage() {
                 <p className="text-gray-600 mt-1">
                   {wishlist?.count || 0}{" "}
                   {wishlist?.count === 1 ? "item" : "items"} saved
-                  {wishlist?.totalValue > 0 && (
+                  {/* {totalValue > 0 && (
                     <span className="ml-2 text-blue-600 font-semibold">
-                      • Total: ${wishlist.totalValue.toFixed(2)}
+                      • Total from: ${totalValue.toFixed(2)}
                     </span>
-                  )}
+                  )} */}
                 </p>
               </div>
             </div>
@@ -243,129 +305,143 @@ export default function WishlistPage() {
 
         {wishlist?.products?.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {wishlist.products.map((product, idx) => (
-              <div
-                key={product.productId}
-                className="group bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 animate-scale-in"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <div className="relative h-64 bg-gray-100 overflow-hidden">
-                  {product.img ? (
-                    <img
-                      src={product.img}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      onError={(e) => {
-                        e.target.style.display = "none";
-                        e.target.nextElementSibling.style.display = "flex";
-                      }}
-                    />
-                  ) : null}
+            {wishlist.products.map((product, idx) => {
+              const minPrice = getMinimumPrice(product);
+              const hasOptions = product.optionTypes && product.optionTypes.length > 0;
+              
+              return (
+                <div
+                  key={product.productId}
+                  className="group bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 animate-scale-in"
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
+                  <div className="relative h-64 bg-gray-100 overflow-hidden">
+                    {product.img ? (
+                      <img
+                        src={product.img}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextElementSibling.style.display = "flex";
+                        }}
+                      />
+                    ) : null}
 
-                  <div
-                    className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"
-                    style={{ display: product.img ? "none" : "flex" }}
-                  >
-                    <Package className="h-16 w-16 text-gray-400" />
-                  </div>
-
-                  {!product.isAvailable && (
-                    <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                      Unavailable
+                    <div
+                      className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"
+                      style={{ display: product.img ? "none" : "flex" }}
+                    >
+                      <Package className="h-16 w-16 text-gray-400" />
                     </div>
-                  )}
 
-                  {product.stock === 0 && (
-                    <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                      Out of Stock
-                    </div>
-                  )}
-
-                  {product.stock > 0 && product.stock < 5 && (
-                    <div className="absolute top-3 left-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                      Only {product.stock} left
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => handleRemoveFromWishlist(product.productId)}
-                    disabled={removingId === product.productId}
-                    className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full text-red-500 hover:bg-red-50 hover:scale-110 transition-all shadow-lg disabled:opacity-50"
-                    title="Remove from wishlist"
-                  >
-                    {removingId === product.productId ? (
-                      <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
-                    ) : (
-                      <Trash2 className="h-5 w-5" />
+                    {!product.isAvailable && (
+                      <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                        Unavailable
+                      </div>
                     )}
-                  </button>
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                    <div className="absolute bottom-4 left-4 right-4 pointer-events-auto">
-                      <Link href={`/customer/product/${product.productId}`}>
-                        <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all shadow-lg">
-                          <Eye className="h-4 w-4" />
-                          <span>View Details</span>
-                        </button>
-                      </Link>
+                    {product.stock === 0 && (
+                      <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                        Out of Stock
+                      </div>
+                    )}
+
+                    {product.stock > 0 && product.stock < 5 && (
+                      <div className="absolute top-3 left-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                        Only {product.stock} left
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => handleRemoveFromWishlist(product.productId)}
+                      disabled={removingId === product.productId}
+                      className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full text-red-500 hover:bg-red-50 hover:scale-110 transition-all shadow-lg disabled:opacity-50"
+                      title="Remove from wishlist"
+                    >
+                      {removingId === product.productId ? (
+                        <div className="animate-spin h-5 w-5 border-2 border-red-500 border-t-transparent rounded-full"></div>
+                      ) : (
+                        <Trash2 className="h-5 w-5" />
+                      )}
+                    </button>
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                      <div className="absolute bottom-4 left-4 right-4 pointer-events-auto">
+                        <Link href={`/customer/product/${product.productId}`}>
+                          <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all shadow-lg">
+                            <Eye className="h-4 w-4" />
+                            <span>View Details</span>
+                          </button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="p-5">
-                  <p className="text-xs font-semibold text-blue-600 mb-1 uppercase tracking-wide">
-                    {product.categoryName}
-                  </p>
-
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                    {product.name}
-                  </h3>
-
-                  {product.description && (
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {product.description}
+                  <div className="p-5">
+                    <p className="text-xs font-semibold text-blue-600 mb-1 uppercase tracking-wide">
+                      {product.categoryName}
                     </p>
-                  )}
 
-                  <p className="text-xs text-gray-500 mb-4">
-                    Added{" "}
-                    {new Date(product.addedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      {product.name}
+                    </h3>
 
-                  <div className="border-t border-gray-100 pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-2xl font-bold text-blue-600">
-                        ${product.price.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/customer/product/${product?.productId}`}
-                        disabled={product.stock === 0 || !product.isAvailable}
-                        className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                        <span>Add to Cart</span>
-                      </Link>
-                    </div>
-
-                    {product.isAvailable && product.stock > 0 && (
-                      <button
-                        onClick={() => handleMoveToCart(product)}
-                        className="w-full mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        Move to Cart & Remove
-                      </button>
+                    {product.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {product.description}
+                      </p>
                     )}
+
+                    <p className="text-xs text-gray-500 mb-4">
+                      Added{" "}
+                      {new Date(product.addedAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+
+                    <div className="border-t border-gray-100 pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        {hasOptions ? (
+                          <div>
+                            <span className="text-xs font-normal text-gray-500 block">From</span>
+                            <span className="text-2xl font-bold text-blue-600">
+                              ${minPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-2xl font-bold text-blue-600">
+                            ${product.price.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Link
+                          href={`/customer/product/${product?.productId}`}
+                          disabled={product.stock === 0 || !product.isAvailable}
+                          className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          <span>Add to Cart</span>
+                        </Link>
+                      </div>
+
+                      {product.isAvailable && product.stock > 0 && (
+                        <button
+                          onClick={() => handleMoveToCart(product)}
+                          className="w-full mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          Move to Cart & Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-16 animate-fade-in">
@@ -397,9 +473,9 @@ export default function WishlistPage() {
                 </h3>
                 <p className="text-gray-600">
                   {wishlist.count} {wishlist.count === 1 ? "item" : "items"} •
-                  Total value:{" "}
+                  Total value from:{" "}
                   <span className="font-bold text-blue-600">
-                    ${wishlist.totalValue.toFixed(2)}
+                    ${totalValue.toFixed(2)}
                   </span>
                 </p>
               </div>
@@ -419,6 +495,39 @@ export default function WishlistPage() {
           </div>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out;
+        }
+
+        @keyframes scale-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.5s ease-out forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   );
 }

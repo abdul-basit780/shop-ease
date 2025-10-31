@@ -11,6 +11,23 @@ export const Footer = () => {
     setEmail('');
   };
 
+  const quickLinks = [
+    { name: 'All Products', href: '/customer/all-products' },
+    { name: 'Categories', href: '/customer/all-categories' },
+    { name: 'About Us', href: '/about-us' },
+    { name: 'Contact', href: '/contact' },
+    { name: 'Blog', href: '/blog' },
+  ];
+
+  const customerServiceLinks = [
+    { name: 'My Account', href: '/customer/my-profile' },
+    { name: 'Order History', href: '/customer/my-orders' },
+    { name: 'Wishlist', href: '/customer/wishlist' },
+    { name: 'Track Order', href: '/customer/track-order' },
+    { name: 'FAQ', href: '/faq' },
+    { name: 'Returns', href: '/returns' },
+  ];
+
   return (
     <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-300 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -35,7 +52,7 @@ export const Footer = () => {
             </div>
             
             <p className="text-gray-400 mb-6 leading-relaxed">
-              Your one-stop destination for personalized shopping experiences. Discover products tailored just for you with our AI-powered recommendations.
+              Your one-stop destination for personalized shopping experiences. Discover products tailored just for you with our AI-powered personalized recommendations.
             </p>
             
             {/* Social Media Links */}
@@ -68,14 +85,14 @@ export const Footer = () => {
               <div className="absolute bottom-0 left-0 w-12 h-1 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"></div>
             </h3>
             <ul className="space-y-3">
-              {['All Products', 'Categories', 'About Us', 'Contact', 'Blog'].map((item) => (
-                <li key={item}>
+              {quickLinks.map((link) => (
+                <li key={link.name}>
                   <Link 
-                    href={`/${item.toLowerCase().replace(' ', '-')}`}
+                    href={link.href}
                     className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
                   >
                     <span className="w-0 group-hover:w-2 h-0.5 bg-gradient-to-r from-primary-500 to-secondary-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
-                    {item}
+                    {link.name}
                   </Link>
                 </li>
               ))}
@@ -89,14 +106,14 @@ export const Footer = () => {
               <div className="absolute bottom-0 left-0 w-12 h-1 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"></div>
             </h3>
             <ul className="space-y-3">
-              {['My Account', 'Order History', 'Wishlist', 'Track Order', 'FAQ', 'Returns'].map((item) => (
-                <li key={item}>
+              {customerServiceLinks.map((link) => (
+                <li key={link.name}>
                   <Link 
-                    href={`/${item.toLowerCase().replace(' ', '-')}`}
+                    href={link.href}
                     className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
                   >
                     <span className="w-0 group-hover:w-2 h-0.5 bg-gradient-to-r from-primary-500 to-secondary-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
-                    {item}
+                    {link.name}
                   </Link>
                 </li>
               ))}
@@ -148,13 +165,13 @@ export const Footer = () => {
             </div>
             
             <div className="flex items-center space-x-6">
-              <Link href="/privacy" className="text-sm text-gray-400 hover:text-white transition-colors">
+              <Link href="/privacy-policy" className="text-sm text-gray-400 hover:text-white transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-sm text-gray-400 hover:text-white transition-colors">
+              <Link href="/terms-of-service" className="text-sm text-gray-400 hover:text-white transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="text-sm text-gray-400 hover:text-white transition-colors">
+              <Link href="/cookie-policy" className="text-sm text-gray-400 hover:text-white transition-colors">
                 Cookie Policy
               </Link>
             </div>
@@ -164,6 +181,28 @@ export const Footer = () => {
 
       {/* Decorative Bottom Gradient */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-600 via-purple-600 to-secondary-600"></div>
+
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0) translateX(0);
+          }
+          33% {
+            transform: translateY(-20px) translateX(10px);
+          }
+          66% {
+            transform: translateY(10px) translateX(-10px);
+          }
+        }
+
+        .animate-float {
+          animation: float 10s ease-in-out infinite;
+        }
+
+        .animation-delay-1000 {
+          animation-delay: 1s;
+        }
+      `}</style>
     </footer>
   );
 };

@@ -703,7 +703,7 @@ export default function RegisterPage() {
                   {/* Address Section */}
                   <div className="animate-fade-in-up animation-delay-600">
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Address (Optional)
+                      Address
                     </label>
 
                     {/* Street */}
