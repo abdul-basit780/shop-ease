@@ -6,7 +6,6 @@ import {
   Phone,
   Calendar,
   Briefcase,
-  MapPin,
   Edit2,
   Save,
   X,
@@ -15,8 +14,6 @@ import {
   CheckCircle,
   Send,
   Lock,
-  Plus,
-  Trash2,
   Home,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
