@@ -112,8 +112,7 @@ export class StripePaymentStrategy implements IPaymentStrategy {
       if (paymentIntent.status === "succeeded") {
         status = "completed";
       } else if (
-        paymentIntent.status === "canceled" ||
-        paymentIntent.status === "payment_failed"
+        paymentIntent.status === "canceled"
       ) {
         status = "failed";
       }
