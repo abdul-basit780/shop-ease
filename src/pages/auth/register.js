@@ -321,7 +321,6 @@ export default function RegisterPage() {
     );
   }
 
-  // REGISTRATION FORM (original code continues...)
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-secondary-50 via-white to-primary-50 relative overflow-hidden">
       {/* Animated Background Elements */}

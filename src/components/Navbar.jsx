@@ -425,24 +425,26 @@ export const Navbar = () => {
                           </p>
                         </div>
 
-                        <Link
-                          href="/customer/profile"
-                          className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                          onClick={() => setShowUserMenu(false)}
-                        >
-                          <UserCircle className="h-5 w-5" />
-                          <span>My Profile</span>
-                        </Link>
-
                         {user?.role === "customer" && (
-                          <Link
-                            href="/customer/orders"
-                            className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                            onClick={() => setShowUserMenu(false)}
-                          >
-                            <Package className="h-5 w-5" />
-                            <span>My Orders</span>
-                          </Link>
+                          <>
+                            <Link
+                              href="/customer/profile"
+                              className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              onClick={() => setShowUserMenu(false)}
+                            >
+                              <UserCircle className="h-5 w-5" />
+                              <span>My Profile</span>
+                            </Link>
+
+                            <Link
+                              href="/customer/orders"
+                              className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              onClick={() => setShowUserMenu(false)}
+                            >
+                              <Package className="h-5 w-5" />
+                              <span>My Orders</span>
+                            </Link>
+                          </>
                         )}
 
                         {user?.role === "admin" && (

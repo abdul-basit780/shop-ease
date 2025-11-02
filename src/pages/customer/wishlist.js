@@ -92,7 +92,6 @@ export default function WishlistPage() {
     try {
       setIsLoading(true);
       const response = await apiClient.get("/api/customer/wishlist");
-      console.log(response)
       if (response.success && response.data) {
         // Fetch full product details for each wishlist item to get optionTypes
         const productsWithDetails = await Promise.all(
@@ -108,7 +107,6 @@ export default function WishlistPage() {
               }
               return product;
             } catch (err) {
-              console.error(`Error fetching product ${product.productId}:`, err);
               return product;
             }
           })
@@ -129,7 +127,6 @@ export default function WishlistPage() {
         }
       }
     } catch (error) {
-      console.error("Error fetching wishlist:", error);
       toast.error("Failed to load wishlist");
     } finally {
       setIsLoading(false);
@@ -190,7 +187,6 @@ export default function WishlistPage() {
         );
       }
     } catch (error) {
-      console.error("Error removing from wishlist:", error);
       toast.error("Failed to remove item");
     } finally {
       setRemovingId(null);
@@ -226,7 +222,6 @@ export default function WishlistPage() {
       localStorage.setItem("cart", JSON.stringify(cart));
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (error) {
-      console.error("Error adding to cart:", error);
       toast.error("Failed to add to cart");
     }
   };
