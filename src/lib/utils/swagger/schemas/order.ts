@@ -36,6 +36,36 @@ export const orderSchemas = {
         example: 2599.98,
         description: "Subtotal (price × quantity)",
       },
+      selectedOptions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            optionValueId: {
+              type: "string",
+              example: "507f1f77bcf86cd799439015",
+              description: "Option value ID",
+            },
+            optionTypeName: {
+              type: "string",
+              example: "Size",
+              description: "Name of the option type",
+            },
+            value: {
+              type: "string",
+              example: "Large",
+              description: "Selected option value",
+            },
+            price: {
+              type: "number",
+              format: "float",
+              example: 0,
+              description: "Additional price for this option",
+            },
+          },
+        },
+        description: "Selected product options (if any)",
+      },
     },
   },
 
@@ -63,8 +93,8 @@ export const orderSchemas = {
       amount: {
         type: "number",
         format: "float",
-        example: 2599.98,
-        description: "Payment amount",
+        example: 2989.97,
+        description: "Payment amount (total amount including tax and shipping)",
       },
     },
   },
@@ -95,11 +125,29 @@ export const orderSchemas = {
         example: "pending",
         description: "Order status",
       },
-      totalAmount: {
+      subtotal: {
         type: "number",
         format: "float",
         example: 2599.98,
-        description: "Total order amount",
+        description: "Subtotal (sum of all products before tax and shipping)",
+      },
+      tax: {
+        type: "number",
+        format: "float",
+        example: 389.99,
+        description: "Tax amount (15% of subtotal)",
+      },
+      shipping: {
+        type: "number",
+        format: "float",
+        example: 0,
+        description: "Shipping cost ($9.99 if subtotal <= $50, otherwise free)",
+      },
+      totalAmount: {
+        type: "number",
+        format: "float",
+        example: 2989.97,
+        description: "Total order amount (subtotal + tax + shipping)",
       },
       products: {
         type: "array",

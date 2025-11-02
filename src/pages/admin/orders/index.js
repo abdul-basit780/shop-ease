@@ -386,7 +386,7 @@ export default function OrdersPage() {
         `"${order.orderNumber || order._id?.slice(-8) || ''}"`,
         `"${order.customer?.name || ''}"`,
         `"${order.customer?.email || ''}"`,
-        `"${order.total || 0}"`,
+        `"${order.totalAmount || 0}"`,
         `"${order.status || ''}"`,
         `"${order.paymentMethod || ''}"`,
         `"${order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ''}"`
@@ -645,7 +645,7 @@ export default function OrdersPage() {
                           <OrderStatusBadge status={order.status} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${order.total?.toFixed(2) || '0.00'}
+                          ${order.totalAmount?.toFixed(2) || '0.00'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">

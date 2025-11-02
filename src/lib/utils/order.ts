@@ -22,6 +22,9 @@ export interface OrderResponse {
   customerId: string;
   datetime: Date;
   status: OrderStatus;
+  subtotal: number;
+  tax: number;
+  shipping: number;
   totalAmount: number;
   products: OrderProductResponse[];
   address: string;
@@ -70,11 +73,23 @@ export const buildOrderResponse = (order: any, payment: any): OrderResponse => {
     order.status === OrderStatus.PENDING ||
     order.status === OrderStatus.PROCESSING;
 
+  // Handle customerId whether it's populated (object) or just an ObjectId
+  const customerIdString =
+    order.customerId &&
+    typeof order.customerId === "object" &&
+    !(order.customerId instanceof Date) &&
+    order.customerId._id
+      ? order.customerId._id.toString()
+      : String(order.customerId);
+
   return {
     id: order._id.toString(),
-    customerId: order.customerId.toString(),
+    customerId: customerIdString,
     datetime: order.datetime,
     status: order.status,
+    subtotal: order.subtotal || 0,
+    tax: order.tax || 0,
+    shipping: order.shipping || 0,
     totalAmount: order.totalAmount,
     products,
     address: order.address,

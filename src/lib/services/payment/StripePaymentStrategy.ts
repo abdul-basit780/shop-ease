@@ -93,4 +93,42 @@ export class StripePaymentStrategy implements IPaymentStrategy {
   isConfigured(): boolean {
     return !!process.env.STRIPE_SECRET_KEY;
   }
+
+  /**
+   * Verify and get the current status of a payment intent
+   */
+  async verifyPaymentStatus(paymentIntentId: string): Promise<{
+    success: boolean;
+    status: string;
+    error?: string;
+  }> {
+    try {
+      const paymentIntent = await this.stripe.paymentIntents.retrieve(
+        paymentIntentId
+      );
+
+      // Map Stripe status to our payment status
+      let status = "pending";
+      if (paymentIntent.status === "succeeded") {
+        status = "completed";
+      } else if (
+        paymentIntent.status === "canceled" ||
+        paymentIntent.status === "payment_failed"
+      ) {
+        status = "failed";
+      }
+
+      return {
+        success: true,
+        status,
+      };
+    } catch (error: any) {
+      console.error("Stripe payment verification error:", error);
+      return {
+        success: false,
+        status: "pending",
+        error: error.message || "Failed to verify payment status",
+      };
+    }
+  }
 }
