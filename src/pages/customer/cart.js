@@ -62,7 +62,6 @@ export default function Cart() {
         setCart(response.data);
       }
     } catch (error) {
-      console.error("Error fetching cart:", error);
       toast.error("Failed to load cart");
       setCart({ products: [], totalAmount: 0, count: 0 });
     } finally {
@@ -103,7 +102,6 @@ export default function Cart() {
         window.dispatchEvent(new Event("cartUpdated"));
       }
     } catch (error) {
-      console.error("Error updating quantity:", error);
       const errorMessage =
         error.response?.data?.message || "Failed to update quantity";
       toast.error(errorMessage);
@@ -160,7 +158,7 @@ export default function Cart() {
   };
 
   const handleCheckout = () => {
-    router.push("/checkout");
+    router.push("/customer/checkout");
   };
 
   const isItemUpdating = (productId, selectedOptions) => {

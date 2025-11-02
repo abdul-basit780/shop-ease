@@ -27,7 +27,6 @@ export default function Categories() {
           setCategories(categoriesWithChildren);
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
         if (isMounted) {
           toast.error('Failed to load categories');
         }

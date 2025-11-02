@@ -129,7 +129,6 @@ export default function AllProducts() {
       
       setWishlistProductIds(productIds);
     } catch (error) {
-      console.error('Error loading wishlist:', error);
       setWishlistProductIds([]);
     }
   };
@@ -156,7 +155,6 @@ export default function AllProducts() {
         setPagination(response.data.pagination);
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
@@ -281,7 +279,6 @@ export default function AllProducts() {
         }
       }
     } catch (error) {
-      console.error('Error adding to wishlist:', error);
       toast.error('Failed to add to wishlist. Please try again.', {
         style: {
           borderRadius: '12px',
