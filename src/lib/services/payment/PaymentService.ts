@@ -108,6 +108,41 @@ export class PaymentService {
       return null;
     }
   }
+
+  /**
+   * Verify payment status (currently supports Stripe only)
+   */
+  static async verifyPaymentStatus(
+    method: string,
+    paymentIntentId: string
+  ): Promise<{
+    success: boolean;
+    status: string;
+    error?: string;
+  }> {
+    try {
+      if (method === "stripe") {
+        const strategy = PaymentFactory.getStrategy(method);
+        // Type assertion needed since verifyPaymentStatus is specific to Stripe
+        const stripeStrategy = strategy as any;
+        if (stripeStrategy.verifyPaymentStatus) {
+          return await stripeStrategy.verifyPaymentStatus(paymentIntentId);
+        }
+      }
+      return {
+        success: false,
+        status: "pending",
+        error: "Payment verification not supported for this method",
+      };
+    } catch (error: any) {
+      console.error(`Payment verification error (${method}):`, error);
+      return {
+        success: false,
+        status: "pending",
+        error: error.message || "Payment verification failed",
+      };
+    }
+  }
 }
 
 // Export for convenience

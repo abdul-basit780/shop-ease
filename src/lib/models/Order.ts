@@ -21,6 +21,9 @@ export interface IOrder extends Document {
   customerId: mongoose.Types.ObjectId;
   datetime: Date;
   status: OrderStatus;
+  subtotal: number;
+  tax: number;
+  shipping: number;
   totalAmount: number;
   products: IOrderProduct[];
   address: string;
@@ -59,6 +62,9 @@ const OrderSchema = new Schema<IOrder>(
   {
     customerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     datetime: { type: Date, required: true },
+    subtotal: { type: Number, required: true, min: 0 },
+    tax: { type: Number, required: true, min: 0 },
+    shipping: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     products: {
       type: [OrderProductSchema],

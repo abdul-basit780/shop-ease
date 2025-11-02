@@ -27,7 +27,7 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
   const [error, setError] = useState(null);
 
   const shippingCost = cart.totalAmount >= 50 ? 0 : 9.99;
-  const taxAmount = cart.totalAmount * 0.1;
+  const taxAmount = cart.totalAmount * 0.15;
   const finalTotal = cart.totalAmount + shippingCost + taxAmount;
 
   const handleSubmit = async (event) => {
@@ -103,6 +103,18 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
 
         // Payment successful
         if (paymentIntent.status === 'succeeded') {
+          // Update payment status in backend
+          try {
+            await apiClient.patch(`/api/customer/order/${response.data.order.id}`, {
+              action: 'confirmPayment'
+            });
+            console.log('Payment status updated in backend');
+          } catch (confirmErr) {
+            console.error('Failed to update payment status:', confirmErr);
+            // Don't fail the order flow if status update fails
+            // Payment was successful with Stripe, status update is just for database consistency
+          }
+
           // Clear cart on frontend
           window.dispatchEvent(new Event('cartUpdated'));
           
@@ -387,7 +399,7 @@ export default function CheckoutPage() {
   }
 
   const shippingCost = cart.totalAmount >= 50 ? 0 : 9.99;
-  const taxAmount = cart.totalAmount * 0.1;
+  const taxAmount = cart.totalAmount * 0.15;
   const finalTotal = cart.totalAmount + shippingCost + taxAmount;
 
   return (

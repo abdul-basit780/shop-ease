@@ -47,6 +47,9 @@ describe('order utils', () => {
         customerId: '507f1f77bcf86cd799439012',
         datetime: mockOrder.datetime,
         status: OrderStatus.PENDING,
+        subtotal: 0,
+        tax: 0,
+        shipping: 0,
         totalAmount: 25.98,
         products: [
           {

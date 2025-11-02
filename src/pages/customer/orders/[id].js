@@ -461,8 +461,22 @@ export default function OrderDetails() {
                 <div className="space-y-3">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span className="font-semibold">${order.totalAmount.toFixed(2)}</span>
+                    <span className="font-semibold">${((order.subtotal || order.totalAmount)).toFixed(2)}</span>
                   </div>
+                  {(order.subtotal !== undefined) && (
+                    <>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Tax</span>
+                        <span className="font-semibold">${(order.tax || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Shipping</span>
+                        <span className={`font-semibold ${order.shipping === 0 ? 'text-green-600' : ''}`}>
+                          {order.shipping === 0 ? 'FREE' : `$${(order.shipping || 0).toFixed(2)}`}
+                        </span>
+                      </div>
+                    </>
+                  )}
                   <div className="border-t pt-3 flex justify-between text-lg font-bold text-gray-900">
                     <span>Total</span>
                     <span className="text-2xl text-blue-600">${order.totalAmount.toFixed(2)}</span>

@@ -14,7 +14,7 @@ import {
   composeMiddleware,
   AuthenticatedRequest,
 } from "../../../../lib/middleware/auth";
-import { getOrder, cancelOrder } from "@/lib/controllers/order";
+import { getOrder, cancelOrder, confirmPayment } from "@/lib/controllers/order";
 
 // GET: Get single order
 const getOrderHandler = async (
@@ -35,11 +35,21 @@ const getOrderHandler = async (
   );
 };
 
-// PATCH: Cancel order
-const cancelOrderHandler = async (
+// PATCH: Cancel order or confirm payment
+const patchOrderHandler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
 ) => {
+  // Check if this is a payment confirmation request
+  if (req.body?.action === "confirmPayment") {
+    const response = await confirmPayment(req, res);
+    if (!response.success) {
+      return sendError(res, response.message, response.statusCode);
+    }
+    return sendSuccess(res, response.order, response.message, response.statusCode);
+  }
+
+  // Otherwise, it's a cancel order request
   const response = await cancelOrder(req, res);
 
   if (!response.success) {
@@ -66,7 +76,7 @@ const orderIdHandler = async (
     case "GET":
       return getOrderHandler(req, res);
     case "PATCH":
-      return cancelOrderHandler(req, res);
+      return patchOrderHandler(req, res);
     default:
       return sendError(res, "Method not allowed", 405);
   }

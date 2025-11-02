@@ -121,8 +121,8 @@ export const createOrder = async (
       return orderResponse;
     }
 
-    // Verify stock and calculate total
-    let totalAmount = 0;
+    // Verify stock and calculate subtotal
+    let subtotal = 0;
     const orderProducts = [];
 
     for (const item of cart.products) {
@@ -182,8 +182,8 @@ export const createOrder = async (
         return orderResponse;
       }
 
-      const subtotal = effectivePrice * item.quantity;
-      totalAmount += subtotal;
+      const itemSubtotal = effectivePrice * item.quantity;
+      subtotal += itemSubtotal;
 
       orderProducts.push({
         productId: product._id,
@@ -215,7 +215,17 @@ export const createOrder = async (
       }
     }
 
-    totalAmount = Math.round(totalAmount * 100) / 100;
+    // Calculate order totals
+    subtotal = Math.round(subtotal * 100) / 100;
+    
+    // Tax is 15% of subtotal
+    const tax = Math.round(subtotal * 0.15 * 100) / 100;
+    
+    // Shipping is $9.99 if subtotal <= $50, otherwise free
+    const shipping = subtotal <= 50 ? 9.99 : 0;
+    
+    // Total amount includes subtotal, tax, and shipping
+    const totalAmount = Math.round((subtotal + tax + shipping) * 100) / 100;
 
     // Create order
     const newOrder = await Order.create(
@@ -223,6 +233,9 @@ export const createOrder = async (
         {
           customerId,
           datetime: new Date(),
+          subtotal,
+          tax,
+          shipping,
           totalAmount,
           products: orderProducts,
           address: `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`,
@@ -610,5 +623,107 @@ export const cancelOrder = async (
     return orderResponse;
   } finally {
     session.endSession();
+  }
+};
+
+// Confirm payment status (for Stripe payments after frontend confirmation)
+export const confirmPayment = async (
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+): Promise<Response> => {
+  await connectToDatabase();
+
+  const orderResponse: Response = {
+    success: false,
+    message: "",
+    order: undefined,
+    statusCode: 500,
+  };
+
+  const { id } = req.query;
+
+  try {
+    if (!id || typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
+      orderResponse.message = "Invalid order ID";
+      orderResponse.statusCode = 400;
+      return orderResponse;
+    }
+
+    // Get the order and payment
+    const order = await Order.findById(id);
+
+    if (!order) {
+      orderResponse.message = ORDER_MESSAGES.ORDER_NOT_FOUND;
+      orderResponse.statusCode = 404;
+      return orderResponse;
+    }
+
+    // Verify the order belongs to the customer
+    if (order.customerId.toString() !== req.user!.userId) {
+      orderResponse.message = "Unauthorized";
+      orderResponse.statusCode = 403;
+      return orderResponse;
+    }
+
+    const payment = await Payment.findOne({ orderId: order._id });
+
+    if (!payment) {
+      orderResponse.message = "Payment information not found";
+      orderResponse.statusCode = 404;
+      return orderResponse;
+    }
+
+    // Only verify Stripe payments
+    if (payment.method === "stripe" && payment.paymentId) {
+      const verificationResult = await PaymentService.verifyPaymentStatus(
+        "stripe",
+        payment.paymentId
+      );
+
+      if (verificationResult.success) {
+        // Update payment status
+        payment.status = verificationResult.status as PaymentStatus;
+        await payment.save();
+
+        // Refresh order data
+        const updatedOrder = await Order.findById(order._id)
+          .populate("customerId", "name email")
+          .lean()
+          .exec();
+        const updatedPayment = await Payment.findOne({ orderId: order._id })
+          .lean()
+          .exec();
+
+        orderResponse.order = buildOrderResponse(updatedOrder!, updatedPayment!);
+        orderResponse.success = true;
+        orderResponse.message = "Payment status updated successfully";
+        orderResponse.statusCode = 200;
+      } else {
+        orderResponse.message =
+          verificationResult.error || "Failed to verify payment status";
+        orderResponse.statusCode = 400;
+      }
+    } else {
+      // For cash payments or payments without paymentId, just return current status
+      const updatedOrder = await Order.findById(order._id)
+        .populate("customerId", "name email")
+        .lean()
+        .exec();
+      const updatedPayment = await Payment.findOne({ orderId: order._id })
+        .lean()
+        .exec();
+
+      orderResponse.order = buildOrderResponse(updatedOrder!, updatedPayment!);
+      orderResponse.success = true;
+      orderResponse.message = "Payment status retrieved";
+      orderResponse.statusCode = 200;
+    }
+
+    return orderResponse;
+  } catch (err) {
+    console.error("Confirm payment error:", err);
+    orderResponse.message = "Internal server error";
+    orderResponse.statusCode = 500;
+    return orderResponse;
   }
 };

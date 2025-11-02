@@ -520,15 +520,15 @@ export default function OrderViewPage() {
               <h3 className="text-lg font-semibold text-gray-900">Order Items</h3>
             </CardHeader>
             <CardBody>
-              {order.items && order.items.length > 0 ? (
+              {order.products && order.products.length > 0 ? (
                 <div className="space-y-4">
-                  {order.items.map((item, index) => (
+                  {order.products.map((item, index) => (
                     <div key={index} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
                       <div className="flex-shrink-0">
-                        {item.product?.img ? (
+                        {item.img ? (
                           <img
-                            src={item.product.img}
-                            alt={item.product.name}
+                            src={item.img}
+                            alt={item.name}
                             className="h-16 w-16 object-cover rounded-lg"
                           />
                         ) : (
@@ -539,16 +539,16 @@ export default function OrderViewPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium text-gray-900 truncate">
-                          {item.product?.name || 'Unknown Product'}
+                          {item.name || 'Unknown Product'}
                         </h4>
                         <p className="text-sm text-gray-500">
                           Quantity: {item.quantity}
                         </p>
-                        {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                        {item.selectedOptions && item.selectedOptions.length > 0 && (
                           <div className="mt-1">
-                            {Object.entries(item.selectedOptions).map(([key, value]) => (
-                              <span key={key} className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded mr-2">
-                                {key}: {value}
+                            {item.selectedOptions.map((opt, idx) => (
+                              <span key={idx} className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded mr-2">
+                                {opt.optionTypeName}: {opt.value}
                               </span>
                             ))}
                           </div>
@@ -556,7 +556,7 @@ export default function OrderViewPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900">
-                          {formatCurrency(item.price * item.quantity)}
+                          {formatCurrency(item.subtotal)}
                         </p>
                         <p className="text-xs text-gray-500">
                           {formatCurrency(item.price)} each
@@ -619,15 +619,12 @@ export default function OrderViewPage() {
               <h3 className="text-lg font-semibold text-gray-900">Shipping Address</h3>
             </CardHeader>
             <CardBody>
-              {order.shippingAddress ? (
+              {order.address ? (
                 <div className="space-y-2">
                   <div className="flex items-start space-x-2">
                     <MapPin className="h-4 w-4 text-gray-400 mt-1" />
                     <div className="text-sm text-gray-600">
-                      <p className="font-medium">{order.shippingAddress.name}</p>
-                      <p>{order.shippingAddress.street}</p>
-                      <p>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}</p>
-                      <p>{order.shippingAddress.country}</p>
+                      <p>{order.address}</p>
                     </div>
                   </div>
                 </div>
@@ -686,22 +683,22 @@ export default function OrderViewPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Shipping</span>
-                  <span className="font-medium">
-                    {formatCurrency(order.shippingCost || 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Tax</span>
                   <span className="font-medium">
                     {formatCurrency(order.tax || 0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Shipping</span>
+                  <span className={`font-medium ${order.shipping === 0 ? 'text-green-600' : ''}`}>
+                    {order.shipping === 0 ? 'FREE' : formatCurrency(order.shipping || 0)}
                   </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex items-center justify-between">
                     <span className="text-base font-semibold text-gray-900">Total</span>
                     <span className="text-lg font-bold text-gray-900">
-                      {formatCurrency(order.total || 0)}
+                      {formatCurrency(order.totalAmount || 0)}
                     </span>
                   </div>
                 </div>

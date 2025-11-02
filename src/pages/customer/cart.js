@@ -206,7 +206,7 @@ export default function Cart() {
   }
 
   const shippingCost = cart.totalAmount >= 50 ? 0 : 9.99;
-  const taxAmount = cart.totalAmount * 0.1;
+  const taxAmount = cart.totalAmount * 0.15;
   const finalTotal = cart.totalAmount + shippingCost + taxAmount;
 
   return (
