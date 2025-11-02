@@ -115,7 +115,7 @@ export default function OrderDetails() {
   }, [id]);
 
   useEffect(() => {
-    if (order && order.products && order.status === 'delivered') {
+    if (order && order.products && order.status === 'completed') {
       const productIds = order.products.map(p => p.productId);
       fetchProductReviews(productIds);
     }
@@ -220,7 +220,7 @@ export default function OrderDetails() {
         return <Package className="h-8 w-8 text-blue-600" />;
       case 'shipped':
         return <Truck className="h-8 w-8 text-purple-600" />;
-      case 'delivered':
+      case 'completed':
         return <CheckCircle className="h-8 w-8 text-green-600" />;
       case 'cancelled':
         return <XCircle className="h-8 w-8 text-red-600" />;
@@ -237,7 +237,7 @@ export default function OrderDetails() {
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'shipped':
         return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'delivered':
+      case 'completed':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
@@ -345,7 +345,7 @@ export default function OrderDetails() {
                 {order.status === 'pending' && 'Your order is being processed'}
                 {order.status === 'processing' && 'We are preparing your order'}
                 {order.status === 'shipped' && 'Your order is on the way'}
-                {order.status === 'delivered' && 'Your order has been delivered'}
+                {order.status === 'completed' && 'Your order has been delivered'}
                 {order.status === 'cancelled' && 'This order has been cancelled'}
               </p>
             </div>
@@ -393,7 +393,7 @@ export default function OrderDetails() {
                     </div>
 
                     {/* Review Section - Only show for delivered orders */}
-                    {order.status === 'delivered' && (
+                    {order.status === 'completed' && (
                       <div className="border-t border-gray-100 p-4 bg-gray-50">
                         {productReviews[product.productId] ? (
                           // Show existing review

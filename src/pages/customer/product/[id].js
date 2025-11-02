@@ -109,6 +109,7 @@ export default function ProductDetails() {
       const response = await apiClient.get(
         `/api/public/products/${id}/feedbacks?page=1&limit=10&sortBy=createdAt&sortOrder=desc`
       );
+      console.log(response)
 
       if (response.success && response.data) {
         setFeedbacks(response.data.feedbacks || []);
@@ -742,7 +743,7 @@ export default function ProductDetails() {
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">
-                          {feedback.customerName || "Anonymous"}
+                          {feedback.customerId.name || "Anonymous"}
                         </div>
                         <div className="text-sm text-gray-500">
                           {new Date(feedback.createdAt).toLocaleDateString()}
