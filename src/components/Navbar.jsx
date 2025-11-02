@@ -436,7 +436,7 @@ export const Navbar = () => {
 
                         {user?.role === "customer" && (
                           <Link
-                            href="/orders"
+                            href="/customer/orders"
                             className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                             onClick={() => setShowUserMenu(false)}
                           >
@@ -597,7 +597,7 @@ export const Navbar = () => {
                       My Profile
                     </Link>
                     <Link
-                      href="/orders"
+                      href="/customer/orders"
                       className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >

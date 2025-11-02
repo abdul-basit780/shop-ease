@@ -20,10 +20,10 @@ export const Footer = () => {
   ];
 
   const customerServiceLinks = [
-    { name: 'My Account', href: '/customer/my-profile' },
-    { name: 'Order History', href: '/customer/my-orders' },
+    { name: 'My Account', href: '/customer/profile' },
+    { name: 'Order History', href: '/customer/orders' },
     { name: 'Wishlist', href: '/customer/wishlist' },
-    { name: 'Track Order', href: '/customer/track-order' },
+    { name: 'Track Order', href: '/customer/orders' },
     { name: 'FAQ', href: '/faq' },
     { name: 'Returns', href: '/returns' },
   ];
@@ -147,7 +147,7 @@ export const Footer = () => {
                 <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary-600 transition-colors">
                   <Mail className="h-5 w-5 text-primary-400 group-hover:text-white transition-colors" />
                 </div>
-                <span className="text-sm text-gray-400 group-hover:text-white transition-colors">support@shophub.com</span>
+                <span className="text-sm text-gray-400 group-hover:text-white transition-colors">support@shopease.com</span>
               </li>
             </ul>
           </div>
@@ -159,7 +159,7 @@ export const Footer = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center space-x-2 text-gray-400 text-sm">
-              <span>© {new Date().getFullYear()} ShopHub. Made with</span>
+              <span>© {new Date().getFullYear()} ShopEase. Made with</span>
               <Heart className="h-4 w-4 text-red-500 fill-red-500 animate-pulse" />
               <span>All rights reserved.</span>
             </div>

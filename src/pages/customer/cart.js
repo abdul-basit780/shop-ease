@@ -160,7 +160,7 @@ export default function Cart() {
   };
 
   const handleCheckout = () => {
-    router.push("/checkout");
+    router.push("/customer/checkout");
   };
 
   const isItemUpdating = (productId, selectedOptions) => {

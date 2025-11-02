@@ -22,6 +22,7 @@ export default function ProductDetails() {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState({});
+  const [displayImage, setDisplayImage] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -32,10 +33,17 @@ export default function ProductDetails() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (product) {
+      setDisplayImage(product.img);
+    }
+  }, [product]);
+
   const fetchProductDetails = async () => {
     try {
       setIsLoading(true);
       const response = await apiClient.get(`/api/public/products/${id}`);
+      console.log(response)
       
       if (response.success && response.data) {
         setProduct(response.data);
@@ -130,6 +138,13 @@ export default function ProductDetails() {
       ...prev,
       [optionName]: valueObj
     }));
+    
+    // Update display image if the selected option has an image
+    if (valueObj && valueObj.img) {
+      setDisplayImage(valueObj.img);
+    } else if (product.img) {
+      setDisplayImage(product.img);
+    }
   };
 
   const validateOptions = () => {
@@ -328,11 +343,11 @@ export default function ProductDetails() {
           <div className="animate-fade-in">
             <div className="bg-white rounded-2xl shadow-lg p-8 sticky top-24">
               <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
-                {product.img ? (
+                {displayImage ? (
                   <img
-                    src={product.img}
+                    src={displayImage}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-all duration-500"
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.nextElementSibling.style.display = 'flex';
@@ -341,11 +356,57 @@ export default function ProductDetails() {
                 ) : null}
                 <div 
                   className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"
-                  style={{ display: product.img ? 'none' : 'flex' }}
+                  style={{ display: displayImage ? 'none' : 'flex' }}
                 >
                   <Package className="h-24 w-24 text-gray-400" />
                 </div>
               </div>
+              
+              {/* Thumbnail gallery for option images */}
+              {product.optionTypes && product.optionTypes.some(opt => 
+                opt.values && opt.values.some(val => typeof val === 'object' && val.img)
+              ) && (
+                <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                  {/* Main product image thumbnail */}
+                  <button
+                    onClick={() => setDisplayImage(product.img)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      displayImage === product.img ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <img
+                      src={product.img}
+                      alt="Main"
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                  
+                  {/* Option value image thumbnails */}
+                  {product.optionTypes.map(option => 
+                    option.values
+                      .filter(val => typeof val === 'object' && val.img)
+                      .map((val, idx) => (
+                        <button
+                          key={`${option.name}-${idx}`}
+                          onClick={() => {
+                            setDisplayImage(val.img);
+                            handleOptionChange(option.name, val);
+                          }}
+                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                            displayImage === val.img ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          title={`${option.name}: ${val.value}`}
+                        >
+                          <img
+                            src={val.img}
+                            alt={val.value}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))
+                  )}
+                </div>
+              )}
               
               {effectiveStock < 5 && effectiveStock > 0 && (
                 <div className="bg-orange-100 border border-orange-300 rounded-lg p-3 text-orange-800 text-sm font-medium">
@@ -438,6 +499,7 @@ export default function ProductDetails() {
                         const valueObj = typeof value === 'object' ? value : { id: value, value: value };
                         const isSelected = selectedOptions[option.name]?.value === displayValue;
                         const isOutOfStock = typeof value === 'object' && value.stock !== undefined && value.stock === 0;
+                        const hasImage = typeof value === 'object' && value.img;
                         
                         return (
                           <button
@@ -452,7 +514,10 @@ export default function ProductDetails() {
                                 : 'border-gray-300 text-gray-700 hover:border-blue-400'
                             }`}
                           >
-                            {displayValue}
+                            <span className="capitalize">{displayValue}</span>
+                            {hasImage && (
+                              <span className="ml-2 text-xs">🖼️</span>
+                            )}
                             {isOutOfStock && (
                               <span className="absolute top-1 right-1 text-xs text-red-500">✕</span>
                             )}
@@ -673,6 +738,43 @@ export default function ProductDetails() {
           </div>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes scale-in {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out;
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.5s ease-out forwards;
+          opacity: 0;
+        }
+
+        .animation-delay-300 {
+          animation-delay: 0.3s;
+        }
+      `}</style>
     </div>
   );
 }
