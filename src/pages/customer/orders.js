@@ -67,7 +67,7 @@ export default function MyOrders() {
         return <Package className="h-5 w-5 text-blue-600" />;
       case "shipped":
         return <Truck className="h-5 w-5 text-purple-600" />;
-      case "delivered":
+      case "completed":
         return <CheckCircle className="h-5 w-5 text-green-600" />;
       case "cancelled":
         return <XCircle className="h-5 w-5 text-red-600" />;
@@ -84,7 +84,7 @@ export default function MyOrders() {
         return "bg-blue-100 text-blue-800 border-blue-200";
       case "shipped":
         return "bg-purple-100 text-purple-800 border-purple-200";
-      case "delivered":
+      case "completed":
         return "bg-green-100 text-green-800 border-green-200";
       case "cancelled":
         return "bg-red-100 text-red-800 border-red-200";
