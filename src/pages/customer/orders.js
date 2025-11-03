@@ -97,7 +97,7 @@ export default function MyOrders() {
     switch (status) {
       case "pending":
         return "text-yellow-600";
-      case "paid":
+      case "completed":
         return "text-green-600";
       case "failed":
         return "text-red-600";

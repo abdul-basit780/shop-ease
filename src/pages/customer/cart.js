@@ -57,6 +57,7 @@ export default function Cart() {
     try {
       setIsLoading(true);
       const response = await apiClient.get("/api/customer/cart");
+      console.log(response)
 
       if (response.success && response.data) {
         setCart(response.data);

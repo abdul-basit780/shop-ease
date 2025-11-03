@@ -125,12 +125,12 @@ export default function OrderDetails() {
     try {
       setIsLoading(true);
       const response = await apiClient.get(`/api/customer/order/${id}`);
+      console.log(response)
       
       if (response.success && response.data) {
         setOrder(response.data);
       }
     } catch (error) {
-      console.error('Error fetching order:', error);
       toast.error('Failed to load order details');
     } finally {
       setIsLoading(false);
@@ -139,7 +139,7 @@ export default function OrderDetails() {
 
   const fetchProductReviews = async (productIds) => {
     try {
-      const currentUserId = authService.getCurrentUser()?.userId;
+      const currentUserId = authService.getCurrentUser()?.id;
       if (!currentUserId) return;
 
       const reviews = {};
@@ -150,11 +150,15 @@ export default function OrderDetails() {
           const response = await apiClient.get(
             `/api/public/products/${productId}/feedbacks?page=1&limit=100`
           );
+          console.log('feedback',response)
           
           if (response.success && response.data?.feedbacks) {
-            // Find user's review for this product
+            // Find user's review for this product - FIXED: Check both _id and id
             const userReview = response.data.feedbacks.find(
-              f => f.customerId?._id === currentUserId || f.customerId === currentUserId
+              f => {
+                const customerId = f.customerId?._id || f.customerId?.id || f.customerId;
+                return customerId === currentUserId;
+              }
             );
             
             if (userReview) {

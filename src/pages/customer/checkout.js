@@ -65,8 +65,6 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
         return;
       }
 
-      console.log('Payment method created:', paymentMethod.id);
-
       // Step 2: Create order with Stripe payment method
       const orderData = {
         addressId: address.id,
@@ -99,8 +97,6 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
           return;
         }
 
-        console.log('Payment confirmed:', paymentIntent.status);
-
         // Payment successful
         if (paymentIntent.status === 'succeeded') {
           // Update payment status in backend
@@ -108,7 +104,6 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
             await apiClient.patch(`/api/customer/order/${response.data.order.id}`, {
               action: 'confirmPayment'
             });
-            console.log('Payment status updated in backend');
           } catch (confirmErr) {
             console.error('Failed to update payment status:', confirmErr);
             // Don't fail the order flow if status update fails
@@ -127,7 +122,6 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
         throw new Error('No payment client secret received');
       }
     } catch (err) {
-      console.error('Payment error:', err);
       setError(err.message || 'Payment failed');
       onPaymentError(err);
     } finally {
@@ -261,6 +255,7 @@ export default function CheckoutPage() {
     try {
       setIsLoading(true);
       const cartRes = await apiClient.get('/api/customer/cart');
+      console.log(cartRes)
 
       if (cartRes.success && cartRes.data) {
         setCart(cartRes.data);
