@@ -694,7 +694,7 @@ export default function AdminDashboard() {
         />
         <StatCard
           title="Total Products"
-            value={stats?.overview?.totalProducts || 0}
+            value={stats?.overview?.products?.active || stats?.overview?.totalProducts || 0}
             change="+5%"
           changeType="increase"
           icon={Package}

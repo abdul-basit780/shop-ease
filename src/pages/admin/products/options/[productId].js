@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { 
   Package, 
   ArrowLeft, 
@@ -146,6 +147,32 @@ const AdminLayout = ({ children, title, subtitle }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#1f2937',
+            padding: '16px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e5e7eb',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
     </div>
   );
 };
@@ -205,6 +232,7 @@ export default function ProductOptions() {
   const { productId } = router.query;
   const [product, setProduct] = useState(null);
   const [optionTypes, setOptionTypes] = useState([]);
+  const [optionTypeStats, setOptionTypeStats] = useState({}); // Store stats for each option type
   const [loading, setLoading] = useState(true);
   const [showCreateOptionType, setShowCreateOptionType] = useState(false);
   const [newOptionType, setNewOptionType] = useState({ name: '' });
@@ -215,6 +243,13 @@ export default function ProductOptions() {
       fetchOptionTypes();
     }
   }, [productId]);
+
+  useEffect(() => {
+    // Fetch stats for all option types when they change
+    if (optionTypes.length > 0 && product) {
+      fetchAllOptionTypeStats();
+    }
+  }, [optionTypes, product]);
 
   const fetchProduct = async () => {
     try {
@@ -251,6 +286,73 @@ export default function ProductOptions() {
     }
   };
 
+  const fetchAllOptionTypeStats = async () => {
+    try {
+      console.log('Fetching stats for option types:', optionTypes);
+      const statsPromises = optionTypes.map(async (optionType) => {
+        try {
+          const optionTypeId = optionType.id || optionType._id;
+          console.log(`Fetching values for option type: ${optionTypeId}`);
+          const response = await apiClient.get(`/api/admin/option-value?optionTypeId=${optionTypeId}`);
+          console.log(`Response for option type ${optionTypeId}:`, response);
+          
+          if (response.success) {
+            const values = response.data?.optionValues || response.optionValues || [];
+            console.log(`Found ${values.length} values for option type ${optionTypeId}:`, values);
+            
+            // Calculate stats
+            const valueCount = values.length;
+            const totalStock = values.reduce((sum, val) => sum + (parseInt(val.stock) || 0), 0);
+            
+            // Calculate price adjustment range (just the adjustments, not full prices)
+            const priceAdjustments = values.map(val => parseFloat(val.price) || 0).filter(adj => !isNaN(adj));
+            const minAdjustment = priceAdjustments.length > 0 ? Math.min(...priceAdjustments) : 0;
+            const maxAdjustment = priceAdjustments.length > 0 ? Math.max(...priceAdjustments) : 0;
+            
+            return {
+              optionTypeId: optionTypeId,
+              valueCount,
+              totalStock,
+              minAdjustment: isNaN(minAdjustment) ? 0 : minAdjustment,
+              maxAdjustment: isNaN(maxAdjustment) ? 0 : maxAdjustment,
+              values: values // Store values for display in table
+            };
+          }
+          console.warn(`No success response for option type ${optionTypeId}`);
+          return {
+            optionTypeId: optionTypeId,
+            valueCount: 0,
+            totalStock: 0,
+            minAdjustment: 0,
+            maxAdjustment: 0,
+            values: []
+          };
+        } catch (error) {
+          console.error(`Error fetching stats for option type ${optionType.id}:`, error);
+          return {
+            optionTypeId: optionType.id || optionType._id,
+            valueCount: 0,
+            totalStock: 0,
+            minAdjustment: 0,
+            maxAdjustment: 0,
+            values: []
+          };
+        }
+      });
+      
+      const statsResults = await Promise.all(statsPromises);
+      console.log('All stats results:', statsResults);
+      const statsMap = {};
+      statsResults.forEach(stat => {
+        statsMap[stat.optionTypeId] = stat;
+      });
+      console.log('Stats map:', statsMap);
+      setOptionTypeStats(statsMap);
+    } catch (error) {
+      console.error('Error fetching option type stats:', error);
+    }
+  };
+
   const handleCreateOptionType = async (e) => {
     e.preventDefault();
     
@@ -270,7 +372,8 @@ export default function ProductOptions() {
         toast.success('Option type created successfully!');
         setNewOptionType({ name: '' });
         setShowCreateOptionType(false);
-        fetchOptionTypes();
+        await fetchOptionTypes();
+        // Stats will be fetched automatically via useEffect
       } else {
         toast.error(response.message || 'Failed to create option type');
       }
@@ -291,7 +394,8 @@ export default function ProductOptions() {
       console.log('Delete option type response:', response);
       if (response.success) {
         toast.success('Option type deleted successfully!');
-        fetchOptionTypes();
+        await fetchOptionTypes();
+        // Stats will be updated automatically via useEffect
       } else {
         toast.error(response.message || 'Failed to delete option type');
       }
@@ -429,16 +533,77 @@ export default function ProductOptions() {
                 <CardBody>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">0</div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {optionTypeStats[optionType.id]?.valueCount || 0}
+                      </div>
                       <div className="text-sm text-blue-600">Values</div>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">0</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {optionTypeStats[optionType.id]?.totalStock || 0}
+                      </div>
                       <div className="text-sm text-green-600">Total Stock</div>
                     </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">$0</div>
-                      <div className="text-sm text-purple-600">Price Range</div>
+                    <div className="p-4 bg-purple-50 rounded-lg">
+                      <div className="text-sm font-semibold text-purple-700 mb-3 text-center">Price Adjustments</div>
+                      {(() => {
+                        const optionTypeId = optionType.id || optionType._id;
+                        const stats = optionTypeStats[optionTypeId];
+                        const basePrice = parseFloat(product?.price) || 0;
+                        
+                        if (!stats) {
+                          return (
+                            <div className="text-center text-gray-500 text-sm py-2">Loading...</div>
+                          );
+                        }
+                        
+                        const values = stats.values || [];
+                        if (values.length === 0 || stats.valueCount === 0) {
+                          return (
+                            <div className="text-center text-gray-500 text-sm py-2">No values</div>
+                          );
+                        }
+                        
+                        return (
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {values.map((value, idx) => {
+                              const adjustment = parseFloat(value.price);
+                              if (isNaN(adjustment)) {
+                                return null;
+                              }
+                              
+                              const totalPrice = basePrice + adjustment;
+                              const isPositive = adjustment >= 0;
+                              const adjustmentDisplay = Math.abs(adjustment).toFixed(2);
+                              const valueName = value.value || value.name || `Value ${idx + 1}`;
+                              
+                              return (
+                                <div key={value.id || value._id || idx} className="bg-white rounded-md p-2.5 border border-purple-100 hover:border-purple-200 transition-colors">
+                                  <div className="text-sm font-semibold text-gray-800 mb-1.5">{valueName}</div>
+                                  <div className="flex items-center justify-between text-xs space-x-2">
+                                    <div className="flex items-center space-x-1">
+                                      <span className="text-gray-600">Base:</span>
+                                      <span className="font-medium text-gray-700">${basePrice.toFixed(2)}</span>
+                                    </div>
+                                    <span className="text-gray-400">+</span>
+                                    <div className="flex items-center space-x-1">
+                                      <span className="text-gray-600">Adjustment:</span>
+                                      <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                        {isPositive ? '+' : '-'}${adjustmentDisplay}
+                                      </span>
+                                    </div>
+                                    <span className="text-gray-400">=</span>
+                                    <div className="flex items-center space-x-1">
+                                      <span className="text-gray-600">Total:</span>
+                                      <span className="font-semibold text-purple-700">${totalPrice.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardBody>

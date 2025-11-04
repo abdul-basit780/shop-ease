@@ -258,11 +258,11 @@ const RatingStars = ({ rating, maxRating = 5 }) => {
 // Feedback Type Badge Component
 const FeedbackTypeBadge = ({ type }) => {
   const typeConfig = {
-    review: { color: 'bg-blue-100 text-blue-800', icon: Star },
-    complaint: { color: 'bg-red-100 text-red-800', icon: AlertCircle },
-    suggestion: { color: 'bg-green-100 text-green-800', icon: ThumbsUp },
-    question: { color: 'bg-purple-100 text-purple-800', icon: MessageSquare },
-    bug: { color: 'bg-orange-100 text-orange-800', icon: Flag },
+    review: { color: 'bg-blue-100 text-blue-800', icon: Star, label: 'Review' },
+    complaint: { color: 'bg-red-100 text-red-800', icon: AlertCircle, label: 'Complaint' },
+    suggestion: { color: 'bg-green-100 text-green-800', icon: ThumbsUp, label: 'Suggestion' },
+    question: { color: 'bg-purple-100 text-purple-800', icon: MessageSquare, label: 'Question' },
+    bug: { color: 'bg-orange-100 text-orange-800', icon: Flag, label: 'Bug' },
   };
 
   const config = typeConfig[type] || typeConfig.review;
@@ -271,7 +271,7 @@ const FeedbackTypeBadge = ({ type }) => {
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
       <Icon className="w-4 h-4 mr-2" />
-      {type.charAt(0).toUpperCase() + type.slice(1)}
+      {config.label || (type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown')}
     </span>
   );
 };
@@ -279,10 +279,10 @@ const FeedbackTypeBadge = ({ type }) => {
 // Feedback Status Badge Component
 const FeedbackStatusBadge = ({ status }) => {
   const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    reviewed: { color: 'bg-blue-100 text-blue-800', icon: Eye },
-    resolved: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    closed: { color: 'bg-gray-100 text-gray-800', icon: X },
+    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
+    reviewed: { color: 'bg-blue-100 text-blue-800', icon: Eye, label: 'Reviewed' },
+    resolved: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Resolved' },
+    closed: { color: 'bg-gray-100 text-gray-800', icon: X, label: 'Closed' },
   };
 
   const config = statusConfig[status] || statusConfig.pending;
@@ -291,7 +291,7 @@ const FeedbackStatusBadge = ({ status }) => {
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
       <Icon className="w-4 h-4 mr-2" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {config.label || (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown')}
     </span>
   );
 };

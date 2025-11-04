@@ -209,8 +209,7 @@ export default function CategoryView() {
   const [parentCategory, setParentCategory] = useState(null);
   const [stats, setStats] = useState({
     productCount: 0,
-    subcategoryCount: 0,
-    totalViews: 0
+    subcategoryCount: 0
   });
 
   useEffect(() => {
@@ -300,36 +299,75 @@ export default function CategoryView() {
     try {
       console.log('Fetching category stats for ID:', id);
       
-      // Get products in this category
-      console.log('Fetching products for category ID:', id);
-      const productsResponse = await apiClient.get(`/api/admin/product?categoryId=${id}&limit=1`);
-      console.log('Products response for category:', productsResponse);
-      console.log('API URL called:', `/admin/product?categoryId=${id}&limit=1`);
-      
-      // The API response structure might be different
-      const productCount = productsResponse.data?.pagination?.total || 
-                          productsResponse.pagination?.total || 
-                          productsResponse.data?.products?.length ||
-                          productsResponse.products?.length || 0;
-      
-      // Get subcategories (categories with this as parent)
-      const categoriesResponse = await apiClient.get('/api/admin/category');
-      console.log('Categories response:', categoriesResponse);
-      
+      // Get all categories to find subcategories
+      const categoriesResponse = await apiClient.get('/api/admin/category?limit=100&includeDeleted=false');
       const allCategories = categoriesResponse.data?.categories || 
                            categoriesResponse.categories || [];
-      const subcategoryCount = allCategories.filter(cat => cat.parentId === id).length;
+      
+      // Find the current category
+      const currentCategory = allCategories.find(cat => (cat.id || cat._id) === id);
+      const isParentCategory = !currentCategory?.parentId;
+      
+      // Get subcategories (categories with this as parent)
+      const subcategories = allCategories.filter(cat => {
+        const catParentId = cat.parentId?.toString() || cat.parentId;
+        const currentIdStr = (id || currentCategory?.id || currentCategory?._id).toString();
+        return catParentId === currentIdStr;
+      });
+      const subcategoryCount = subcategories.length;
+      
+      // Calculate product count
+      let productCount = 0;
+      
+      if (isParentCategory) {
+        // For parent categories: count products directly in parent + all subcategories
+        const categoryId = id || currentCategory?.id || currentCategory?._id;
+        
+        // Get products directly in parent category
+        try {
+          const parentProductsResponse = await apiClient.get(`/api/admin/product?categoryId=${categoryId}&limit=1`);
+          const parentProductCount = parentProductsResponse.data?.pagination?.total || 
+                                    parentProductsResponse.pagination?.total || 0;
+          productCount += parentProductCount;
+        } catch (error) {
+          console.error('Error fetching parent category products:', error);
+        }
+        
+        // Get products from all subcategories
+        const subcategoryProductPromises = subcategories.map(async (sub) => {
+          try {
+            const subId = sub.id || sub._id;
+            const response = await apiClient.get(`/api/admin/product?categoryId=${subId}&limit=1`);
+            return response.data?.pagination?.total || response.pagination?.total || 0;
+          } catch (error) {
+            console.error(`Error fetching products for subcategory ${sub.name}:`, error);
+            return 0;
+          }
+        });
+        
+        const subcategoryProductCounts = await Promise.all(subcategoryProductPromises);
+        productCount += subcategoryProductCounts.reduce((sum, count) => sum + count, 0);
+      } else {
+        // For subcategories: count products directly in this subcategory
+        try {
+          const categoryId = id || currentCategory?.id || currentCategory?._id;
+          const productsResponse = await apiClient.get(`/api/admin/product?categoryId=${categoryId}&limit=1`);
+          productCount = productsResponse.data?.pagination?.total || 
+                        productsResponse.pagination?.total || 0;
+        } catch (error) {
+          console.error('Error fetching subcategory products:', error);
+        }
+      }
       
       setStats({
         productCount,
-        subcategoryCount,
-        totalViews: 0 // This would need to be implemented in the backend
+        subcategoryCount
       });
       
       console.log('Category stats calculated:', { 
         productCount, 
         subcategoryCount, 
-        productsResponse: productsResponse,
+        isParentCategory,
         allCategories: allCategories.length 
       });
     } catch (error) {
@@ -458,7 +496,7 @@ export default function CategoryView() {
             )}
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <Link href={`/admin/categories/edit/${category.id}`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />
@@ -512,18 +550,19 @@ export default function CategoryView() {
                 <h3 className="text-lg font-semibold text-gray-900">Category Statistics</h3>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <div className="text-2xl font-bold text-blue-600">{stats.productCount}</div>
                     <div className="text-sm text-blue-600">Products</div>
+                    {!category.parentId && stats.subcategoryCount > 0 && (
+                      <div className="text-xs text-blue-500 mt-1">
+                        (Includes products from subcategories)
+                      </div>
+                    )}
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">{stats.subcategoryCount}</div>
                     <div className="text-sm text-green-600">Subcategories</div>
-                  </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">{stats.totalViews}</div>
-                    <div className="text-sm text-purple-600">Total Views</div>
                   </div>
                 </div>
               </CardBody>
@@ -539,11 +578,22 @@ export default function CategoryView() {
               </CardHeader>
               <CardBody>
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-green-700 font-medium">Active</span>
+                  {!category.deletedAt ? (
+                    <>
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span className="text-green-700 font-medium">Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      <span className="text-red-700 font-medium">Inactive</span>
+                    </>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600 mt-2">
-                  This category is currently available for use.
+                  {!category.deletedAt 
+                    ? "This category is currently available for use."
+                    : "This category has been deleted and is not available for use."}
                 </p>
               </CardBody>
             </Card>
@@ -574,7 +624,7 @@ export default function CategoryView() {
                     </Button>
                   </Link>
                 )}
-                <Button variant="danger" className="w-full" onClick={handleDelete}>
+                <Button variant="danger" className="w-full mt-2" onClick={handleDelete}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Category
                 </Button>

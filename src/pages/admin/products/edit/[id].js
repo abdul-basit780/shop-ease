@@ -274,11 +274,14 @@ export default function ProductEdit() {
   const fetchCategories = async () => {
     try {
       console.log('Fetching categories...');
-      const response = await apiClient.get('/api/admin/category');
+      const response = await apiClient.get('/api/admin/category?limit=100&includeDeleted=false');
       console.log('Categories response:', response);
       
       if (response.success) {
-        setCategories(response.data?.categories || response.categories || []);
+        const allCategories = response.data?.categories || response.categories || [];
+        // Filter to only show active categories (where deletedAt is null)
+        const activeCategories = allCategories.filter(cat => !cat.deletedAt);
+        setCategories(activeCategories);
       } else {
         console.error('Failed to fetch categories:', response.message);
         toast.error('Failed to load categories');
