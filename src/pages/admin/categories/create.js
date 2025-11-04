@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { 
   Tag, 
   ArrowLeft, 
@@ -155,6 +156,32 @@ const AdminLayout = ({ children, title, subtitle }) => {
           {children}
         </main>
       </div>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#1f2937',
+            padding: '16px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e5e7eb',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
     </div>
   );
 };
@@ -359,10 +386,31 @@ export default function CreateCategoryPage() {
       console.log('Created category fields:', Object.keys(response.data || {}));
 
       if (response.success) {
-        toast.success(isSubcategory ? 'Subcategory created successfully! 🎉' : 'Category created successfully! 🎉');
-        router.push('/admin/categories');
+        setLoading(false);
+        
+        const successMessage = isSubcategory ? 'Subcategory created successfully! 🎉' : 'Category created successfully! 🎉';
+        toast.success(successMessage, {
+          icon: "✅",
+          style: {
+            borderRadius: "12px",
+            background: "#10b981",
+            color: "#fff",
+          },
+        });
+        
+        // Wait 3 seconds to let user see the message, then redirect
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        
+        await router.push('/admin/categories');
       } else {
-        toast.error(response.message || 'Failed to create category');
+        setLoading(false);
+        toast.error(response.message || 'Failed to create category', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+          },
+        });
       }
     } catch (error) {
       console.error('Error creating category:', error);
@@ -371,27 +419,60 @@ export default function CreateCategoryPage() {
       
       // Handle specific validation errors from backend
       if (error.response?.status === 400) {
+        setLoading(false);
         const errorMessage = error.response?.data?.message || 'Validation failed. Please check your input.';
-        toast.error(errorMessage);
+        toast.error(errorMessage, {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+          },
+        });
         
         // If there are specific field errors, show them
         if (error.response?.data?.errors) {
           setErrors(error.response.data.errors);
         }
       } else if (error.response?.status === 409) {
+        setLoading(false);
         const errorMessage = error.response?.data?.message || 'Category already exists or there is a conflict.';
-        toast.error(`Conflict: ${errorMessage}`);
+        toast.error(`Conflict: ${errorMessage}`, {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+          },
+        });
         console.error('409 Conflict details:', error.response?.data);
       } else if (error.response?.status === 401) {
-        toast.error('You are not authorized. Please login again.');
+        setLoading(false);
+        toast.error('You are not authorized. Please login again.', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+          },
+        });
         router.push('/auth/login');
       } else if (error.response?.status === 403) {
-        toast.error('You do not have permission to create categories.');
+        setLoading(false);
+        toast.error('You do not have permission to create categories.', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+          },
+        });
       } else {
-        toast.error(`Failed to create category. Error: ${error.response?.status || 'Unknown error'}`);
+        setLoading(false);
+        toast.error(`Failed to create category. Error: ${error.response?.status || 'Unknown error'}`, {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+          },
+        });
       }
-    } finally {
-      setLoading(false);
     }
   };
 

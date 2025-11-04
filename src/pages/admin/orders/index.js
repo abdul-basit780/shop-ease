@@ -156,15 +156,6 @@ const AdminLayout = ({ children, title, subtitle }) => {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden md:block relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search orders..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -246,12 +237,12 @@ const Button = ({
 // Order Status Badge Component
 const OrderStatusBadge = ({ status }) => {
   const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    processing: { color: 'bg-blue-100 text-blue-800', icon: Package },
-    shipped: { color: 'bg-purple-100 text-purple-800', icon: Package },
-    delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    cancelled: { color: 'bg-red-100 text-red-800', icon: X },
-    refunded: { color: 'bg-gray-100 text-gray-800', icon: AlertCircle },
+    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
+    processing: { color: 'bg-blue-100 text-blue-800', icon: Package, label: 'Processing' },
+    shipped: { color: 'bg-purple-100 text-purple-800', icon: Package, label: 'Shipped' },
+    completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Delivered' },
+    cancelled: { color: 'bg-red-100 text-red-800', icon: X, label: 'Cancelled' },
+    refunded: { color: 'bg-gray-100 text-gray-800', icon: AlertCircle, label: 'Refunded' },
   };
 
   const config = statusConfig[status] || statusConfig.pending;
@@ -260,7 +251,7 @@ const OrderStatusBadge = ({ status }) => {
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
       <Icon className="w-3 h-3 mr-1" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {config.label || status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 };
@@ -277,6 +268,7 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState(null);
+  const [cumulativeStats, setCumulativeStats] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -292,7 +284,59 @@ export default function OrdersPage() {
       console.log('Orders response:', response);
       
       if (response.success && response.data) {
-        setOrders(response.data.orders || []);
+        const orders = response.data.orders || [];
+        
+        // Fetch customer info for all orders
+        const uniqueCustomerIds = [...new Set(orders.map(order => order.customerId).filter(Boolean))];
+        const customerMap = new Map();
+        
+        // Fetch customer details for each unique customerId
+        if (uniqueCustomerIds.length > 0) {
+          try {
+            const customerPromises = uniqueCustomerIds.map(async (customerId) => {
+              try {
+                const customerResponse = await apiClient.get(`/api/admin/customer/${customerId}`);
+                if (customerResponse.success && customerResponse.data) {
+                  // API response structure: { success, message, data: { success, message, customer, statusCode } }
+                  const customer = customerResponse.data.customer || customerResponse.data;
+                  if (customer && customer.name) {
+                    return {
+                      id: customerId,
+                      name: customer.name,
+                      email: customer.email || ''
+                    };
+                  }
+                }
+              } catch (err) {
+                console.warn(`Failed to fetch customer ${customerId}:`, err);
+              }
+              return null;
+            });
+            
+            const customers = await Promise.all(customerPromises);
+            customers.forEach(customer => {
+              if (customer && customer.id) {
+                customerMap.set(customer.id, {
+                  name: customer.name || 'Unknown Customer',
+                  email: customer.email || 'No email'
+                });
+              }
+            });
+          } catch (err) {
+            console.warn('Failed to fetch some customer details:', err);
+          }
+        }
+        
+        // Enrich orders with customer info
+        const enrichedOrders = orders.map(order => ({
+          ...order,
+          customer: customerMap.get(order.customerId) || {
+            name: 'Unknown Customer',
+            email: 'No email'
+          }
+        }));
+        
+        setOrders(enrichedOrders);
         setTotalPages(response.data.pagination?.totalPages || 1);
         setStats(response.data.stats || null);
       } else {
@@ -308,9 +352,40 @@ export default function OrdersPage() {
     }
   };
 
+  const fetchCumulativeStats = async () => {
+    try {
+      // Fetch cumulative stats from dashboard API (unfiltered)
+      const response = await apiClient.get('/api/admin/dashboard/stats');
+      if (response.success && response.data) {
+        const dashboardData = response.data;
+        const orderStats = dashboardData.overview?.orders || {};
+        const revenueStats = dashboardData.overview?.revenue || {};
+        
+        // Get status breakdown from dashboard
+        const statusBreakdown = {};
+        if (dashboardData.overview?.orders?.byStatus) {
+          Object.entries(dashboardData.overview.orders.byStatus).forEach(([status, count]) => {
+            statusBreakdown[status] = count;
+          });
+        }
+        
+        setCumulativeStats({
+          totalOrders: orderStats.total || 0,
+          totalRevenue: revenueStats.total || 0,
+          statusBreakdown: statusBreakdown
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching cumulative stats:', error);
+      // Keep using filtered stats as fallback
+      setCumulativeStats(null);
+    }
+  };
+
   useEffect(() => {
     if (isAdmin) {
       fetchOrders();
+      fetchCumulativeStats();
     }
   }, [currentPage, searchTerm, statusFilter, isAdmin]);
 
@@ -325,10 +400,38 @@ export default function OrdersPage() {
   };
 
   const handleView = (order) => {
-    router.push(`/admin/orders/view/${order._id}`);
+    const orderId = order.id || order._id;
+    if (!orderId) {
+      console.error('Order object:', order);
+      toast.error('Order ID not found');
+      return;
+    }
+    console.log('Navigating to order view:', orderId);
+    router.push(`/admin/orders/view/${orderId}`);
   };
 
   const handleUpdateStatus = async (order, newStatus) => {
+    // Get confirmation message based on status transition
+    const getConfirmationMessage = (currentStatus, newStatus) => {
+      const orderNumber = order.orderNumber || order.id?.slice(-8) || order._id?.slice(-8);
+      
+      switch (newStatus) {
+        case 'processing':
+          return `Are you sure you want to process order #${orderNumber}? This will mark the order as being processed.`;
+        case 'shipped':
+          return `Are you sure you want to mark order #${orderNumber} as shipped? This will notify the customer that their order is on the way.`;
+        case 'completed':
+          return `Are you sure you want to mark order #${orderNumber} as delivered? This will complete the order and mark it as successfully delivered.`;
+        default:
+          return `Are you sure you want to update order #${orderNumber} status to ${newStatus}?`;
+      }
+    };
+
+    const confirmationMessage = getConfirmationMessage(order.status, newStatus);
+    if (!confirm(confirmationMessage)) {
+      return;
+    }
+
     try {
       const response = await apiClient.put(`/api/admin/orders/${order.id || order._id}`, {
         status: newStatus
@@ -460,14 +563,14 @@ export default function OrdersPage() {
       </div>
 
       {/* Enhanced Stats Cards */}
-      {stats && (
+      {(cumulativeStats || stats) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-blue-600">Total Orders</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.total || 0}</p>
+                  <p className="text-3xl font-bold text-blue-900">{cumulativeStats?.totalOrders || stats?.totalOrders || 0}</p>
                   <p className="text-xs text-blue-600 mt-1">All time</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
@@ -481,7 +584,7 @@ export default function OrdersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-yellow-600">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-900">{stats.pending || 0}</p>
+                  <p className="text-3xl font-bold text-yellow-900">{cumulativeStats?.statusBreakdown?.pending || stats?.statusBreakdown?.pending || 0}</p>
                   <p className="text-xs text-yellow-600 mt-1">Needs attention</p>
                 </div>
                 <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
@@ -495,7 +598,7 @@ export default function OrdersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-600">Completed</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.completed || 0}</p>
+                  <p className="text-3xl font-bold text-green-900">{cumulativeStats?.statusBreakdown?.completed || stats?.statusBreakdown?.completed || 0}</p>
                   <p className="text-xs text-green-600 mt-1">Successfully delivered</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
@@ -509,7 +612,7 @@ export default function OrdersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-purple-600">Total Revenue</p>
-                  <p className="text-3xl font-bold text-purple-900">${stats.revenue || 0}</p>
+                  <p className="text-3xl font-bold text-purple-900">${((cumulativeStats?.totalRevenue || stats?.totalRevenue || 0).toFixed(2))}</p>
                   <p className="text-xs text-purple-600 mt-1">Lifetime earnings</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
@@ -548,7 +651,7 @@ export default function OrdersPage() {
                 <option value="pending">Pending</option>
                 <option value="processing">Processing</option>
                 <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
+                <option value="completed">Delivered</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="refunded">Refunded</option>
               </select>
@@ -613,10 +716,10 @@ export default function OrdersPage() {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
-                                #{order.orderNumber || order._id.slice(-8)}
+                                #{order.orderNumber || order.id?.slice(-8) || order._id?.slice(-8)}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {order.items?.length || 0} items
+                                {order.products?.length || 0} items
                               </div>
                             </div>
                           </div>
@@ -678,7 +781,7 @@ export default function OrdersPage() {
                               <Button
                                 variant="success"
                                 size="sm"
-                                onClick={() => handleUpdateStatus(order, 'delivered')}
+                                onClick={() => handleUpdateStatus(order, 'completed')}
                               >
                                 Deliver
                               </Button>

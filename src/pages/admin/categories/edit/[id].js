@@ -206,7 +206,8 @@ export default function CategoryEdit() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    parentId: ''
+    parentId: '',
+    sortOrder: ''
   });
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -232,10 +233,7 @@ export default function CategoryEdit() {
           name: category.name || '',
           description: category.description || '',
           parentId: category.parentId || '',
-          sortOrder: category.sortOrder?.toString() || '',
-          metaTitle: category.metaTitle || '',
-          metaDescription: category.metaDescription || '',
-          isActive: category.isActive !== undefined ? category.isActive : true
+          sortOrder: category.sortOrder?.toString() || ''
         });
       } else {
         console.error('Failed to fetch category:', response.message);
@@ -336,27 +334,27 @@ export default function CategoryEdit() {
     try {
       console.log('Updating category with data:', formData);
       
+      // First, update the category fields (name, description, parentId)
       const submitData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        parentId: formData.parentId || null,
-        sortOrder: formData.sortOrder ? parseInt(formData.sortOrder) : null,
-        metaTitle: formData.metaTitle.trim() || null,
-        metaDescription: formData.metaDescription.trim() || null,
-        isActive: formData.isActive
+        parentId: formData.parentId || null
       };
 
       console.log('Submitting to /admin/category/' + id);
-      const response = await apiClient.put(`/api/admin/category/${id}`, submitData);
+      const updateResponse = await apiClient.put(`/api/admin/category/${id}`, submitData);
 
-      console.log('Category update response:', response);
+      console.log('Category update response:', updateResponse);
 
-      if (response.success) {
-        toast.success('Category updated successfully! 🎉');
-        router.push('/admin/categories');
-      } else {
-        toast.error(response.message || 'Failed to update category');
+      if (!updateResponse.success) {
+        toast.error(updateResponse.message || 'Failed to update category');
+        setLoading(false);
+        return;
       }
+
+      toast.success('Category updated successfully! 🎉');
+      
+      router.push('/admin/categories');
     } catch (error) {
       console.error('Error updating category:', error);
       console.error('Error response:', error.response?.data);
@@ -516,85 +514,27 @@ export default function CategoryEdit() {
                 </CardBody>
               </Card>
 
-              {/* SEO Information */}
-              <Card>
-                <CardHeader>
-                  <h3 className="text-lg font-semibold text-gray-900">SEO Information</h3>
-                </CardHeader>
-                <CardBody className="space-y-6">
-                  {/* Meta Title */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Meta Title
-                    </label>
-                    <input
-                      type="text"
-                      name="metaTitle"
-                      value={formData.metaTitle}
-                      onChange={handleChange}
-                      placeholder="Enter meta title for SEO"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                    />
-                  </div>
-
-                  {/* Meta Description */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Meta Description
-                    </label>
-                    <textarea
-                      name="metaDescription"
-                      value={formData.metaDescription}
-                      onChange={handleChange}
-                      placeholder="Enter meta description for SEO"
-                      rows={3}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all resize-none"
-                    />
-                  </div>
-                </CardBody>
-              </Card>
-
-              {/* Status */}
-              <Card>
-                <CardHeader>
-                  <h3 className="text-lg font-semibold text-gray-900">Status</h3>
-                </CardHeader>
-                <CardBody>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    />
-                    <label className="text-sm font-medium text-gray-700">
-                      Active (Category is visible to customers)
-                    </label>
-                  </div>
-                </CardBody>
-              </Card>
             </div>
 
             {/* Actions */}
             <div className="space-y-6">
               <Card>
                 <CardBody>
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <Button
                       type="submit"
                       variant="primary"
                       className="w-full"
                       isLoading={loading}
                     >
-                      <Save className="h-4 w-4" />
+                      <Save className="h-4 w-4 mr-2" />
                       Update Category
                     </Button>
                     <Link href="/admin/categories">
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full"
+                        className="w-full hover:bg-gray-100 hover:text-gray-700"
                       >
                         Cancel
                       </Button>
@@ -618,20 +558,13 @@ export default function CategoryEdit() {
                       <span className="text-sm font-medium text-gray-500">Description:</span>
                       <p className="text-gray-900 text-sm">{formData.description || 'Category description'}</p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        formData.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {formData.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                      {formData.sortOrder && (
+                    {formData.sortOrder && (
+                      <div>
                         <span className="text-xs text-gray-500">
                           Sort: {formData.sortOrder}
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </CardBody>
               </Card>

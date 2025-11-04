@@ -238,12 +238,12 @@ const Button = ({
 // Order Status Badge Component
 const OrderStatusBadge = ({ status }) => {
   const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    processing: { color: 'bg-blue-100 text-blue-800', icon: Package },
-    shipped: { color: 'bg-purple-100 text-purple-800', icon: Truck },
-    completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    cancelled: { color: 'bg-red-100 text-red-800', icon: X },
-    refunded: { color: 'bg-gray-100 text-gray-800', icon: AlertCircle },
+    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
+    processing: { color: 'bg-blue-100 text-blue-800', icon: Package, label: 'Processing' },
+    shipped: { color: 'bg-purple-100 text-purple-800', icon: Truck, label: 'Shipped' },
+    completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Delivered' },
+    cancelled: { color: 'bg-red-100 text-red-800', icon: X, label: 'Cancelled' },
+    refunded: { color: 'bg-gray-100 text-gray-800', icon: AlertCircle, label: 'Refunded' },
   };
 
   const config = statusConfig[status] || statusConfig.pending;
@@ -252,7 +252,7 @@ const OrderStatusBadge = ({ status }) => {
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
       <Icon className="w-4 h-4 mr-2" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {config.label || status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 };
@@ -276,7 +276,33 @@ export default function OrderViewPage() {
       console.log('Order response:', response);
       
       if (response.success && response.data) {
-        setOrder(response.data);
+        const orderData = response.data;
+        
+        // Fetch customer info if customerId exists
+        if (orderData.customerId) {
+          try {
+            const customerResponse = await apiClient.get(`/api/admin/customer/${orderData.customerId}`);
+            if (customerResponse.success && customerResponse.data) {
+              const customer = customerResponse.data.customer || customerResponse.data;
+              if (customer) {
+                orderData.customer = {
+                  name: customer.name || 'Unknown Customer',
+                  email: customer.email || 'No email',
+                  phone: customer.phone || ''
+                };
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to fetch customer details:', err);
+            orderData.customer = {
+              name: 'Unknown Customer',
+              email: 'No email',
+              phone: ''
+            };
+          }
+        }
+        
+        setOrder(orderData);
       } else {
         toast.error(response.message || 'Order not found');
         router.push('/admin/orders');
@@ -307,6 +333,27 @@ export default function OrderViewPage() {
   }, [id, isAdmin]);
 
   const handleStatusUpdate = async (newStatus) => {
+    // Get confirmation message based on status transition
+    const getConfirmationMessage = (newStatus) => {
+      const orderNumber = order?.orderNumber || order?.id?.slice(-8) || order?._id?.slice(-8) || id?.slice(-8) || 'this order';
+      
+      switch (newStatus) {
+        case 'processing':
+          return `Are you sure you want to process order #${orderNumber}? This will mark the order as being processed.`;
+        case 'shipped':
+          return `Are you sure you want to mark order #${orderNumber} as shipped? This will notify the customer that their order is on the way.`;
+        case 'completed':
+          return `Are you sure you want to mark order #${orderNumber} as delivered? This will complete the order and mark it as successfully delivered.`;
+        default:
+          return `Are you sure you want to update order #${orderNumber} status to ${newStatus}?`;
+      }
+    };
+
+    const confirmationMessage = getConfirmationMessage(newStatus);
+    if (!confirm(confirmationMessage)) {
+      return;
+    }
+
     try {
       setUpdating(true);
       const response = await apiClient.put(`/api/admin/orders/${id}`, {
@@ -401,7 +448,7 @@ export default function OrderViewPage() {
   }
 
   return (
-    <AdminLayout title={`Order #${order.orderNumber || order._id?.slice(-8)}`} subtitle="View order details and manage status">
+    <AdminLayout title={`Order #${order.orderNumber || order.id?.slice(-8) || order._id?.slice(-8) || 'N/A'}`} subtitle="View order details and manage status">
       {/* Header Actions */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-4">
@@ -414,7 +461,7 @@ export default function OrderViewPage() {
           </Button>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              Order #{order.orderNumber || order._id?.slice(-8)}
+              Order #{order.orderNumber || order.id?.slice(-8) || order._id?.slice(-8) || 'N/A'}
             </h2>
             <p className="text-gray-600">
               Placed on {formatDate(order.createdAt)}
@@ -458,7 +505,9 @@ export default function OrderViewPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Current Status</span>
-                  <span className="font-medium">{order.status?.charAt(0).toUpperCase() + order.status?.slice(1)}</span>
+                  <span className="font-medium">
+                    {order.status === 'completed' ? 'Delivered' : (order.status?.charAt(0).toUpperCase() + order.status?.slice(1))}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Order Date</span>

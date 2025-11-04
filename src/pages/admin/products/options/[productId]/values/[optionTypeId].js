@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { 
   Package, 
   ArrowLeft, 
@@ -148,6 +149,32 @@ const AdminLayout = ({ children, title, subtitle }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#1f2937',
+            padding: '16px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e5e7eb',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
     </div>
   );
 };

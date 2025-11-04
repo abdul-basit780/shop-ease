@@ -16,7 +16,6 @@ import {
   Grid,
   List,
   Download,
-  Upload,
   RefreshCw,
   AlertCircle,
   AlertTriangle,
@@ -165,15 +164,6 @@ const AdminLayout = ({ children, title, subtitle }) => {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden md:block relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -367,23 +357,23 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected, 
 };
 
 // Enhanced Product Analytics Component
-const ProductAnalytics = ({ products }) => {
-  const totalProducts = products.length;
-  const inStockProducts = products.filter(p => p.stock > 0).length;
-  const outOfStockProducts = products.filter(p => p.stock === 0).length;
-  const lowStockProducts = products.filter(p => p.stock > 0 && p.stock <= 10).length;
-  const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+const ProductAnalytics = ({ cumulativeStats }) => {
+  const totalProducts = cumulativeStats?.total || 0;
+  const inStockProducts = cumulativeStats?.inStock || 0;
+  const outOfStockProducts = cumulativeStats?.outOfStock || 0;
+  const lowStockProducts = cumulativeStats?.lowStock || 0;
+  const totalValue = cumulativeStats?.totalValue || 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
       <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-600">Total Products</p>
-              <p className="text-3xl font-bold text-blue-900">{totalProducts}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-blue-600">Total Products</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900">{totalProducts}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <Package className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -393,11 +383,11 @@ const ProductAnalytics = ({ products }) => {
       <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-600">In Stock</p>
-              <p className="text-3xl font-bold text-green-900">{inStockProducts}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-green-600">In Stock</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900">{inStockProducts}</p>
             </div>
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <CheckCircle className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -407,11 +397,11 @@ const ProductAnalytics = ({ products }) => {
       <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-yellow-600">Low Stock</p>
-              <p className="text-3xl font-bold text-yellow-900">{lowStockProducts}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-yellow-600">Low Stock</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-900">{lowStockProducts}</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <AlertTriangle className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -421,11 +411,11 @@ const ProductAnalytics = ({ products }) => {
       <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-purple-600">Total Value</p>
-              <p className="text-3xl font-bold text-purple-900">${totalValue.toFixed(2)}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-purple-600">Total Value</p>
+              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-purple-900">${totalValue.toFixed(2)}</p>
             </div>
-            <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <DollarSign className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -446,12 +436,60 @@ const EnhancedFilters = ({
   stockStatus,
   setStockStatus,
   sortBy,
-  setSortBy
+  setSortBy,
+  categories = []
 }) => {
+  // Organize categories into hierarchical structure
+  const organizeCategories = (cats) => {
+    if (!cats || cats.length === 0) return [];
+    
+    // Separate parents and children
+    const parentCategories = cats.filter(cat => !cat.parentId || cat.parentId === null);
+    const childCategories = cats.filter(cat => cat.parentId && cat.parentId !== null);
+    
+    // Create a map of parentId to children
+    const childrenMap = new Map();
+    childCategories.forEach(child => {
+      const parentId = child.parentId?.toString() || child.parentId;
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+      childrenMap.get(parentId).push(child);
+    });
+    
+    // Build hierarchical list
+    const hierarchicalList = [];
+    parentCategories.forEach(parent => {
+      const parentId = parent.id || parent._id;
+      hierarchicalList.push({ ...parent, isParent: true, level: 0 });
+      
+      // Add children if any
+      const children = childrenMap.get(parentId.toString());
+      if (children && children.length > 0) {
+        children.forEach(child => {
+          hierarchicalList.push({ ...child, isParent: false, level: 1 });
+        });
+      }
+    });
+    
+    // Add any orphaned children (parent not found)
+    childCategories.forEach(child => {
+      const parentId = child.parentId?.toString() || child.parentId;
+      const hasParent = parentCategories.some(p => (p.id || p._id).toString() === parentId);
+      if (!hasParent) {
+        hierarchicalList.push({ ...child, isParent: false, level: 1 });
+      }
+    });
+    
+    return hierarchicalList;
+  };
+
+  const organizedCategories = organizeCategories(categories);
+
   return (
     <Card className="mb-6 animate-fade-in-up">
       <CardBody>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -471,10 +509,16 @@ const EnhancedFilters = ({
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="">All Categories</option>
-            <option value="electronics">Electronics</option>
-            <option value="clothing">Clothing</option>
-            <option value="books">Books</option>
-            <option value="home">Home & Garden</option>
+            {organizedCategories.map((category) => {
+              const categoryId = category.id || category._id;
+              const indent = category.level > 0 ? '  └─ ' : '';
+              const label = category.isParent ? `📁 ${category.name}` : `${indent}${category.name}`;
+              return (
+                <option key={categoryId} value={categoryId}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
 
           {/* Price Range */}
@@ -529,34 +573,40 @@ const BulkActions = ({ selectedProducts, onBulkDelete, onBulkEdit, onBulkExport 
   return (
     <Card className="mb-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
       <CardBody>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium text-primary-700">
-              {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
-            </span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <span className="text-sm font-medium text-primary-700">
+            {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={onBulkEdit}
+              className="flex-1 sm:flex-initial"
             >
-              <Edit className="h-4 w-4" />
-              Bulk Edit
+              <Edit className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Bulk Edit</span>
+              <span className="sm:hidden">Edit</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onBulkExport}
+              className="flex-1 sm:flex-initial"
             >
-              <Download className="h-4 w-4" />
-              Export Selected
+              <Download className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export</span>
+              <span className="sm:hidden">Export</span>
             </Button>
             <Button
               variant="danger"
               size="sm"
               onClick={onBulkDelete}
+              className="flex-1 sm:flex-initial"
             >
-              <Trash2 className="h-4 w-4" />
-              Delete Selected
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete</span>
+              <span className="sm:hidden">Delete</span>
             </Button>
           </div>
         </div>
@@ -581,35 +631,101 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [cumulativeStats, setCumulativeStats] = useState(null);
+  const [categories, setCategories] = useState([]);
 
   const fetchProducts = async () => {
     try {
       setRefreshing(true);
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '12',
-        ...(searchTerm && { search: searchTerm }),
-        ...(selectedCategory && { categoryId: selectedCategory }),
-      });
-
-      console.log('Fetching products with params:', params.toString());
-      const response = await apiClient.get(`/api/admin/product?${params}`);
-      console.log('Products response:', response);
-      console.log('Response structure:', {
-        success: response.success,
-        products: response.products,
-        data: response.data,
-        pagination: response.pagination
-      });
       
-      if (response.success) {
-        // The API returns products and pagination inside data object
-        setProducts(response.data?.products || []);
-        setTotalPages(response.data?.pagination?.totalPages || 1);
-      } else {
-        console.error('Failed to fetch products:', response.message);
-        toast.error('Failed to load products');
+      // If a parent category is selected, get all its subcategories
+      let categoryIdsToFetch = [];
+      if (selectedCategory) {
+        // First, try to find the category in the current categories list
+        const selectedCat = categories.find(cat => (cat.id || cat._id) === selectedCategory);
+        
+        if (selectedCat && !selectedCat.parentId) {
+          // This is a parent category - include it and all its subcategories
+          categoryIdsToFetch.push(selectedCategory);
+          const subcategories = categories.filter(cat => 
+            (cat.parentId === selectedCategory) || 
+            (cat.parentId && cat.parentId.toString() === selectedCategory.toString())
+          );
+          subcategories.forEach(sub => {
+            categoryIdsToFetch.push(sub.id || sub._id);
+          });
+        } else {
+          // This is a subcategory or category not found yet - fetch normally
+          categoryIdsToFetch = [selectedCategory];
+        }
       }
+      
+      // Fetch products for all relevant categories
+      let allProducts = [];
+      let totalProductsCount = 0;
+      
+      if (categoryIdsToFetch.length > 0) {
+        // Fetch products for each category (parent + subcategories)
+        const productPromises = categoryIdsToFetch.map(async (categoryId) => {
+          try {
+            const params = new URLSearchParams({
+              page: '1',
+              limit: '1000', // Get all products for this category
+              ...(searchTerm && { search: searchTerm }),
+              categoryId: categoryId,
+            });
+            const response = await apiClient.get(`/api/admin/product?${params}`);
+            if (response.success && response.data?.products) {
+              return response.data.products;
+            }
+            return [];
+          } catch (error) {
+            console.error(`Error fetching products for category ${categoryId}:`, error);
+            return [];
+          }
+        });
+        
+        const productsArrays = await Promise.all(productPromises);
+        // Combine and deduplicate products
+        const productMap = new Map();
+        productsArrays.flat().forEach(product => {
+          productMap.set(product.id || product._id, product);
+        });
+        allProducts = Array.from(productMap.values());
+        totalProductsCount = allProducts.length;
+        
+        // Apply pagination to combined results
+        const pageSize = 12;
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        allProducts = allProducts.slice(startIndex, endIndex);
+      } else {
+        // No category filter - fetch normally
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: '12',
+          ...(searchTerm && { search: searchTerm }),
+        });
+
+        const response = await apiClient.get(`/api/admin/product?${params}`);
+        
+        if (response.success) {
+          allProducts = response.data?.products || [];
+          totalProductsCount = response.data?.pagination?.total || allProducts.length;
+          setTotalPages(response.data?.pagination?.totalPages || 1);
+        } else {
+          console.error('Failed to fetch products:', response.message);
+          toast.error('Failed to load products');
+        }
+      }
+      
+      setProducts(allProducts);
+      
+      // Calculate total pages for category-filtered results
+      if (categoryIdsToFetch.length > 0) {
+        setTotalPages(Math.ceil(totalProductsCount / 12));
+      }
+      
     } catch (error) {
       console.error('Error fetching products:', error);
       if (error.response?.status === 401) {
@@ -626,11 +742,131 @@ export default function ProductsPage() {
     }
   };
 
+  const fetchCumulativeStats = async () => {
+    try {
+      const response = await apiClient.get('/api/admin/dashboard/stats');
+      if (response.success && response.data) {
+        const dashboardData = response.data;
+        const productStats = dashboardData.overview?.products || {};
+        
+        // Fetch all products to calculate total value, in-stock, and out-of-stock
+        const allProductsResponse = await apiClient.get('/api/admin/product?limit=10000');
+        let totalValue = 0;
+        let inStockCount = 0;
+        let outOfStockCount = 0;
+        if (allProductsResponse.success && allProductsResponse.data?.products) {
+          const allProducts = allProductsResponse.data.products;
+          totalValue = allProducts.reduce((sum, p) => 
+            sum + (parseFloat(p.price) || 0), 0
+          );
+          inStockCount = allProducts.filter(p => (p.stock || 0) > 0).length;
+          outOfStockCount = allProducts.filter(p => (p.stock || 0) === 0).length;
+        }
+        
+        // Use active products count (excluding deleted) to match what's shown on the page
+        setCumulativeStats({
+          total: productStats.active || productStats.total || 0, // Use active count to match page display
+          inStock: inStockCount || 0,
+          outOfStock: outOfStockCount || 0,
+          lowStock: productStats.lowStock || 0,
+          totalValue: totalValue
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching cumulative stats:', error);
+      // Set default stats on error
+      setCumulativeStats({
+        total: 0,
+        inStock: 0,
+        outOfStock: 0,
+        lowStock: 0,
+        totalValue: 0
+      });
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await apiClient.get('/api/admin/category?limit=1000');
+      if (response.success && response.data) {
+        const categoriesList = response.data.categories || response.data.data?.categories || [];
+        setCategories(categoriesList);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
   useEffect(() => {
     if (isAdmin) {
+      fetchCategories();
+      fetchCumulativeStats();
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin && categories.length >= 0) { // Allow empty array to fetch products without category filter
       fetchProducts();
     }
-  }, [currentPage, searchTerm, selectedCategory, isAdmin]);
+  }, [currentPage, searchTerm, selectedCategory, isAdmin, categories.length]);
+
+
+  // Apply client-side filtering and sorting
+  const getFilteredAndSortedProducts = () => {
+    let filtered = [...products];
+
+    // Apply price range filter
+    if (priceRange) {
+      if (priceRange === '0-50') {
+        filtered = filtered.filter(p => parseFloat(p.price) >= 0 && parseFloat(p.price) <= 50);
+      } else if (priceRange === '50-100') {
+        filtered = filtered.filter(p => parseFloat(p.price) > 50 && parseFloat(p.price) <= 100);
+      } else if (priceRange === '100-500') {
+        filtered = filtered.filter(p => parseFloat(p.price) > 100 && parseFloat(p.price) <= 500);
+      } else if (priceRange === '500+') {
+        filtered = filtered.filter(p => parseFloat(p.price) > 500);
+      }
+    }
+
+    // Apply stock status filter
+    if (stockStatus) {
+      if (stockStatus === 'in-stock') {
+        filtered = filtered.filter(p => p.stock > 0);
+      } else if (stockStatus === 'low-stock') {
+        filtered = filtered.filter(p => p.stock > 0 && p.stock <= 10);
+      } else if (stockStatus === 'out-of-stock') {
+        filtered = filtered.filter(p => p.stock === 0);
+      }
+    }
+
+    // Apply sorting
+    if (sortBy) {
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'name':
+            return (a.name || '').localeCompare(b.name || '');
+          case 'price-low':
+            return (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
+          case 'price-high':
+            return (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0);
+          case 'stock-low':
+            return (a.stock || 0) - (b.stock || 0);
+          case 'stock-high':
+            return (b.stock || 0) - (a.stock || 0);
+          case 'date-new':
+            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          case 'date-old':
+            return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredProducts = getFilteredAndSortedProducts();
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -700,7 +936,7 @@ export default function ProductsPage() {
       return;
     }
 
-    const selectedProductsData = products.filter(product => selectedProducts.includes(product.id));
+    const selectedProductsData = filteredProducts.filter(product => selectedProducts.includes(product.id));
     exportProducts(selectedProductsData, 'selected-products');
   };
 
@@ -753,10 +989,11 @@ export default function ProductsPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedProducts.length === products.length) {
+    const filtered = getFilteredAndSortedProducts();
+    if (selectedProducts.length === filtered.length && filtered.length > 0) {
       setSelectedProducts([]);
     } else {
-      setSelectedProducts(products.map(p => p.id));
+      setSelectedProducts(filtered.map(p => p.id));
     }
   };
 
@@ -778,42 +1015,43 @@ export default function ProductsPage() {
   return (
     <AdminLayout title="Products" subtitle="Manage your product catalog and inventory">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Product Catalog</h2>
-          <p className="text-gray-600">Manage your products, inventory, and pricing</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Product Catalog</h2>
+          <p className="text-sm sm:text-base text-gray-600">Manage your products, inventory, and pricing</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button
             variant="outline"
+            size="sm"
             onClick={handleRefresh}
             isLoading={refreshing}
+            className="flex-1 sm:flex-initial"
           >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
           <Button 
             variant="outline"
+            size="sm"
             onClick={handleExportAll}
+            className="flex-1 sm:flex-initial"
           >
-            <Download className="h-4 w-4" />
-            Export All
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export All</span>
           </Button>
-          <Button variant="secondary">
-            <Upload className="h-4 w-4" />
-            Import
-          </Button>
-          <Link href="/admin/products/create">
-            <Button variant="primary">
-              <Plus className="h-4 w-4" />
-              Add Product
+          <Link href="/admin/products/create" className="flex-1 sm:flex-initial">
+            <Button variant="primary" size="sm" className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Product</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </Link>
         </div>
       </div>
 
       {/* Product Analytics */}
-      <ProductAnalytics products={products} />
+      <ProductAnalytics cumulativeStats={cumulativeStats} />
 
       {/* Enhanced Filters */}
       <EnhancedFilters
@@ -827,10 +1065,11 @@ export default function ProductsPage() {
         setStockStatus={setStockStatus}
         sortBy={sortBy}
         setSortBy={setSortBy}
+        categories={categories}
       />
 
       {/* View Mode Toggle */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6">
         <div className="flex items-center bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('grid')}
@@ -854,7 +1093,7 @@ export default function ProductsPage() {
           </button>
         </div>
         <div className="text-sm text-gray-600">
-          {products.length} product{products.length !== 1 ? 's' : ''} found
+          {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
         </div>
       </div>
 
@@ -867,7 +1106,7 @@ export default function ProductsPage() {
       />
 
       {/* Products Grid/List */}
-      {products.length === 0 ? (
+      {filteredProducts.length === 0 ? (
         <Card>
           <CardBody>
             <div className="text-center py-12">
@@ -891,8 +1130,8 @@ export default function ProductsPage() {
       ) : (
         <>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 animate-fade-in-up animation-delay-200">
-              {products.map((product) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-fade-in-up animation-delay-200">
+              {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -915,7 +1154,7 @@ export default function ProductsPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           <input
                             type="checkbox"
-                            checked={selectedProducts.length === products.length && products.length > 0}
+                            checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
                             onChange={handleSelectAll}
                             className="w-4 h-4 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
                           />
@@ -941,7 +1180,7 @@ export default function ProductsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {products.map((product) => (
+                      {filteredProducts.map((product) => (
                         <tr key={product.id} className={`hover:bg-gray-50 ${
                           selectedProducts.includes(product.id) ? 'bg-primary-50' : ''
                         }`}>
@@ -1043,11 +1282,11 @@ export default function ProductsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
               <div className="text-sm text-gray-700">
                 Showing page {currentPage} of {totalPages}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
