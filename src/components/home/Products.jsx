@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { ShoppingCart, Heart, Star, TrendingUp, Eye } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { authService } from '@/lib/auth-service';
+import { useCartWishlist } from '@/contexts/CartWishlistContext';
 import toast from 'react-hot-toast';
 
 export default function Products() {
@@ -11,33 +12,25 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [wishlistProductIds, setWishlistProductIds] = useState([]);
+
+  // Use context for wishlist
+  const { wishlist, addToWishlist, isInWishlist } = useCartWishlist();
 
   useEffect(() => {
     fetchProducts();
     checkUser();
-    loadWishlist();
     
     window.addEventListener('userLoggedIn', handleUserLogin);
     window.addEventListener('userLoggedOut', handleLogout);
-    window.addEventListener('wishlistUpdated', handleWishlistUpdated);
     
     return () => {
       window.removeEventListener('userLoggedIn', handleUserLogin);
       window.removeEventListener('userLoggedOut', handleLogout);
-      window.removeEventListener('wishlistUpdated', handleWishlistUpdated);
     };
   }, []);
 
   const handleUserLogin = () => {
     checkUser();
-    loadWishlist();
-  };
-
-  const handleWishlistUpdated = () => {
-    setTimeout(() => {
-      loadWishlist();
-    }, 300);
   };
 
   const checkUser = () => {
@@ -47,27 +40,6 @@ export default function Products() {
 
   const handleLogout = () => {
     setUser(null);
-    setWishlistProductIds([]);
-  };
-
-  const loadWishlist = async () => {
-    if (!authService.isAuthenticated()) {
-      setWishlistProductIds([]);
-      return;
-    }
-    
-    try {
-      const response = await apiClient.get('/api/customer/wishlist');
-      let productIds = [];
-      if (response.success) {
-        const wishlistProducts = response.data?.products || response.wishlist?.products || [];
-        productIds = wishlistProducts.map(p => p.productId || p.id);
-      }
-      
-      setWishlistProductIds(productIds);
-    } catch (error) {
-      setWishlistProductIds([]);
-    }
   };
 
   const fetchProducts = async () => {
@@ -131,18 +103,9 @@ export default function Products() {
     }
     
     try {
-      const response = await apiClient.post('/api/customer/wishlist', {
-        productId: product.id
-      });
+      const result = await addToWishlist(product.id);
       
-      if (response.success) {
-        setWishlistProductIds(prev => {
-          if (!prev.includes(product.id)) {
-            return [...prev, product.id];
-          }
-          return prev;
-        });
-        
+      if (result.success) {
         toast.success('Added to wishlist!', {
           icon: '❤️',
           style: {
@@ -151,10 +114,8 @@ export default function Products() {
             color: '#fff',
           },
         });
-        
-        loadWishlist();
       } else {
-        if (response.error && (response.error.includes('already') || response.error.includes('exists'))) {
+        if (result.error && (result.error.includes('already') || result.error.includes('exists'))) {
           toast('Already in wishlist!', {
             icon: '💜',
             style: {
@@ -163,14 +124,8 @@ export default function Products() {
               color: '#fff',
             },
           });
-          setWishlistProductIds(prev => {
-            if (!prev.includes(product.id)) {
-              return [...prev, product.id];
-            }
-            return prev;
-          });
         } else {
-          toast.error(response.error || 'Failed to add to wishlist', {
+          toast.error(result.error || 'Failed to add to wishlist', {
             style: {
               borderRadius: '12px',
               background: '#ef4444',
@@ -188,10 +143,6 @@ export default function Products() {
         },
       });
     }
-  };
-
-  const isInWishlist = (productId) => {
-    return wishlistProductIds.includes(productId);
   };
 
   const getAnimationClass = (idx) => {

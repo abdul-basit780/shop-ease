@@ -10,23 +10,29 @@ import {
   Package,
   AlertCircle,
 } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
 import { authService } from "@/lib/auth-service";
+import { useCartWishlist } from "@/contexts/CartWishlistContext";
 import toast from "react-hot-toast";
 
 export default function Cart() {
   const router = useRouter();
-  const [cart, setCart] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [updatingItems, setUpdatingItems] = useState(new Set());
   const hasCheckedAuth = useRef(false);
+  const [updatingItems, setUpdatingItems] = useState(new Set());
+
+  // Use context for cart data and methods
+  const { 
+    cart, 
+    isLoadingCart, 
+    updateCartQuantity, 
+    removeFromCart 
+  } = useCartWishlist();
 
   useEffect(() => {
     if (hasCheckedAuth.current) return;
     hasCheckedAuth.current = true;
 
     if (!authService.isAuthenticated()) {
-      router.push("/auth/login?returnUrl=/cart");
+      router.push("/auth/login?returnUrl=/customer/cart");
       return;
     }
 
@@ -42,33 +48,7 @@ export default function Cart() {
       }, 1000);
       return;
     }
-
-    fetchCart();
-
-    const handleCartUpdate = () => {
-      fetchCart();
-    };
-
-    window.addEventListener("cartUpdated", handleCartUpdate);
-    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
   }, [router]);
-
-  const fetchCart = async () => {
-    try {
-      setIsLoading(true);
-      const response = await apiClient.get("/api/customer/cart");
-      console.log(response)
-
-      if (response.success && response.data) {
-        setCart(response.data);
-      }
-    } catch (error) {
-      toast.error("Failed to load cart");
-      setCart({ products: [], totalAmount: 0, count: 0 });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const updateQuantity = async (productId, newQuantity, selectedOptions) => {
     if (newQuantity < 1) return;
@@ -77,35 +57,21 @@ export default function Cart() {
     setUpdatingItems((prev) => new Set(prev).add(itemKey));
 
     try {
-      const requestBody = {
-        quantity: newQuantity,
-      };
+      const optionIds = selectedOptions?.map(option => option.id) || [];
+      const result = await updateCartQuantity(productId, newQuantity, optionIds);
 
-      if (selectedOptions && selectedOptions.length > 0) {
-        requestBody.selectedOptions = selectedOptions.map(option => option.id);
-      }
-
-      const response = await apiClient.put(
-        `/api/customer/cart/${productId}`,
-        requestBody
-      );
-
-      if (response.success && response.data) {
-        setCart(response.data);
-        
+      if (result.success) {
         toast.success("Quantity updated", {
           duration: 1500,
           style: {
             borderRadius: '12px',
           },
         });
-        
-        window.dispatchEvent(new Event("cartUpdated"));
+      } else {
+        toast.error(result.error || "Failed to update quantity");
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to update quantity";
-      toast.error(errorMessage);
+      toast.error("Failed to update quantity");
     } finally {
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
@@ -120,20 +86,10 @@ export default function Cart() {
     setUpdatingItems((prev) => new Set(prev).add(itemKey));
 
     try {
-      const requestBody = {};
+      const optionIds = selectedOptions?.map(option => option.id) || [];
+      const result = await removeFromCart(productId, optionIds);
 
-      if (selectedOptions && selectedOptions.length > 0) {
-        requestBody.selectedOptions = selectedOptions.map(option => option.id);
-      }
-
-      const response = await apiClient.delete(
-        `/api/customer/cart/${productId}`,
-        requestBody
-      );
-
-      if (response.success) {
-        setCart(response.data);
-        
+      if (result.success) {
         toast.success("Item removed from cart", {
           icon: "🗑️",
           duration: 2000,
@@ -141,14 +97,11 @@ export default function Cart() {
             borderRadius: '12px',
           },
         });
-        
-        window.dispatchEvent(new Event("cartUpdated"));
+      } else {
+        toast.error(result.error || "Failed to remove item");
       }
     } catch (error) {
-      console.error("Error removing item:", error);
-      const errorMessage =
-        error.response?.data?.message || "Failed to remove item";
-      toast.error(errorMessage);
+      toast.error("Failed to remove item");
     } finally {
       setUpdatingItems((prev) => {
         const newSet = new Set(prev);
@@ -167,7 +120,7 @@ export default function Cart() {
     return updatingItems.has(itemKey);
   };
 
-  if (isLoading) {
+  if (isLoadingCart) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -227,7 +180,6 @@ export default function Cart() {
           <div className="lg:col-span-2 space-y-4">
             {cart.products.map((item, idx) => {
               const isUpdating = isItemUpdating(item.productId, item.selectedOptions);
-              // Calculate unit price from subtotal (backend already calculated base + options)
               const unitPrice = item.subtotal / item.quantity;
               
               return (
@@ -363,7 +315,7 @@ export default function Cart() {
                           </button>
                         </div>
 
-                        {/* Price - Backend already calculated base + options */}
+                        {/* Price */}
                         <div className="text-right">
                           <div className="text-sm text-gray-500">
                             ${unitPrice.toFixed(2)} each

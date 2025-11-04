@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { authService } from "@/lib/auth-service";
+import { useCartWishlist } from "@/contexts/CartWishlistContext";
 import RecommendationsModal from "@/components/ProductRecommendationsModal";
 import toast from "react-hot-toast";
 
@@ -32,11 +33,15 @@ export default function ProductDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [showAllReviews, setShowAllReviews] = useState(false);
-  const [isInWishlist, setIsInWishlist] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState({});
   const [displayImage, setDisplayImage] = useState("");
   const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
+
+  // Use context for cart and wishlist
+  const { cart, addToCart, addToWishlist, isInWishlist } = useCartWishlist();
 
   // Check if there are stored recommendations on mount
   useEffect(() => {
@@ -57,7 +62,6 @@ export default function ProductDetails() {
       fetchProductDetails();
       fetchFeedbacks();
       fetchSimilarProducts();
-      checkWishlist();
     }
   }, [id]);
 
@@ -145,22 +149,6 @@ export default function ProductDetails() {
     }
   };
 
-  const checkWishlist = async () => {
-    if (!authService.isAuthenticated()) return;
-
-    try {
-      const response = await apiClient.get("/api/customer/wishlist");
-      if (response.success && response.data?.products) {
-        const inWishlist = response.data.products.some(
-          (p) => p.productId === id
-        );
-        setIsInWishlist(inWishlist);
-      }
-    } catch (error) {
-      console.error("Error checking wishlist:", error);
-    }
-  };
-
   const handleOptionChange = (optionName, valueObj) => {
     setSelectedOptions((prev) => ({
       ...prev,
@@ -203,27 +191,18 @@ export default function ProductDetails() {
       return;
     }
 
+    setIsAddingToCart(true);
+
     try {
-      const cartData = {
-        productId: product.id,
-        quantity: quantity,
-      };
+      const optionIds = product.optionTypes && product.optionTypes.length > 0
+        ? Object.values(selectedOptions)
+            .filter((opt) => opt && opt.id)
+            .map((opt) => opt.id)
+        : [];
 
-      if (product.optionTypes && product.optionTypes.length > 0) {
-        const optionIds = Object.values(selectedOptions)
-          .filter((opt) => opt && opt.id)
-          .map((opt) => opt.id);
+      const result = await addToCart(product.id, quantity, optionIds);
 
-        if (optionIds.length > 0) {
-          cartData.selectedOptions = optionIds;
-        }
-      }
-
-      const response = await apiClient.post("/api/customer/cart", cartData);
-
-      if (response.success) {
-        window.dispatchEvent(new Event("cartUpdated"));
-
+      if (result.success) {
         toast.success(`Added ${quantity} item(s) to cart!`, {
           icon: "🛒",
         });
@@ -233,12 +212,12 @@ export default function ProductDetails() {
         // Fetch and show personalized recommendations
         fetchRecommendations();
       } else {
-        toast.error(response.error || "Failed to add to cart");
+        toast.error(result.error || "Failed to add to cart");
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to add to cart";
-      toast.error(errorMessage);
+      toast.error("Failed to add to cart");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
@@ -307,22 +286,22 @@ export default function ProductDetails() {
       return;
     }
 
-    try {
-      const response = await apiClient.post("/api/customer/wishlist", {
-        productId: product.id,
-      });
+    setIsAddingToWishlist(true);
 
-      if (response.success) {
-        setIsInWishlist(true);
+    try {
+      const result = await addToWishlist(product.id);
+
+      if (result.success) {
         toast.success("Added to wishlist!", {
           icon: "❤️",
         });
-        window.dispatchEvent(new Event("wishlistUpdated"));
       } else {
-        toast.error(response.error || "Failed to add to wishlist");
+        toast.error(result.error || "Failed to add to wishlist");
       }
     } catch (error) {
       toast.error("Failed to add to wishlist");
+    } finally {
+      setIsAddingToWishlist(false);
     }
   };
 
@@ -370,9 +349,43 @@ export default function ProductDetails() {
     return minStock;
   };
 
+  const getQuantityInCart = () => {
+    if (!cart || !cart.products || !product) return 0;
+
+    const selectedOptionIds = product.optionTypes && product.optionTypes.length > 0
+      ? Object.values(selectedOptions)
+          .filter((opt) => opt && opt.id)
+          .map((opt) => opt.id)
+          .sort()
+      : [];
+
+    const cartItem = cart.products.find((item) => {
+      if (item.productId !== product.id) return false;
+
+      if (selectedOptionIds.length === 0 && (!item.selectedOptions || item.selectedOptions.length === 0)) {
+        return true;
+      }
+
+      if (selectedOptionIds.length !== (item.selectedOptions?.length || 0)) {
+        return false;
+      }
+
+      const itemOptionIds = (item.selectedOptions || [])
+        .map((opt) => opt.id)
+        .sort();
+
+      return JSON.stringify(selectedOptionIds) === JSON.stringify(itemOptionIds);
+    });
+
+    return cartItem ? cartItem.quantity : 0;
+  };
+
   const effectivePrice = product ? getEffectivePrice() : 0;
-  const effectiveStock = product ? getEffectiveStock() : 0;
+  const quantityInCart = getQuantityInCart();
+  const baseStock = product ? getEffectiveStock() : 0;
+  const effectiveStock = Math.max(0, baseStock - quantityInCart);
   const displayedReviews = showAllReviews ? feedbacks : feedbacks.slice(0, 2);
+  const productInWishlist = product ? isInWishlist(product.id) : false;
 
   if (isLoading) {
     return (
@@ -505,9 +518,21 @@ export default function ProductDetails() {
                 </div>
               )}
 
-              {effectiveStock === 0 && (
+              {effectiveStock === 0 && baseStock > 0 && quantityInCart > 0 && (
+                <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 text-blue-800 text-sm font-medium">
+                  ℹ️ You already have {quantityInCart} in your cart (all available stock)
+                </div>
+              )}
+
+              {effectiveStock === 0 && baseStock === 0 && (
                 <div className="bg-red-100 border border-red-300 rounded-lg p-3 text-red-800 text-sm font-bold">
                   ❌ Out of Stock
+                </div>
+              )}
+
+              {quantityInCart > 0 && effectiveStock > 0 && (
+                <div className="bg-green-100 border border-green-300 rounded-lg p-3 text-green-800 text-sm font-medium">
+                  🛒 {quantityInCart} already in cart
                 </div>
               )}
             </div>
@@ -687,6 +712,7 @@ export default function ProductDetails() {
                 </div>
                 <span className="text-sm sm:text-base text-gray-600">
                   {effectiveStock} available
+                  {quantityInCart > 0 && ` (${quantityInCart} in cart)`}
                 </span>
               </div>
             </div>
@@ -694,25 +720,38 @@ export default function ProductDetails() {
             <div className="flex gap-3 sm:gap-4 mb-8">
               <button
                 onClick={handleAddToCart}
-                disabled={effectiveStock === 0}
+                disabled={effectiveStock === 0 || isAddingToCart}
                 className="flex-1 flex items-center justify-center space-x-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               >
-                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span>Add to Cart</span>
+                {isAddingToCart ? (
+                  <>
+                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                    <span>Adding...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span>Add to Cart</span>
+                  </>
+                )}
               </button>
 
               <button
                 onClick={handleAddToWishlist}
-                disabled={isInWishlist}
+                disabled={productInWishlist || isAddingToWishlist}
                 className={`p-3 sm:p-4 rounded-xl border-2 transition-all transform hover:scale-110 ${
-                  isInWishlist
+                  productInWishlist
                     ? "bg-red-500 border-red-500 text-white"
                     : "border-gray-300 text-gray-600 hover:border-red-500 hover:text-red-500"
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <Heart
-                  className={`h-5 w-5 sm:h-6 sm:w-6 ${isInWishlist ? "fill-current" : ""}`}
-                />
+                {isAddingToWishlist ? (
+                  <div className="animate-spin h-5 w-5 sm:h-6 sm:w-6 border-2 border-current border-t-transparent rounded-full"></div>
+                ) : (
+                  <Heart
+                    className={`h-5 w-5 sm:h-6 sm:w-6 ${productInWishlist ? "fill-current" : ""}`}
+                  />
+                )}
               </button>
             </div>
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CreditCard, Banknote, MapPin, Check, ArrowLeft, Lock, ShoppingBag, Package } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { authService } from '@/lib/auth-service';
+import { useCartWishlist } from '@/contexts/CartWishlistContext';
 import AddressManager from '@/components/AddressManager';
 import toast from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
@@ -219,13 +220,14 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const [cart, setCart] = useState(null);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showStripeForm, setShowStripeForm] = useState(false);
   const hasCheckedAuth = useRef(false);
+
+  // Get cart from context
+  const { cart, isLoadingCart, fetchCart } = useCartWishlist();
 
   useEffect(() => {
     if (hasCheckedAuth.current) return;
@@ -248,30 +250,19 @@ export default function CheckoutPage() {
       return;
     }
 
-    fetchCart();
-  }, [router]);
-
-  const fetchCart = async () => {
-    try {
-      setIsLoading(true);
-      const cartRes = await apiClient.get('/api/customer/cart');
-      console.log(cartRes)
-
-      if (cartRes.success && cartRes.data) {
-        setCart(cartRes.data);
-        
-        if (!cartRes.data.products || cartRes.data.products.length === 0) {
-          toast.error('Your cart is empty');
-          setTimeout(() => router.push('/customer/all-products'), 1500);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-      toast.error('Failed to load cart');
-    } finally {
-      setIsLoading(false);
+    // Fetch cart if not already loaded
+    if (!cart) {
+      fetchCart();
     }
-  };
+  }, [router, cart, fetchCart]);
+
+  // Check if cart is empty and redirect
+  useEffect(() => {
+    if (!isLoadingCart && cart && (!cart.products || cart.products.length === 0)) {
+      toast.error('Your cart is empty');
+      setTimeout(() => router.push('/customer/all-products'), 1500);
+    }
+  }, [isLoadingCart, cart, router]);
 
   const handleAddressSelect = (address) => {
     setSelectedAddress(address);
@@ -357,7 +348,7 @@ export default function CheckoutPage() {
     setShowStripeForm(false);
   };
 
-  if (isLoading) {
+  if (isLoadingCart) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
