@@ -1,4 +1,4 @@
-// pages/checkout.js
+// pages/customer/checkout.js
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -79,9 +79,6 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
         throw new Error(response.message || response.error || 'Failed to create order');
       }
 
-      console.log('Order created:', response.data.order.id);
-      console.log('Client secret received:', response.data.clientSecret);
-
       // Step 3: Confirm payment with Stripe
       if (response.data.clientSecret) {
         const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
@@ -92,7 +89,6 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
         );
 
         if (confirmError) {
-          console.error('Payment confirmation error:', confirmError);
           setError(confirmError.message);
           setProcessing(false);
           return;
@@ -107,19 +103,13 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
             });
           } catch (confirmErr) {
             console.error('Failed to update payment status:', confirmErr);
-            // Don't fail the order flow if status update fails
-            // Payment was successful with Stripe, status update is just for database consistency
           }
 
-          // Clear cart on frontend
-          window.dispatchEvent(new Event('cartUpdated'));
-          
           onPaymentSuccess(response.data);
         } else {
           throw new Error(`Payment status: ${paymentIntent.status}`);
         }
       } else {
-        // No client secret - shouldn't happen for Stripe, but handle it
         throw new Error('No payment client secret received');
       }
     } catch (err) {
@@ -224,7 +214,9 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showStripeForm, setShowStripeForm] = useState(false);
+  const [orderProcessing, setOrderProcessing] = useState(false); // NEW: Track order completion
   const hasCheckedAuth = useRef(false);
+  const hasCheckedCart = useRef(false); // NEW: Track if we've checked cart
 
   // Get cart from context
   const { cart, isLoadingCart, fetchCart } = useCartWishlist();
@@ -234,7 +226,7 @@ export default function CheckoutPage() {
     hasCheckedAuth.current = true;
 
     if (!authService.isAuthenticated()) {
-      router.push('/auth/login?returnUrl=/checkout');
+      router.push('/auth/login?returnUrl=/customer/checkout');
       return;
     }
 
@@ -256,13 +248,20 @@ export default function CheckoutPage() {
     }
   }, [router, cart, fetchCart]);
 
-  // Check if cart is empty and redirect
+  // Check if cart is empty ONLY once on mount, not during order processing
   useEffect(() => {
-    if (!isLoadingCart && cart && (!cart.products || cart.products.length === 0)) {
-      toast.error('Your cart is empty');
-      setTimeout(() => router.push('/customer/all-products'), 1500);
+    if (hasCheckedCart.current || orderProcessing) return; // Don't check if order is processing
+    
+    if (!isLoadingCart && cart) {
+      if (!cart.products || cart.products.length === 0) {
+        hasCheckedCart.current = true; // Mark as checked
+        toast.error('Your cart is empty');
+        setTimeout(() => router.push('/customer/all-products'), 1500);
+      } else {
+        hasCheckedCart.current = true; // Mark as checked after confirming cart has items
+      }
     }
-  }, [isLoadingCart, cart, router]);
+  }, [isLoadingCart, cart, router, orderProcessing]);
 
   const handleAddressSelect = (address) => {
     setSelectedAddress(address);
@@ -303,6 +302,8 @@ export default function CheckoutPage() {
 
     // Cash on Delivery
     setIsProcessing(true);
+    setOrderProcessing(true); // Mark order as processing
+    
     try {
       const orderData = {
         addressId: selectedAddress.id,
@@ -313,30 +314,38 @@ export default function CheckoutPage() {
 
       if (response.success) {
         toast.success('Order placed successfully! 🎉', {
-          duration: 3000,
+          duration: 2000,
         });
         
-        // Clear cart
+        // Clear cart - this will trigger context update
         window.dispatchEvent(new Event('cartUpdated'));
         
+        // Redirect after a short delay
         setTimeout(() => {
           router.push(`/customer/orders/${response.data.order.id}`);
-        }, 2000);
+        }, 1000);
       } else {
         toast.error(response.message || response.error || 'Failed to place order');
+        setOrderProcessing(false); // Reset on error
       }
     } catch (error) {
       console.error('Error processing order:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to process order');
+      setOrderProcessing(false); // Reset on error
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handlePaymentSuccess = (orderData) => {
+    setOrderProcessing(true); // Mark order as processing
+    
     toast.success('Payment successful! Order placed. 🎉', {
       duration: 2000,
     });
+    
+    // Clear cart
+    window.dispatchEvent(new Event('cartUpdated'));
     
     setTimeout(() => {
       router.push(`/customer/orders`);
@@ -346,6 +355,7 @@ export default function CheckoutPage() {
   const handlePaymentError = (error) => {
     toast.error(error.message || 'Payment failed. Please try again.');
     setShowStripeForm(false);
+    setOrderProcessing(false); // Reset on error
   };
 
   if (isLoadingCart) {
@@ -361,6 +371,24 @@ export default function CheckoutPage() {
               </div>
               <div className="h-96 bg-gray-200 rounded-2xl"></div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while order is being processed
+  if (orderProcessing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-blue-100 rounded-full mb-6 animate-pulse">
+              <Lock className="h-12 w-12 text-blue-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Processing Your Order...</h2>
+            <p className="text-gray-600 mb-8">Please wait while we complete your order</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto"></div>
           </div>
         </div>
       </div>
