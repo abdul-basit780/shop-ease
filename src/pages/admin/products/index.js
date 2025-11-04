@@ -365,15 +365,15 @@ const ProductAnalytics = ({ cumulativeStats }) => {
   const totalValue = cumulativeStats?.totalValue || 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
       <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-600">Total Products</p>
-              <p className="text-3xl font-bold text-blue-900">{totalProducts}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-blue-600">Total Products</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900">{totalProducts}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <Package className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -383,11 +383,11 @@ const ProductAnalytics = ({ cumulativeStats }) => {
       <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-green-600">In Stock</p>
-              <p className="text-3xl font-bold text-green-900">{inStockProducts}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-green-600">In Stock</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900">{inStockProducts}</p>
             </div>
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <CheckCircle className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -397,11 +397,11 @@ const ProductAnalytics = ({ cumulativeStats }) => {
       <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-yellow-600">Low Stock</p>
-              <p className="text-3xl font-bold text-yellow-900">{lowStockProducts}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-yellow-600">Low Stock</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-900">{lowStockProducts}</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <AlertTriangle className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -411,11 +411,11 @@ const ProductAnalytics = ({ cumulativeStats }) => {
       <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
         <CardBody>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-purple-600">Total Value</p>
-              <p className="text-3xl font-bold text-purple-900">${totalValue.toFixed(2)}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-purple-600">Total Value</p>
+              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-purple-900">${totalValue.toFixed(2)}</p>
             </div>
-            <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <DollarSign className="h-6 w-6 text-white" />
             </div>
           </div>
@@ -489,7 +489,7 @@ const EnhancedFilters = ({
   return (
     <Card className="mb-6 animate-fade-in-up">
       <CardBody>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -573,34 +573,40 @@ const BulkActions = ({ selectedProducts, onBulkDelete, onBulkEdit, onBulkExport 
   return (
     <Card className="mb-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
       <CardBody>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium text-primary-700">
-              {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
-            </span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <span className="text-sm font-medium text-primary-700">
+            {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={onBulkEdit}
+              className="flex-1 sm:flex-initial"
             >
-              <Edit className="h-4 w-4" />
-              Bulk Edit
+              <Edit className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Bulk Edit</span>
+              <span className="sm:hidden">Edit</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onBulkExport}
+              className="flex-1 sm:flex-initial"
             >
-              <Download className="h-4 w-4" />
-              Export Selected
+              <Download className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export</span>
+              <span className="sm:hidden">Export</span>
             </Button>
             <Button
               variant="danger"
               size="sm"
               onClick={onBulkDelete}
+              className="flex-1 sm:flex-initial"
             >
-              <Trash2 className="h-4 w-4" />
-              Delete Selected
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete</span>
+              <span className="sm:hidden">Delete</span>
             </Button>
           </div>
         </div>
@@ -1009,31 +1015,36 @@ export default function ProductsPage() {
   return (
     <AdminLayout title="Products" subtitle="Manage your product catalog and inventory">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Product Catalog</h2>
-          <p className="text-gray-600">Manage your products, inventory, and pricing</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Product Catalog</h2>
+          <p className="text-sm sm:text-base text-gray-600">Manage your products, inventory, and pricing</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button
             variant="outline"
+            size="sm"
             onClick={handleRefresh}
             isLoading={refreshing}
+            className="flex-1 sm:flex-initial"
           >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
           <Button 
             variant="outline"
+            size="sm"
             onClick={handleExportAll}
+            className="flex-1 sm:flex-initial"
           >
-            <Download className="h-4 w-4" />
-            Export All
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export All</span>
           </Button>
-          <Link href="/admin/products/create">
-            <Button variant="primary">
-              <Plus className="h-4 w-4" />
-              Add Product
+          <Link href="/admin/products/create" className="flex-1 sm:flex-initial">
+            <Button variant="primary" size="sm" className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Product</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </Link>
         </div>
@@ -1058,7 +1069,7 @@ export default function ProductsPage() {
       />
 
       {/* View Mode Toggle */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6">
         <div className="flex items-center bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => setViewMode('grid')}
@@ -1119,7 +1130,7 @@ export default function ProductsPage() {
       ) : (
         <>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 animate-fade-in-up animation-delay-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-fade-in-up animation-delay-200">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -1271,11 +1282,11 @@ export default function ProductsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
               <div className="text-sm text-gray-700">
                 Showing page {currentPage} of {totalPages}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

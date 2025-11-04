@@ -409,8 +409,8 @@ export default function CustomersPage() {
           total: responseData.pagination?.total || customersList.length || 0,
           active: dashboardData?.overview?.customers?.active || activeCount,
           inactive: dashboardData?.overview?.customers?.blocked || inactiveCount,
-          newThisMonth: dashboardData?.overview?.customers?.newCustomers || 0,
-          avgOrderValue: 0, // Would need additional API call
+          avgOrderValue: dashboardData?.overview?.revenue?.avgOrderValue || 0,
+          totalOrders: dashboardData?.overview?.orders?.total || 0,
         };
         setStats(stats);
       } else {
@@ -624,12 +624,12 @@ export default function CustomersPage() {
             <CardBody>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-600">New This Month</p>
-                  <p className="text-3xl font-bold text-purple-900">{stats.newThisMonth || 0}</p>
-                  <p className="text-xs text-purple-600 mt-1">Recent signups</p>
+                  <p className="text-sm font-medium text-purple-600">Total Orders</p>
+                  <p className="text-3xl font-bold text-purple-900">{stats.totalOrders || 0}</p>
+                  <p className="text-xs text-purple-600 mt-1">All orders</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
-                  <User className="h-6 w-6 text-white" />
+                  <ShoppingBag className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardBody>
@@ -639,7 +639,7 @@ export default function CustomersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-orange-600">Avg. Order Value</p>
-                  <p className="text-3xl font-bold text-orange-900">${stats.avgOrderValue || 0}</p>
+                  <p className="text-3xl font-bold text-orange-900">${(stats.avgOrderValue || 0).toFixed(2)}</p>
                   <p className="text-xs text-orange-600 mt-1">Per customer</p>
                 </div>
                 <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">

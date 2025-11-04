@@ -20,7 +20,8 @@ import {
   Star
 } from 'lucide-react';
 import { apiClient } from '../../lib/api-client';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { useAdminAuth } from './utils/adminAuth';
 
 // AdminLayout Component
@@ -263,7 +264,7 @@ const StatCard = ({ title, value, subtitle, change, changeType, icon: Icon, colo
             {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
             {change && (
               <div className="flex items-center mt-2">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${changeColorClasses[changeType]}`}>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${changeColorClasses[changeType] || changeColorClasses.neutral}`}>
                   {change}
                 </span>
                 {trend && (
@@ -392,14 +393,48 @@ const RevenueChart = ({ trends }) => {
 
   const maxRevenue = Math.max(...trends.map(t => t.revenue || 0));
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Date';
+    
+    try {
+      // If it's already a formatted string, return it
+      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+      }
+      
+      // Try to parse as date
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+      }
+      
+      // If it's a string that looks like a date but not ISO format
+      return dateString;
+    } catch (error) {
+      return dateString || 'Date';
+    }
+  };
+
   return (
     <div className="space-y-2">
       {trends.slice(0, 7).map((item, index) => {
         const percentage = maxRevenue > 0 ? (item.revenue / maxRevenue) * 100 : 0;
+        // API returns 'period' field which contains the date string (e.g., "2025-11-02")
+        const dateValue = item.period || item.date || item._id?.date || item.day || item.createdAt || item.dateString;
+        const formattedDate = formatDate(dateValue);
         return (
           <div key={index} className="space-y-1">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{item.date || 'Date'}</span>
+              <span className="text-gray-600">{formattedDate}</span>
               <span className="font-medium text-gray-900">${(item.revenue || 0).toLocaleString()}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -568,24 +603,20 @@ export default function AdminDashboard() {
             lowStockProducts: data.insights?.lowStockProducts || [],
             recentOrders: data.insights?.recentOrders || [],
             topSellingProducts: data.insights?.topSellingProducts || [],
-            trends: data.trends?.revenueTrend || [],
           });
         }
 
         // Handle revenue response - API returns { success, message, data: { period, dateRange, data: [...] } }
+        // Each item in data.data has: { period, revenue, orders, avgOrderValue }
         if (revenueResponse?.success && revenueResponse.data) {
           setRevenueData(revenueResponse.data);
         }
 
-        // Handle health response - API returns { success, message, data }
-        console.log('Health response:', healthResponse);
-        
+        // Handle health response - API returns { success, message, data: { status, timestamp, uptime, version, environment, database, memory } }
         if (healthResponse?.success && healthResponse.data) {
-          console.log('Setting health data:', healthResponse.data);
           setHealthData(healthResponse.data);
-        } else if (healthResponse?.data?.status) {
-          // Handle case where response.data has the health object directly
-          console.log('Setting health data (direct):', healthResponse.data);
+        } else if (healthResponse?.data && typeof healthResponse.data === 'object' && healthResponse.data.status) {
+          // Handle case where response.data has the health object directly (fallback)
           setHealthData(healthResponse.data);
         }
       } catch (apiError) {
@@ -606,8 +637,18 @@ export default function AdminDashboard() {
     }
   }, [isAdmin]);
 
-  const handleRefresh = () => {
-    fetchDashboardData();
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchDashboardData();
+      toast.success('Dashboard refreshed successfully!', {
+        icon: "🔄",
+      });
+    } catch (error) {
+      toast.error('Failed to refresh dashboard data');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Don't render anything if authentication is still loading or user is not admin
@@ -674,29 +715,21 @@ export default function AdminDashboard() {
           <StatCard
             title="Total Orders"
             value={stats?.overview?.totalOrders || 0}
-            change="+12%"
-            changeType="increase"
             icon={ShoppingBag}
           />
         <StatCard
           title="Total Revenue"
             value={`$${stats?.overview?.totalRevenue?.toLocaleString() || 0}`}
-            change="+8%"
-          changeType="increase"
           icon={DollarSign}
         />
         <StatCard
           title="Total Customers"
             value={stats?.overview?.totalCustomers || 0}
-            change="+15%"
-          changeType="increase"
           icon={Users}
         />
         <StatCard
           title="Total Products"
-            value={stats?.overview?.products?.active || stats?.overview?.totalProducts || 0}
-            change="+5%"
-          changeType="increase"
+            value={stats?.products?.active || stats?.overview?.products?.active || stats?.overview?.totalProducts || 0}
           icon={Package}
         />
       </div>
@@ -712,7 +745,7 @@ export default function AdminDashboard() {
         />
         <StatCard
             title="Avg Order Value"
-            value={`$${(stats?.overview?.avgOrderValue || 0).toFixed(2)}`}
+            value={`$${(stats?.overview?.avgOrderValue || stats?.revenue?.avgOrderValue || 0).toFixed(2)}`}
             subtitle={`${stats?.overview?.totalOrders || 0} orders`}
           color="purple"
             icon={DollarSign}
@@ -780,6 +813,32 @@ export default function AdminDashboard() {
         {/* System Health */}
         <SystemHealth health={healthData} />
       </div>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#1f2937',
+            padding: '16px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e5e7eb',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
     </AdminLayout>
   );
 }
