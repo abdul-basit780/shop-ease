@@ -496,7 +496,7 @@ export const removeProduct = async (
     // Check if product has option types
     const product = await Product.findOne({
       _id: productId,
-      deletedAt: null,
+      // deletedAt: null,
     });
 
     if (!product) {
@@ -507,7 +507,7 @@ export const removeProduct = async (
 
     const productOptionTypes = await OptionType.find({
       productId: product._id,
-      deletedAt: null,
+      // deletedAt: null,
     });
 
     // If product has options, selectedOptions must be provided
