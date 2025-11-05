@@ -310,15 +310,31 @@ export default function CustomerViewPage() {
     try {
       setOrdersLoading(true);
       const response = await apiClient.get(`/api/admin/orders?customerId=${id}&limit=10`);
+      console.log('Customer orders response:', response);
       
-      // Handle both possible response structures (response.data or direct response)
-      const responseData = response.data || response;
-      
-      if (responseData.success) {
-        setOrders(responseData.orders || []);
+      // apiClient.get() returns response.data, so structure is: { success, message, data: { orders, stats, pagination }, timestamp }
+      // Check multiple possible structures
+      if (response && response.success) {
+        if (response.data && response.data.orders) {
+          // Standard structure: { success, data: { orders, stats, pagination } }
+          setOrders(response.data.orders || []);
+        } else if (response.orders) {
+          // Alternative: { success, orders }
+          setOrders(response.orders || []);
+        } else if (Array.isArray(response)) {
+          // Direct array
+          setOrders(response);
+        } else {
+          console.warn('Unexpected response structure:', response);
+          setOrders([]);
+        }
+      } else {
+        console.warn('Failed response or unexpected structure:', response);
+        setOrders([]);
       }
     } catch (error) {
       console.error('Error fetching customer orders:', error);
+      toast.error('Failed to load customer orders');
     } finally {
       setOrdersLoading(false);
     }
@@ -523,14 +539,14 @@ export default function CustomerViewPage() {
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-2" />
                   <p className="text-2xl font-bold text-green-900">
-                    {formatCurrency(orders.reduce((sum, order) => sum + (order.total || 0), 0))}
+                    {formatCurrency(orders.reduce((sum, order) => sum + (order.totalAmount || order.total || 0), 0))}
                   </p>
                   <p className="text-sm text-green-600">Total Spent</p>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <Star className="h-8 w-8 text-purple-600 mx-auto mb-2" />
                   <p className="text-2xl font-bold text-purple-900">
-                    {orders.length > 0 ? formatCurrency(orders.reduce((sum, order) => sum + (order.total || 0), 0) / orders.length) : '$0.00'}
+                    {orders.length > 0 ? formatCurrency(orders.reduce((sum, order) => sum + (order.totalAmount || order.total || 0), 0) / orders.length) : '$0.00'}
                   </p>
                   <p className="text-sm text-purple-600">Avg. Order Value</p>
                 </div>
@@ -567,7 +583,7 @@ export default function CustomerViewPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            Order #{order.orderNumber || order._id?.slice(-8)}
+                            Order #{order.orderNumber || order.id?.slice(-8) || order._id?.slice(-8)}
                           </p>
                           <p className="text-sm text-gray-500">
                             {formatDate(order.createdAt)}
@@ -576,7 +592,7 @@ export default function CustomerViewPage() {
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-gray-900">
-                          {formatCurrency(order.total || 0)}
+                          {formatCurrency(order.totalAmount || order.total || 0)}
                         </p>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           order.status === 'completed' ? 'bg-green-100 text-green-800' :

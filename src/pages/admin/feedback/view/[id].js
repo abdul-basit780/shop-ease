@@ -24,8 +24,7 @@ import {
   Flag,
   ThumbsUp,
   ThumbsDown,
-  Eye,
-  Send
+  Eye
 } from 'lucide-react';
 import { apiClient } from '../../../../lib/api-client';
 import { useAdminAuth } from '../../utils/adminAuth';
@@ -258,11 +257,11 @@ const RatingStars = ({ rating, maxRating = 5 }) => {
 // Feedback Type Badge Component
 const FeedbackTypeBadge = ({ type }) => {
   const typeConfig = {
-    review: { color: 'bg-blue-100 text-blue-800', icon: Star },
-    complaint: { color: 'bg-red-100 text-red-800', icon: AlertCircle },
-    suggestion: { color: 'bg-green-100 text-green-800', icon: ThumbsUp },
-    question: { color: 'bg-purple-100 text-purple-800', icon: MessageSquare },
-    bug: { color: 'bg-orange-100 text-orange-800', icon: Flag },
+    review: { color: 'bg-blue-100 text-blue-800', icon: Star, label: 'Review' },
+    complaint: { color: 'bg-red-100 text-red-800', icon: AlertCircle, label: 'Complaint' },
+    suggestion: { color: 'bg-green-100 text-green-800', icon: ThumbsUp, label: 'Suggestion' },
+    question: { color: 'bg-purple-100 text-purple-800', icon: MessageSquare, label: 'Question' },
+    bug: { color: 'bg-orange-100 text-orange-800', icon: Flag, label: 'Bug' },
   };
 
   const config = typeConfig[type] || typeConfig.review;
@@ -271,7 +270,7 @@ const FeedbackTypeBadge = ({ type }) => {
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
       <Icon className="w-4 h-4 mr-2" />
-      {type.charAt(0).toUpperCase() + type.slice(1)}
+      {config.label || (type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown')}
     </span>
   );
 };
@@ -279,10 +278,10 @@ const FeedbackTypeBadge = ({ type }) => {
 // Feedback Status Badge Component
 const FeedbackStatusBadge = ({ status }) => {
   const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-    reviewed: { color: 'bg-blue-100 text-blue-800', icon: Eye },
-    resolved: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    closed: { color: 'bg-gray-100 text-gray-800', icon: X },
+    pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
+    reviewed: { color: 'bg-blue-100 text-blue-800', icon: Eye, label: 'Reviewed' },
+    resolved: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Resolved' },
+    closed: { color: 'bg-gray-100 text-gray-800', icon: X, label: 'Closed' },
   };
 
   const config = statusConfig[status] || statusConfig.pending;
@@ -291,7 +290,7 @@ const FeedbackStatusBadge = ({ status }) => {
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
       <Icon className="w-4 h-4 mr-2" />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {config.label || (status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown')}
     </span>
   );
 };
@@ -304,8 +303,6 @@ export default function FeedbackViewPage() {
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [sendingReply, setSendingReply] = useState(false);
 
   const fetchFeedback = async () => {
     if (!id) return;
@@ -317,7 +314,12 @@ export default function FeedbackViewPage() {
       console.log('Feedback response:', response);
       
       if (response.success && response.data) {
-        setFeedback(response.data);
+        const feedbackData = response.data;
+        // Handle productId - it might be an object or string
+        if (feedbackData.productId && typeof feedbackData.productId === 'object') {
+          feedbackData.productId = feedbackData.productId._id || feedbackData.productId.id || feedbackData.productId;
+        }
+        setFeedback(feedbackData);
       } else {
         toast.error(response.message || 'Feedback not found');
         router.push('/admin/feedback');
@@ -365,25 +367,6 @@ export default function FeedbackViewPage() {
     }
   };
 
-  const handleSendReply = async () => {
-    if (!replyText.trim()) {
-      toast.error('Please enter a reply message');
-      return;
-    }
-
-    try {
-      setSendingReply(true);
-      // Note: This would need to be implemented in the backend
-      // For now, we'll just show a success message
-      toast.success('Reply sent successfully');
-      setReplyText('');
-    } catch (error) {
-      console.error('Error sending reply:', error);
-      toast.error('Failed to send reply');
-    } finally {
-      setSendingReply(false);
-    }
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -446,7 +429,7 @@ export default function FeedbackViewPage() {
           </Button>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              {feedback.subject || 'No Subject'}
+              Feedback #{feedback._id?.slice(-8)}
             </h2>
             <p className="text-gray-600">
               From {feedback.customerId?.name || 'Anonymous'} • {formatDate(feedback.createdAt)}
@@ -516,39 +499,6 @@ export default function FeedbackViewPage() {
             </CardBody>
           </Card>
 
-          {/* Admin Reply */}
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-gray-900">Admin Response</h3>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="reply" className="block text-sm font-medium text-gray-700 mb-2">
-                    Reply to Customer
-                  </label>
-                  <textarea
-                    id="reply"
-                    rows={4}
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Type your response here..."
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleSendReply}
-                    isLoading={sendingReply}
-                    disabled={!replyText.trim()}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Send Reply
-                  </Button>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
         </div>
 
         {/* Sidebar */}
@@ -654,7 +604,12 @@ export default function FeedbackViewPage() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => router.push(`/admin/products/view/${feedback.productId}`)}
+                    onClick={() => {
+                      const productId = typeof feedback.productId === 'object' 
+                        ? (feedback.productId.id || feedback.productId._id || feedback.productId)
+                        : feedback.productId;
+                      router.push(`/admin/products/view/${productId}`);
+                    }}
                   >
                     <Package className="h-4 w-4 mr-2" />
                     View Product
@@ -663,6 +618,13 @@ export default function FeedbackViewPage() {
                 <Button
                   variant="outline"
                   className="w-full"
+                  onClick={() => {
+                    if (feedback.customerId?.email) {
+                      window.location.href = `mailto:${feedback.customerId.email}`;
+                    } else {
+                      toast.error('Customer email not available');
+                    }
+                  }}
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Email Customer

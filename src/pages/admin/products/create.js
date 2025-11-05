@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { 
   Package, 
   ArrowLeft, 
@@ -159,6 +160,32 @@ const AdminLayout = ({ children, title, subtitle }) => {
           {children}
         </main>
       </div>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#1f2937',
+            padding: '16px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e5e7eb',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
     </div>
   );
 };
@@ -205,7 +232,7 @@ const Button = ({
     secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-300',
     success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500',
+    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-gray-100 hover:text-blue-700 focus:ring-blue-500',
   };
   
   const sizes = {
@@ -325,11 +352,11 @@ export default function CreateProductPage() {
     sizeGuide: '',
     options: [],
     isActive: true,
-    isFeatured: false,
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [optionErrors, setOptionErrors] = useState({}); // Errors for option values
   const [categories, setCategories] = useState([]);
   const [parentCategories, setParentCategories] = useState([]);
   const [createdProduct, setCreatedProduct] = useState(null);
@@ -515,7 +542,52 @@ export default function CreateProductPage() {
     }));
   };
 
-  const updateOptionValuePrice = (optionIndex, valueIndex, price) => {
+  const updateOptionValuePrice = (optionIndex, valueIndex, priceValue) => {
+    const errorKey = `option_${optionIndex}_value_${valueIndex}_price`;
+    
+    // Validate price
+    if (priceValue === '' || priceValue === null || priceValue === undefined) {
+      setOptionErrors(prev => ({ ...prev, [errorKey]: '' }));
+      setFormData(prev => ({
+        ...prev,
+        options: prev.options.map((option, i) => 
+          i === optionIndex 
+            ? { 
+                ...option, 
+                values: option.values.map((val, j) => 
+                  j === valueIndex 
+                    ? { ...val, price: 0 }
+                    : val
+                )
+              }
+            : option
+        )
+      }));
+      return;
+    }
+    
+    // Convert to string for text input
+    const priceStr = String(priceValue);
+    
+    // Check if it's a valid number
+    const numValue = parseFloat(priceStr);
+    if (isNaN(numValue)) {
+      setOptionErrors(prev => ({ ...prev, [errorKey]: 'Price must be a valid number' }));
+      return;
+    }
+    
+    if (numValue < -999999 || numValue > 999999) {
+      setOptionErrors(prev => ({ ...prev, [errorKey]: 'Price must be between -999999 and 999999' }));
+      return;
+    }
+    
+    // Clear error if valid
+    setOptionErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[errorKey];
+      return newErrors;
+    });
+    
     setFormData(prev => ({
       ...prev,
       options: prev.options.map((option, i) => 
@@ -524,7 +596,7 @@ export default function CreateProductPage() {
               ...option, 
               values: option.values.map((val, j) => 
                 j === valueIndex 
-                  ? { ...val, price: price }
+                  ? { ...val, price: numValue }
                   : val
               )
             }
@@ -533,7 +605,57 @@ export default function CreateProductPage() {
     }));
   };
 
-  const updateOptionValueStock = (optionIndex, valueIndex, stock) => {
+  const updateOptionValueStock = (optionIndex, valueIndex, stockValue) => {
+    const errorKey = `option_${optionIndex}_value_${valueIndex}_stock`;
+    
+    // Validate stock
+    if (stockValue === '' || stockValue === null || stockValue === undefined) {
+      setOptionErrors(prev => ({ ...prev, [errorKey]: '' }));
+      setFormData(prev => ({
+        ...prev,
+        options: prev.options.map((option, i) => 
+          i === optionIndex 
+            ? { 
+                ...option, 
+                values: option.values.map((val, j) => 
+                  j === valueIndex 
+                    ? { ...val, stock: 0 }
+                    : val
+                )
+              }
+            : option
+        )
+      }));
+      return;
+    }
+    
+    // Convert to string for text input
+    const stockStr = String(stockValue);
+    
+    // Check if it's a valid integer
+    const numValue = parseInt(stockStr, 10);
+    if (isNaN(numValue) || !Number.isInteger(numValue)) {
+      setOptionErrors(prev => ({ ...prev, [errorKey]: 'Stock must be a whole number' }));
+      return;
+    }
+    
+    if (numValue < 0) {
+      setOptionErrors(prev => ({ ...prev, [errorKey]: 'Stock cannot be negative' }));
+      return;
+    }
+    
+    if (numValue > 999999) {
+      setOptionErrors(prev => ({ ...prev, [errorKey]: 'Stock cannot exceed 999999' }));
+      return;
+    }
+    
+    // Clear error if valid
+    setOptionErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[errorKey];
+      return newErrors;
+    });
+    
     setFormData(prev => ({
       ...prev,
       options: prev.options.map((option, i) => 
@@ -542,7 +664,7 @@ export default function CreateProductPage() {
               ...option, 
               values: option.values.map((val, j) => 
                 j === valueIndex 
-                  ? { ...val, stock: stock }
+                  ? { ...val, stock: numValue }
                   : val
               )
             }
@@ -634,7 +756,15 @@ export default function CreateProductPage() {
     e.preventDefault();
     
     if (!validate()) {
-      toast.error('Please fix the errors below');
+      toast.error('Please fix the errors below', {
+        style: {
+          borderRadius: "12px",
+          background: "#ef4444",
+          color: "#fff",
+          fontSize: "14px",
+          padding: "16px",
+        },
+      });
       return;
     }
 
@@ -654,6 +784,7 @@ export default function CreateProductPage() {
       // Use subcategory if selected, otherwise use parent category
       const selectedCategoryId = formData.subcategory || formData.category;
       submitData.append('categoryId', selectedCategoryId);
+      submitData.append('isActive', formData.isActive);
 
       // Add image (backend expects single 'image' field, not 'images')
       if (images.length > 0 && typeof images[0] === 'object') {
@@ -675,11 +806,12 @@ export default function CreateProductPage() {
       console.log('Product creation response:', response);
 
       if (response.success) {
-        toast.success('Product created successfully! 🎉');
         const product = response.data || response.product;
         setCreatedProduct(product);
         
         const productId = product?.id;
+        let optionTypesCreated = 0;
+        let optionValuesCreated = 0;
         
         // Create option types and values if any were added in the form
         if (productId && formData.options && formData.options.length > 0) {
@@ -755,55 +887,115 @@ export default function CreateProductPage() {
             );
             
             const validResults = optionTypeResults.filter(r => r !== null);
-            const totalValuesCreated = validResults.reduce((sum, r) => sum + r.valuesCreated, 0);
-            
-            if (validResults.length > 0) {
-              toast.success(
-                `Product created! Created ${validResults.length} option type(s) with ${totalValuesCreated} value(s).`
-              );
-            } else {
-              toast.success('Product created! Note: Failed to create option types. You can add them manually.');
-            }
+            optionTypesCreated = validResults.length;
+            optionValuesCreated = validResults.reduce((sum, r) => sum + r.valuesCreated, 0);
           } catch (error) {
             console.error('Error creating option types and values:', error);
-            toast.success('Product created! Note: Failed to create options. You can add them manually.');
           }
         }
         
-        // Redirect to products list after successful creation
-        if (productId) {
-          router.push('/admin/products');
-        }
+        // Prepare success message
+        const successMessage = optionTypesCreated > 0 
+          ? `Product created successfully! Created ${optionTypesCreated} option type(s) with ${optionValuesCreated} value(s). 🎉`
+          : 'Product created successfully! 🎉';
+        
+        // Set loading to false before showing toast
+        setLoading(false);
+        
+        // Show toast message using the same pattern as login page
+        console.log('Showing success toast:', successMessage);
+        toast.success(successMessage, {
+          icon: "✅",
+          style: {
+            borderRadius: "12px",
+            background: "#10b981",
+            color: "#fff",
+          },
+        });
+        
+        // Wait 3 seconds to let user see the message, then redirect
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        
+        await router.push('/admin/products');
       } else {
-        toast.error(response.message || 'Failed to create product');
+        setLoading(false);
+        toast.error(response.message || 'Failed to create product', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+            fontSize: "14px",
+            padding: "16px",
+          },
+        });
       }
     } catch (error) {
       console.error('Error creating product:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
       
+      setLoading(false);
+      
       // Handle specific validation errors from backend
       if (error.response?.status === 400) {
         const errorMessage = error.response?.data?.message || 'Validation failed. Please check your input.';
         console.error('400 Error details:', error.response?.data);
-        toast.error(errorMessage);
+        toast.error(errorMessage, {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+            fontSize: "14px",
+            padding: "16px",
+          },
+        });
         
         // If there are specific field errors, show them
         if (error.response?.data?.errors) {
           setErrors(error.response.data.errors);
         }
       } else if (error.response?.status === 401) {
-        toast.error('You are not authorized. Please login again.');
+        toast.error('You are not authorized. Please login again.', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+            fontSize: "14px",
+            padding: "16px",
+          },
+        });
         router.push('/auth/login');
       } else if (error.response?.status === 403) {
-        toast.error('You do not have permission to create products.');
+        toast.error('You do not have permission to create products.', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+            fontSize: "14px",
+            padding: "16px",
+          },
+        });
       } else if (error.response?.status === 409) {
-        toast.error('A product with this name already exists in this category. Please choose a different name.');
+        toast.error('A product with this name already exists in this category. Please choose a different name.', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+            fontSize: "14px",
+            padding: "16px",
+          },
+        });
       } else {
-        toast.error('Failed to create product. Please try again.');
+        toast.error('Failed to create product. Please try again.', {
+          style: {
+            borderRadius: "12px",
+            background: "#ef4444",
+            color: "#fff",
+            fontSize: "14px",
+            padding: "16px",
+          },
+        });
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -872,7 +1064,6 @@ export default function CreateProductPage() {
                         features: [],
                         tags: [],
                         isActive: true,
-                        isFeatured: false,
                       });
                       setImages([]);
                       setErrors({});
@@ -899,7 +1090,7 @@ export default function CreateProductPage() {
   return (
     <AdminLayout title="Create Product" subtitle="Add a new product to your catalog">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
           <Link href="/admin/products">
             <Button variant="outline" size="sm">
@@ -914,8 +1105,8 @@ export default function CreateProductPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
@@ -1004,11 +1195,24 @@ export default function CreateProductPage() {
                       Stock Quantity *
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="stock"
                       value={formData.stock}
-                      onChange={handleChange}
-                      min="0"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow empty, numbers, or numeric strings
+                        if (value === '' || /^\d+$/.test(value)) {
+                          handleChange(e);
+                          // Clear error if valid input
+                          if (errors.stock && (value === '' || (!isNaN(parseInt(value)) && parseInt(value) >= 0))) {
+                            setErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.stock;
+                              return newErrors;
+                            });
+                          }
+                        }
+                      }}
                       placeholder="0"
                       className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all ${
                         errors.stock ? 'border-red-500' : 'border-gray-200 focus:border-blue-500'
@@ -1165,7 +1369,7 @@ export default function CreateProductPage() {
                             <div className="flex items-center space-x-2">
                               <input
                                 type="text"
-                                value={value.value || value.name || value}
+                                value={typeof value === 'string' ? value : (value?.value || value?.name || '')}
                                 onChange={(e) => updateOptionValue(optionIndex, valueIndex, e.target.value)}
                                 placeholder="Option value (e.g., Small, Red, Cotton)"
                                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1185,26 +1389,42 @@ export default function CreateProductPage() {
                                 <div className="relative">
                                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
                                   <input
-                                    type="number"
-                                    step="0.01"
-                                    value={value.price || 0}
-                                    onChange={(e) => updateOptionValuePrice(optionIndex, valueIndex, parseFloat(e.target.value) || 0)}
+                                    type="text"
+                                    value={value.price || value.price === 0 ? value.price : ''}
+                                    onChange={(e) => updateOptionValuePrice(optionIndex, valueIndex, e.target.value)}
                                     placeholder="0.00"
-                                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className={`w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                                      optionErrors[`option_${optionIndex}_value_${valueIndex}_price`] 
+                                        ? 'border-red-500' 
+                                        : 'border-gray-300'
+                                    }`}
                                   />
                                 </div>
+                                {optionErrors[`option_${optionIndex}_value_${valueIndex}_price`] && (
+                                  <p className="mt-1 text-xs text-red-600">
+                                    {optionErrors[`option_${optionIndex}_value_${valueIndex}_price`]}
+                                  </p>
+                                )}
                               </div>
                               
                               <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
                                 <input
-                                  type="number"
-                                  min="0"
-                                  value={value.stock || 0}
-                                  onChange={(e) => updateOptionValueStock(optionIndex, valueIndex, parseInt(e.target.value) || 0)}
+                                  type="text"
+                                  value={value.stock || value.stock === 0 ? value.stock : ''}
+                                  onChange={(e) => updateOptionValueStock(optionIndex, valueIndex, e.target.value)}
                                   placeholder="0"
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                                    optionErrors[`option_${optionIndex}_value_${valueIndex}_stock`] 
+                                      ? 'border-red-500' 
+                                      : 'border-gray-300'
+                                  }`}
                                 />
+                                {optionErrors[`option_${optionIndex}_value_${valueIndex}_stock`] && (
+                                  <p className="mt-1 text-xs text-red-600">
+                                    {optionErrors[`option_${optionIndex}_value_${valueIndex}_stock`]}
+                                  </p>
+                                )}
                               </div>
 
                               <div>
@@ -1282,116 +1502,28 @@ export default function CreateProductPage() {
                   />
                   <span className="ml-3 text-sm font-medium text-gray-700">Active</span>
                 </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="isFeatured"
-                    checked={formData.isFeatured}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="ml-3 text-sm font-medium text-gray-700">Featured</span>
-                </label>
               </CardBody>
             </Card>
 
-            {/* Clothing Details */}
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900">Clothing Details</h3>
-                <p className="text-sm text-gray-600">Add specific details for clothing items</p>
-              </CardHeader>
-              <CardBody className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
-                    <input
-                      type="text"
-                      name="material"
-                      value={formData.material || ''}
-                      onChange={handleChange}
-                      placeholder="e.g., 100% Cotton, Polyester, Denim"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Care Instructions</label>
-                    <input
-                      type="text"
-                      name="careInstructions"
-                      value={formData.careInstructions || ''}
-                      onChange={handleChange}
-                      placeholder="e.g., Machine wash cold, Hang dry"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fit Type</label>
-                    <select
-                      name="fitType"
-                      value={formData.fitType || ''}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select fit type</option>
-                      <option value="Slim">Slim</option>
-                      <option value="Regular">Regular</option>
-                      <option value="Relaxed">Relaxed</option>
-                      <option value="Oversized">Oversized</option>
-                      <option value="Athletic">Athletic</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
-                    <select
-                      name="season"
-                      value={formData.season || ''}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select season</option>
-                      <option value="All Season">All Season</option>
-                      <option value="Summer">Summer</option>
-                      <option value="Winter">Winter</option>
-                      <option value="Spring">Spring</option>
-                      <option value="Fall">Fall</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Size Guide</label>
-                  <textarea
-                    name="sizeGuide"
-                    value={formData.sizeGuide || ''}
-                    onChange={handleChange}
-                    rows="3"
-                    placeholder="e.g., Small: Chest 34-36, Medium: Chest 38-40, Large: Chest 42-44"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </CardBody>
-            </Card>
 
             {/* Actions */}
             <Card>
               <CardBody>
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     type="submit"
                     variant="primary"
-                    className="w-full"
+                    className="w-full shadow-md hover:shadow-lg transition-shadow duration-200"
                     isLoading={loading}
                   >
-                    <Save className="h-4 w-4" />
+                    <Save className="h-4 w-4 mr-2" />
                     Create Product
                   </Button>
-                  <Link href="/admin/products">
+                  <Link href="/admin/products" className="w-full">
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full"
+                      className="w-full hover:bg-gray-100 hover:text-gray-700 transition-colors duration-200"
                     >
                       Cancel
                     </Button>

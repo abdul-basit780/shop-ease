@@ -157,15 +157,6 @@ const AdminLayout = ({ children, title, subtitle }) => {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden md:block relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search categories..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -292,16 +283,11 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
                   </span>
                 )}
               </p>
-              <div className="mt-1 text-xs text-gray-400">
-                <span className="font-medium">Parent ID:</span> 
-                <span className={`ml-1 px-2 py-1 rounded ${
-                  category.parentId === null || category.parentId === undefined 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-blue-100 text-blue-700'
-                }`}>
-                  {category.parentId === null ? 'null' : category.parentId === undefined ? 'undefined' : category.parentId}
-                </span>
-              </div>
+              {isParentCategory && hasSubcategories && (
+                <p className="text-xs text-gray-400 mt-1">
+                  (Includes products from subcategories)
+                </p>
+              )}
               {parentCategory && (
                 <div className="flex items-center mt-1">
                   <span className="text-xs text-gray-400">└─</span>
@@ -332,11 +318,11 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
         
         <div className="flex items-center justify-between mb-4">
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            category.isActive 
+            !category.deletedAt 
               ? 'bg-green-100 text-green-800' 
               : 'bg-red-100 text-red-800'
           }`}>
-            {category.isActive ? 'Active' : 'Inactive'}
+            {!category.deletedAt ? 'Active' : 'Inactive'}
           </span>
           <span className="text-xs text-gray-500">
             Created {new Date(category.createdAt).toLocaleDateString()}
@@ -344,13 +330,6 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
         </div>
         
         <div className="space-y-3">
-          {/* Category Stats */}
-          <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 rounded-lg p-2">
-            <span>Status: {category.isActive ? 'Active' : 'Inactive'}</span>
-            <span>Sort: {category.sortOrder || 0}</span>
-            <span>Created: {new Date(category.createdAt).toLocaleDateString()}</span>
-          </div>
-
           {/* Action Buttons */}
           <div className="flex space-x-2">
             <Button
@@ -472,45 +451,96 @@ export default function CategoriesPage() {
     }
   };
 
-  const fetchProductCounts = async (categories) => {
+  const fetchProductCounts = async (allCategories) => {
     try {
-      console.log('Fetching product counts for categories:', categories.length);
+      console.log('Fetching product counts for categories:', allCategories.length);
       
-      // Fetch product counts for each category
-      const productCountPromises = categories.map(async (category) => {
+      // Fetch product counts for each category (including subcategories)
+      const productCountPromises = allCategories.map(async (category) => {
         try {
-          const response = await apiClient.get(`/api/admin/product?categoryId=${category.id}&limit=1`);
+          const categoryId = category.id || category._id;
+          const response = await apiClient.get(`/api/admin/product?categoryId=${categoryId}&limit=1`);
           const count = response.data?.pagination?.total || 0;
           console.log(`Category ${category.name}: ${count} products`);
-          return { id: category.id, productCount: count };
+          return { id: categoryId, productCount: count };
         } catch (error) {
           console.error(`Error fetching product count for category ${category.name}:`, error);
-          return { id: category.id, productCount: 0 };
+          const categoryId = category.id || category._id;
+          return { id: categoryId, productCount: 0 };
         }
       });
       
       const productCounts = await Promise.all(productCountPromises);
       console.log('Product counts fetched:', productCounts);
       
-      // Update categories with product counts
+      // Create a map for quick lookup
+      const countMap = new Map();
+      productCounts.forEach(pc => {
+        countMap.set(pc.id, pc.productCount);
+      });
+      
+      // Calculate total product counts for parent categories (including subcategory products)
+      const parentCountsMap = new Map();
+      allCategories.forEach(category => {
+        if (!category.parentId) {
+          // This is a parent category - calculate total including subcategories
+          const categoryId = category.id || category._id;
+          let totalCount = countMap.get(categoryId) || 0;
+          
+          // Find all subcategories of this parent (handle both string and ObjectId comparisons)
+          const subcategories = allCategories.filter(cat => {
+            const catParentId = cat.parentId?.toString() || cat.parentId;
+            const parentIdStr = categoryId.toString();
+            return catParentId === parentIdStr;
+          });
+          
+          subcategories.forEach(sub => {
+            const subId = sub.id || sub._id;
+            const subCount = countMap.get(subId) || 0;
+            totalCount += subCount;
+          });
+          
+          parentCountsMap.set(categoryId, totalCount);
+        }
+      });
+      
+      // Update categories with product counts (use calculated totals for parents)
       setCategories(prevCategories => 
         prevCategories.map(category => {
-          const countData = productCounts.find(pc => pc.id === category.id);
-          return {
-            ...category,
-            productCount: countData?.productCount || 0
-          };
+          const categoryId = category.id || category._id;
+          if (!category.parentId && parentCountsMap.has(categoryId)) {
+            // Parent category - use calculated total
+            return {
+              ...category,
+              productCount: parentCountsMap.get(categoryId)
+            };
+          } else {
+            // Subcategory - use direct count
+            const countData = productCounts.find(pc => (pc.id === categoryId) || (pc.id === category._id));
+            return {
+              ...category,
+              productCount: countData?.productCount || 0
+            };
+          }
         })
       );
       
-      // Update parent categories with product counts
+      // Update parent categories with calculated totals
       setParentCategories(prevParentCategories =>
         prevParentCategories.map(category => {
-          const countData = productCounts.find(pc => pc.id === category.id);
-          return {
-            ...category,
-            productCount: countData?.productCount || 0
-          };
+          const categoryId = category.id || category._id;
+          if (parentCountsMap.has(categoryId)) {
+            return {
+              ...category,
+              productCount: parentCountsMap.get(categoryId)
+            };
+          } else {
+            const countData = productCounts.find(pc => (pc.id === categoryId) || (pc.id === category._id));
+            return {
+              ...category,
+              productCount: countData?.productCount || 0
+            };
+          }
         })
       );
       
@@ -519,7 +549,8 @@ export default function CategoriesPage() {
         const updatedSubcategories = { ...prevSubcategories };
         Object.keys(updatedSubcategories).forEach(parentId => {
           updatedSubcategories[parentId] = updatedSubcategories[parentId].map(subcategory => {
-            const countData = productCounts.find(pc => pc.id === subcategory.id);
+            const subId = subcategory.id || subcategory._id;
+            const countData = productCounts.find(pc => (pc.id === subId) || (pc.id === subcategory._id));
             return {
               ...subcategory,
               productCount: countData?.productCount || 0
@@ -872,7 +903,7 @@ export default function CategoriesPage() {
       ) : (
         <>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {categories.map((category) => (
                 <CategoryCard
                   key={category.id}
