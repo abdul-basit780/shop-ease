@@ -10,16 +10,21 @@ import {
   Package,
   Sparkles,
 } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
 import { authService } from "@/lib/auth-service";
+import { useCartWishlist } from "@/contexts/CartWishlistContext";
 import toast from "react-hot-toast";
 
 export default function WishlistPage() {
   const router = useRouter();
-  const [wishlist, setWishlist] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [removingId, setRemovingId] = useState(null);
   const hasCheckedAuth = useRef(false);
+
+  // Use context for wishlist data and methods
+  const { 
+    wishlist, 
+    isLoadingWishlist, 
+    removeFromWishlist 
+  } = useCartWishlist();
 
   // Calculate minimum price: base + minimum price from each option type
   const getMinimumPrice = (product) => {
@@ -48,128 +53,37 @@ export default function WishlistPage() {
   };
 
   useEffect(() => {
-    let isMounted = true;
-    let hasRun = false;
+    if (hasCheckedAuth.current) return;
+    hasCheckedAuth.current = true;
 
-    const initPage = async () => {
-      // Prevent multiple executions
-      if (hasRun) return;
-      hasRun = true;
-
-      if (!authService.isAuthenticated()) {
-        toast.error("Please login to view your wishlist", {
-          icon: "🔒",
-        });
-        router.push("/auth/login?returnUrl=/wishlist");
-        return;
-      }
-
-      const user = authService.getCurrentUser();
-      if (user?.role === "admin") {
-        toast.error("This page is only accessible to customers", {
-          icon: "🚫",
-          duration: 1000,
-        });
-        setTimeout(() => {
-          router.push("/admin");
-        }, 1000);
-        return;
-      }
-
-      if (isMounted) {
-        await fetchWishlist();
-      }
-    };
-
-    initPage();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []); // Keep empty dependency array
-
-  const fetchWishlist = async () => {
-    try {
-      setIsLoading(true);
-      const response = await apiClient.get("/api/customer/wishlist");
-      if (response.success && response.data) {
-        // Fetch full product details for each wishlist item to get optionTypes
-        const productsWithDetails = await Promise.all(
-          response.data.products.map(async (product) => {
-            try {
-              const productResponse = await apiClient.get(`/api/public/products/${product.productId}`);
-              if (productResponse.success && productResponse.data) {
-                // Merge wishlist data with full product data
-                return {
-                  ...product,
-                  optionTypes: productResponse.data.optionTypes || [],
-                };
-              }
-              return product;
-            } catch (err) {
-              return product;
-            }
-          })
-        );
-
-        const updatedWishlist = {
-          ...response.data,
-          products: productsWithDetails,
-        };
-
-        setWishlist(updatedWishlist);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(
-            "wishlist",
-            JSON.stringify(productsWithDetails)
-          );
-          window.dispatchEvent(new Event("wishlistUpdated"));
-        }
-      }
-    } catch (error) {
-      toast.error("Failed to load wishlist");
-    } finally {
-      setIsLoading(false);
+    if (!authService.isAuthenticated()) {
+      toast.error("Please login to view your wishlist", {
+        icon: "🔒",
+      });
+      router.push("/auth/login?returnUrl=/wishlist");
+      return;
     }
-  };
+
+    const user = authService.getCurrentUser();
+    if (user?.role === "admin") {
+      toast.error("This page is only accessible to customers", {
+        icon: "🚫",
+        duration: 1000,
+      });
+      setTimeout(() => {
+        router.push("/admin");
+      }, 1000);
+      return;
+    }
+  }, [router]);
 
   const handleRemoveFromWishlist = async (productId) => {
     setRemovingId(productId);
 
     try {
-      const response = await apiClient.delete("/api/customer/wishlist", {
-        productId,
-      });
+      const result = await removeFromWishlist(productId);
 
-      if (response.success) {
-        // Update localStorage with the new wishlist from response
-        if (typeof window !== "undefined") {
-          const updatedProducts = response.wishlist?.products || [];
-          localStorage.setItem("wishlist", JSON.stringify(updatedProducts));
-        }
-
-        // Update wishlist state with response data
-        if (response.wishlist) {
-          setWishlist(response.wishlist);
-        } else {
-          // Fallback: manually update state if no wishlist in response
-          setWishlist((prev) => {
-            if (!prev) return prev;
-            const productToRemove = prev.products.find(
-              (p) => p.productId === productId
-            );
-            return {
-              ...prev,
-              products: prev.products.filter((p) => p.productId !== productId),
-              count: Math.max(0, prev.count - 1),
-              totalValue: Math.max(
-                0,
-                prev.totalValue - (productToRemove?.price || 0)
-              ),
-            };
-          });
-        }
-
+      if (result.success) {
         toast.success("Removed from wishlist", {
           icon: "🗑️",
           style: {
@@ -178,13 +92,8 @@ export default function WishlistPage() {
             color: "#fff",
           },
         });
-
-        // Dispatch event to update home page
-        window.dispatchEvent(new Event("wishlistUpdated"));
       } else {
-        toast.error(
-          response.error || response.message || "Failed to remove item"
-        );
+        toast.error(result.error || "Failed to remove item");
       }
     } catch (error) {
       toast.error("Failed to remove item");
@@ -227,7 +136,6 @@ export default function WishlistPage() {
   };
 
   const handleMoveToCart = async (product) => {
-    // await handleAddToCart(product);
     await handleRemoveFromWishlist(product.productId);
     await router.push(`/customer/product/${product.productId}`);
   };
@@ -240,7 +148,7 @@ export default function WishlistPage() {
     }, 0);
   };
 
-  if (isLoading) {
+  if (isLoadingWishlist) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -287,11 +195,6 @@ export default function WishlistPage() {
                 <p className="text-gray-600 mt-1">
                   {wishlist?.count || 0}{" "}
                   {wishlist?.count === 1 ? "item" : "items"} saved
-                  {/* {totalValue > 0 && (
-                    <span className="ml-2 text-blue-600 font-semibold">
-                      • Total from: ${totalValue.toFixed(2)}
-                    </span>
-                  )} */}
                 </p>
               </div>
             </div>

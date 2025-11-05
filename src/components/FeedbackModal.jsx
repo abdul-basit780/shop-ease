@@ -1,4 +1,4 @@
-// components/ReviewModal.jsx
+// components/FeedbackModal.jsx
 import { useState, useEffect } from 'react';
 import { X, Star, Trash2, Edit2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
@@ -11,7 +11,7 @@ export default function FeedbackModal({
   orderId, 
   productName,
   productImage,
-  existingReview = null, // Pass if user already reviewed
+  existingReview = null,
   onReviewSubmitted 
 }) {
   const [rating, setRating] = useState(0);
@@ -28,6 +28,7 @@ export default function FeedbackModal({
       setRating(0);
       setComment('');
     }
+    setShowDeleteConfirm(false);
   }, [existingReview, isOpen]);
 
   if (!isOpen) return null;
@@ -57,13 +58,13 @@ export default function FeedbackModal({
 
       let response;
       if (existingReview) {
-        // Update existing review
+        // FIX: Use the correct ID field (_id instead of id)
+        const reviewId = existingReview._id || existingReview.id;
         response = await apiClient.put(
-          `/api/customer/feedback/${existingReview._id}`,
+          `/api/customer/feedback/${reviewId}`,
           { rating, comment: comment.trim() }
         );
       } else {
-        // Create new review
         response = await apiClient.post('/api/customer/feedback', reviewData);
       }
 
@@ -73,12 +74,15 @@ export default function FeedbackModal({
         });
         onReviewSubmitted?.();
         onClose();
+        // Reset form after successful submission
+        setRating(0);
+        setComment('');
       } else {
         toast.error(response.message || response.error || 'Failed to submit review');
       }
     } catch (error) {
       console.error('Error submitting review:', error);
-      toast.error(error.response?.data?.message || 'Failed to submit review');
+      toast.error(error.response?.data?.message || error.response?.data?.error || 'Failed to submit review');
     } finally {
       setIsSubmitting(false);
     }
@@ -89,21 +93,25 @@ export default function FeedbackModal({
 
     setIsSubmitting(true);
     try {
-      const response = await apiClient.delete(`/api/customer/feedback/${existingReview._id}`);
+      // FIX: Use the correct ID field
+      const reviewId = existingReview._id || existingReview.id;
+      const response = await apiClient.delete(`/api/customer/feedback/${reviewId}`);
 
       if (response.success) {
-        toast.success('Review deleted successfully', {
-          icon: '🗑️',
+        toast.success('Review deleted successfully! 🗑️', {
           duration: 2000,
         });
         onReviewSubmitted?.();
         onClose();
+        // Reset form
+        setRating(0);
+        setComment('');
       } else {
-        toast.error('Failed to delete review');
+        toast.error(response.message || response.error || 'Failed to delete review');
       }
     } catch (error) {
       console.error('Error deleting review:', error);
-      toast.error('Failed to delete review');
+      toast.error(error.response?.data?.message || error.response?.data?.error || 'Failed to delete review');
     } finally {
       setIsSubmitting(false);
       setShowDeleteConfirm(false);
@@ -124,7 +132,8 @@ export default function FeedbackModal({
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            disabled={isSubmitting}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
           >
             <X className="h-6 w-6" />
           </button>
@@ -168,7 +177,8 @@ export default function FeedbackModal({
                     onClick={() => setRating(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
-                    className="focus:outline-none transform hover:scale-110 transition-transform"
+                    disabled={isSubmitting}
+                    className="focus:outline-none transform hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Star
                       className={`h-10 w-10 ${
@@ -201,7 +211,8 @@ export default function FeedbackModal({
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Share your thoughts about this product... (minimum 10 characters)"
                 rows={5}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all resize-none"
+                disabled={isSubmitting}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all resize-none disabled:opacity-50 disabled:bg-gray-50"
                 required
                 minLength={10}
               />
@@ -219,7 +230,8 @@ export default function FeedbackModal({
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-6 py-3 border-2 border-red-600 text-red-600 font-semibold rounded-xl hover:bg-red-50 transition-all flex items-center gap-2"
+                  disabled={isSubmitting}
+                  className="px-6 py-3 border-2 border-red-600 text-red-600 font-semibold rounded-xl hover:bg-red-50 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete
@@ -230,7 +242,7 @@ export default function FeedbackModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -257,12 +269,19 @@ export default function FeedbackModal({
 
           {/* Delete Confirmation */}
           {showDeleteConfirm && (
-            <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-              <p className="text-red-800 font-semibold mb-3">Are you sure you want to delete this review?</p>
+            <div className="mt-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl animate-fade-in">
+              <div className="flex items-start space-x-3 mb-3">
+                <Trash2 className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-800 font-semibold">Delete this review?</p>
+                  <p className="text-sm text-red-700 mt-1">This action cannot be undone.</p>
+                </div>
+              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -300,8 +319,21 @@ export default function FeedbackModal({
             transform: scale(1) translateY(0);
           }
         }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
         .animate-modal-enter {
           animation: modal-enter 0.3s ease-out;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
         }
       `}</style>
     </div>

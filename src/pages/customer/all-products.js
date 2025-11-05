@@ -1,9 +1,9 @@
-// pages/customer/all-products.js
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { authService } from '@/lib/auth-service';
+import { useCartWishlist } from '@/contexts/CartWishlistContext';
 import { Search, Filter, Package, Heart, ShoppingCart, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -16,7 +16,6 @@ export default function AllProducts() {
   const [pagination, setPagination] = useState(null);
   const [categories, setCategories] = useState([]);
   const [user, setUser] = useState(null);
-  const [wishlistProductIds, setWishlistProductIds] = useState([]);
   const [filters, setFilters] = useState({
     search: search || '',
     subcategoryId: subcategoryId || '',
@@ -28,6 +27,9 @@ export default function AllProducts() {
     page: parseInt(page) || 1,
     limit: 12
   });
+
+  // Use context for wishlist
+  const { addToWishlist, isInWishlist } = useCartWishlist();
 
   // Calculate minimum price: base + minimum price from each option type
   const getMinimumPrice = (product) => {
@@ -55,6 +57,32 @@ export default function AllProducts() {
     return minPrice;
   };
 
+  // Calculate effective stock based on option values
+  const getEffectiveStock = (product) => {
+    // If no option types, return base stock
+    if (!product.optionTypes || product.optionTypes.length === 0) {
+      return product.stock;
+    }
+
+    // Find the minimum stock across all option values
+    let minStock = product.stock; // Start with base stock
+    
+    product.optionTypes.forEach(optionType => {
+      if (optionType.values && optionType.values.length > 0) {
+        optionType.values.forEach(val => {
+          if (typeof val === 'object' && val.stock !== undefined) {
+            // If any option value has lower stock, use that
+            if (val.stock < minStock) {
+              minStock = val.stock;
+            }
+          }
+        });
+      }
+    });
+    
+    return minStock;
+  };
+
   // Fetch products whenever filters or router query changes
   useEffect(() => {
     if (router.isReady) {
@@ -78,29 +106,19 @@ export default function AllProducts() {
   useEffect(() => {
     fetchCategories();
     checkUser();
-    loadWishlist();
     
-    // Listen for auth and wishlist changes
+    // Listen for auth changes
     window.addEventListener('userLoggedIn', handleUserLogin);
     window.addEventListener('userLoggedOut', handleLogout);
-    window.addEventListener('wishlistUpdated', handleWishlistUpdated);
     
     return () => {
       window.removeEventListener('userLoggedIn', handleUserLogin);
       window.removeEventListener('userLoggedOut', handleLogout);
-      window.removeEventListener('wishlistUpdated', handleWishlistUpdated);
     };
   }, []);
 
   const handleUserLogin = () => {
     checkUser();
-    loadWishlist();
-  };
-
-  const handleWishlistUpdated = () => {
-    setTimeout(() => {
-      loadWishlist();
-    }, 300);
   };
 
   const checkUser = () => {
@@ -110,27 +128,6 @@ export default function AllProducts() {
 
   const handleLogout = () => {
     setUser(null);
-    setWishlistProductIds([]);
-  };
-
-  const loadWishlist = async () => {
-    if (!authService.isAuthenticated()) {
-      setWishlistProductIds([]);
-      return;
-    }
-    
-    try {
-      const response = await apiClient.get('/api/customer/wishlist');
-      let productIds = [];
-      if (response.success) {
-        const wishlistProducts = response.data?.products || response.wishlist?.products || [];
-        productIds = wishlistProducts.map(p => p.productId || p.id);
-      }
-      
-      setWishlistProductIds(productIds);
-    } catch (error) {
-      setWishlistProductIds([]);
-    }
   };
 
   const fetchProducts = async () => {
@@ -229,18 +226,9 @@ export default function AllProducts() {
     }
     
     try {
-      const response = await apiClient.post('/api/customer/wishlist', {
-        productId: product.id
-      });
+      const result = await addToWishlist(product.id);
       
-      if (response.success) {
-        setWishlistProductIds(prev => {
-          if (!prev.includes(product.id)) {
-            return [...prev, product.id];
-          }
-          return prev;
-        });
-        
+      if (result.success) {
         toast.success('Added to wishlist!', {
           icon: '❤️',
           style: {
@@ -249,11 +237,8 @@ export default function AllProducts() {
             color: '#fff',
           },
         });
-        
-        loadWishlist();
-        window.dispatchEvent(new Event('wishlistUpdated'));
       } else {
-        if (response.error && (response.error.includes('already') || response.error.includes('exists'))) {
+        if (result.error && (result.error.includes('already') || result.error.includes('exists'))) {
           toast('Already in wishlist!', {
             icon: '💜',
             style: {
@@ -262,14 +247,8 @@ export default function AllProducts() {
               color: '#fff',
             },
           });
-          setWishlistProductIds(prev => {
-            if (!prev.includes(product.id)) {
-              return [...prev, product.id];
-            }
-            return prev;
-          });
         } else {
-          toast.error(response.error || 'Failed to add to wishlist', {
+          toast.error(result.error || 'Failed to add to wishlist', {
             style: {
               borderRadius: '12px',
               background: '#ef4444',
@@ -287,10 +266,6 @@ export default function AllProducts() {
         },
       });
     }
-  };
-
-  const isInWishlist = (productId) => {
-    return wishlistProductIds.includes(productId);
   };
 
   const activeFiltersCount = [search, subcategoryId, minPrice, maxPrice, inStock].filter(Boolean).length;
@@ -486,6 +461,7 @@ export default function AllProducts() {
                   {products.map((product, idx) => {
                     const inWishlist = isInWishlist(product.id);
                     const minPrice = getMinimumPrice(product);
+                    const effectiveStock = getEffectiveStock(product);
                     const hasOptions = product.optionTypes && product.optionTypes.length > 0;
                     
                     return (
@@ -503,15 +479,15 @@ export default function AllProducts() {
                             />
                           </Link>
                           
-                          {product.stock === 0 && (
+                          {effectiveStock === 0 && (
                             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                               <span className="text-white font-bold text-lg">Out of Stock</span>
                             </div>
                           )}
 
-                          {product.stock > 0 && product.stock < 5 && (
+                          {effectiveStock > 0 && effectiveStock < 5 && (
                             <div className="absolute top-3 left-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse z-10">
-                              Only {product.stock} left
+                              Only {effectiveStock} left
                             </div>
                           )}
 
@@ -563,7 +539,7 @@ export default function AllProducts() {
                               )}
                             </div>
                             <span className="text-sm text-gray-500">
-                              Stock: {product.stock}
+                              Stock: {effectiveStock}
                             </span>
                           </div>
 
@@ -622,6 +598,39 @@ export default function AllProducts() {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes scale-in {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out;
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.5s ease-out forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   );
 }

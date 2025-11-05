@@ -15,12 +15,11 @@ import {
 } from "lucide-react";
 import { authService } from "@/lib/auth-service";
 import { apiClient } from "@/lib/api-client";
+import { useCartWishlist } from "@/contexts/CartWishlistContext";
 
 export const Navbar = () => {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
@@ -29,34 +28,27 @@ export const Navbar = () => {
   const [categories, setCategories] = useState([]);
   const [hoveredCategory, setHoveredCategory] = useState(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      checkUser();
-      updateCounts();
-    }, 0);
+  // Use context for cart and wishlist counts
+  const { cartCount, wishlistCount } = useCartWishlist();
 
+  useEffect(() => {
+    checkUser();
     fetchCategories();
 
     const handleUserLogin = () => {
       checkUser();
-      updateCounts();
     };
 
     const handleUserLogout = () => {
       setUser(null);
-      setCartCount(0);
-      setWishlistCount(0);
     };
 
     const handleFocus = () => {
       checkUser();
-      updateCounts();
     };
 
     window.addEventListener("userLoggedIn", handleUserLogin);
     window.addEventListener("userLoggedOut", handleUserLogout);
-    window.addEventListener("cartUpdated", updateCounts);
-    window.addEventListener("wishlistUpdated", updateCounts);
     window.addEventListener("focus", handleFocus);
 
     const handleScroll = () => {
@@ -65,11 +57,8 @@ export const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
 
     return () => {
-      clearTimeout(timer);
       window.removeEventListener("userLoggedIn", handleUserLogin);
       window.removeEventListener("userLoggedOut", handleUserLogout);
-      window.removeEventListener("cartUpdated", updateCounts);
-      window.removeEventListener("wishlistUpdated", updateCounts);
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("scroll", handleScroll);
     };
@@ -77,36 +66,11 @@ export const Navbar = () => {
 
   useEffect(() => {
     checkUser();
-    updateCounts();
   }, [router.pathname, router.asPath]);
 
   const checkUser = () => {
     const currentUser = authService.getCurrentUser();
     setUser(currentUser);
-  };
-
-  const updateCounts = async () => {
-    if (!authService.isAuthenticated()) {
-      setCartCount(0);
-      setWishlistCount(0);
-      return;
-    }
-
-    try {
-      // Fetch cart count
-      const cartResponse = await apiClient.get("/api/customer/cart");
-      if (cartResponse.success && cartResponse.data) {
-        setCartCount(cartResponse.data.count || 0);
-      }
-
-      // Fetch wishlist count
-      const wishlistResponse = await apiClient.get("/api/customer/wishlist");
-      if (wishlistResponse.success && wishlistResponse.data) {
-        setWishlistCount(wishlistResponse.data.products?.length || 0);
-      }
-    } catch (error) {
-      console.error("Error updating counts:", error);
-    }
   };
 
   const fetchCategories = async () => {
@@ -231,7 +195,7 @@ export const Navbar = () => {
                         maxHeight: "calc(100vh - 120px)",
                       }}
                     >
-                      {/* Categories List with Scroll */}
+                      {/* Categories List */}
                       <div className="col-span-1 bg-gray-50 border-r border-gray-200 flex flex-col h-full">
                         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide px-3 py-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
                           All Categories
@@ -269,7 +233,7 @@ export const Navbar = () => {
                         </div>
                       </div>
 
-                      {/* Subcategories Display with Scroll */}
+                      {/* Subcategories Display */}
                       <div className="col-span-3 flex flex-col h-full">
                         <div className="overflow-y-auto flex-1 p-6">
                           {hoveredCategory ? (
@@ -361,7 +325,7 @@ export const Navbar = () => {
 
             {user ? (
               <>
-                {/* Wishlist */}
+                {/* Wishlist - Using Context */}
                 <Link
                   href="/customer/wishlist"
                   className="relative p-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-300 group"
@@ -374,7 +338,7 @@ export const Navbar = () => {
                   )}
                 </Link>
 
-                {/* Cart */}
+                {/* Cart - Using Context */}
                 <Link
                   href="/customer/cart"
                   className="relative p-3 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-300 group mr-2"
@@ -504,7 +468,7 @@ export const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu with Scroll */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 max-h-[calc(100vh-80px)] overflow-y-auto">
             <div className="py-4">
@@ -531,7 +495,7 @@ export const Navbar = () => {
                   Products
                 </Link>
 
-                {/* Mobile Categories with Scroll */}
+                {/* Mobile Categories */}
                 <div className="py-2">
                   <div className="text-xs font-bold text-gray-500 uppercase tracking-wide px-4 mb-2">
                     Categories
