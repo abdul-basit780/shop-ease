@@ -125,7 +125,6 @@ export default function OrderDetails() {
     try {
       setIsLoading(true);
       const response = await apiClient.get(`/api/customer/order/${id}`);
-      console.log(response)
       
       if (response.success && response.data) {
         setOrder(response.data);
@@ -150,7 +149,6 @@ export default function OrderDetails() {
           const response = await apiClient.get(
             `/api/public/products/${productId}/feedbacks?page=1&limit=100`
           );
-          console.log('feedback',response)
           
           if (response.success && response.data?.feedbacks) {
             // Find user's review for this product - FIXED: Check both _id and id
@@ -209,7 +207,6 @@ export default function OrderDetails() {
         toast.error(response.message || 'Failed to cancel order');
       }
     } catch (error) {
-      console.error('Error cancelling order:', error);
       toast.error(error.response?.data?.message || 'Failed to cancel order');
     } finally {
       setIsCancelling(false);

@@ -45,14 +45,12 @@ export default function MyOrders() {
       const response = await apiClient.get(
         `/api/customer/order?page=${page}&limit=10`
       );
-      console.log(response);
 
       if (response.success && response.data) {
         setOrders(response.data.orders || []);
         setPagination(response.data.pagination);
       }
     } catch (error) {
-      console.error("Error fetching orders:", error);
       toast.error("Failed to load orders");
     } finally {
       setIsLoading(false);

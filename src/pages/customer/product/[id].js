@@ -916,7 +916,6 @@ export default function ProductDetails() {
         recommendations={recommendations}
         onProductClick={(productId) => {
           handleCloseRecommendations();
-          console.log('Viewing recommended product:', productId);
         }}
       />
 

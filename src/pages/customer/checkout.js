@@ -1,4 +1,3 @@
-// pages/customer/checkout.js
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -329,7 +328,6 @@ export default function CheckoutPage() {
         setOrderProcessing(false); // Reset on error
       }
     } catch (error) {
-      console.error('Error processing order:', error);
       toast.error(error.response?.data?.message || error.message || 'Failed to process order');
       setOrderProcessing(false); // Reset on error
     } finally {
