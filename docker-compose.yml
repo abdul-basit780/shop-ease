@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v3.0 # Or desired version
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - web
+  web:
+    image: ghcr.io/eretic431/web:latest
+    container_name: web
+    restart: always
+    ports:
+      - "80:3000"
+    depends_on:
+      - mongo
+networks:
+  web:
+    external: true # Or create if not external
