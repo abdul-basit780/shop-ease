@@ -13,6 +13,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # SSH to remote host and execute commands
+      - name: SSH to remote host and execute commands
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: shop-ease.dev  # IP or hostname of the remote host
+          username: root  # SSH username
+          key: ${{ secrets.SSH_KEY }}  # SSH private key (use GitHub Secrets)
+          port: 22  # Default SSH port, adjust if needed
+          script: |
+            echo "Running commands on remote host"
+
       # Check out the repository
       - name: Checkout code
         uses: actions/checkout@v3
@@ -54,13 +65,3 @@ jobs:
       - name: Push Docker image
         run: docker push ghcr.io/abdul-basit780/shop-ease
 
-      # SSH to remote host and execute commands
-      - name: SSH to remote host and execute commands
-        uses: appleboy/ssh-action@v0.1.0
-        with:
-          host: shop-ease.dev  # IP or hostname of the remote host
-          username: root  # SSH username
-          key: ${{ secrets.SSH_KEY }}  # SSH private key (use GitHub Secrets)
-          port: 22  # Default SSH port, adjust if needed
-          script: |
-            echo "Running commands on remote host"
