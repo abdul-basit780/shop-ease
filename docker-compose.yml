@@ -7,6 +7,9 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+      - --providers.file.directory=/etc/traefik/certs
+      - --providers.file.watch=true
     ports:
       - "443:443"
     volumes:
@@ -14,13 +17,16 @@ services:
     networks:
       - web
   web:
-    image: ghcr.io/eretic431/web:latest
+    image: ghcr.io/abdul-basit780/shop-ease:latest
     container_name: web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.my-app.rule=Host(`shop-ease.dev`)"
+      - "traefik.http.routers.my-app.entrypoints=websecure"
+      - "traefik.http.routers.my-app.tls=true"
+      - "traefik.http.services.my-app.loadbalancer.server.port=3000"
     restart: always
-    ports:
-      - "80:3000"
-    depends_on:
-      - mongo
+
 networks:
   web:
     external: true # Or create if not external
