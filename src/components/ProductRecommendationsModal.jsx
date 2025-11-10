@@ -19,6 +19,7 @@ export default function RecommendationsModal({
       onProductClick(productId);
     }
   };
+  console.log(recommendations)
 
   const handleViewCart = () => {
     onClose();
