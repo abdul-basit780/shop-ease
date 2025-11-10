@@ -43,6 +43,7 @@ export const buildRecommendationResponse = (
       stock: product.stock,
       reason: rec.reason || "Popular choice",
       score: rec.score || 0,
+      optionTypes: product.optionTypes || [],
     };
   });
 
@@ -64,6 +65,7 @@ export const buildProductListResponse = (
     img: p.img,
     category: p.categoryId?.name || p.categoryId,
     stock: p.stock,
+    optionTypes: p.optionTypes || [],
   }));
 
   return {
