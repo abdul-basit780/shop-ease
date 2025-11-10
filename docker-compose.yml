@@ -4,6 +4,7 @@ services:
   traefik:
     image: traefik:v3.0 # Or desired version
     command:
+      - --api.insecure=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.websecure.address=:443
@@ -12,8 +13,11 @@ services:
       - --providers.file.watch=true
     ports:
       - "443:443"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/traefik/certs:/etc/traefik/certs:ro
+      - /etc/letsencrypt/:/etc/letsencrypt/:ro
     networks:
       - web
   web:
@@ -24,9 +28,11 @@ services:
       - "traefik.http.routers.my-app.rule=Host(`shop-ease.dev`)"
       - "traefik.http.routers.my-app.entrypoints=websecure"
       - "traefik.http.routers.my-app.tls=true"
-      - "traefik.http.services.my-app.loadbalancer.server.port=3000"
     restart: always
-
+    env_file:
+      - ./web.env
+    networks:
+      - web
 networks:
   web:
     external: true # Or create if not external

@@ -64,5 +64,5 @@ jobs:
           port: 22  # Default SSH port, adjust if needed
           script: |
             echo "Running commands on remote host"
-            docker compose pull
-            docker compose up -d
+            docker-compose pull
+            docker-compose up -d
