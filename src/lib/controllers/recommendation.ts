@@ -4,8 +4,6 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import connectToDatabase from "../db/mongodb";
 import mongoose from "mongoose";
 import { RecommendationService } from "../services/RecommendationService";
-import { Feedback } from "../models/Feedback";
-import { Wishlist } from "../models/Wishlist";
 import {
   buildRecommendationResponse,
   RECOMMENDATION_MESSAGES,
@@ -43,34 +41,14 @@ export const getRecommendations = async (
       response.statusCode = 400;
       return response;
     }
-
-    // Check if user has any feedback or wishlist data
-    const [feedbackCount, wishlist] = await Promise.all([
-      Feedback.countDocuments({ customerId }),
-      Wishlist.findOne({ customerId }).lean(),
-    ]);
-
-    const hasWishlist = wishlist?.products && wishlist.products.length > 0;
-
-    let recommendations;
-    let recommendationType: "personalized" | "popular";
-
-    if (feedbackCount === 0 && !hasWishlist) {
-      // Completely new user - show popular products
-      recommendations = await RecommendationService.getPopularProducts(limit);
-      recommendationType = "popular";
-    } else {
-      // User has feedback or wishlist - personalized recommendations
-      recommendations = await RecommendationService.getRecommendations(
-        customerId,
-        limit
-      );
-      recommendationType = "personalized";
-    }
-
+  
+    const recommendations = await RecommendationService.getRecommendations(
+      customerId,
+      limit,
+    );
     response.data = buildRecommendationResponse(
       recommendations,
-      recommendationType
+      'personalized'
     );
     response.success = true;
     response.message = RECOMMENDATION_MESSAGES.RETRIEVED;

@@ -736,7 +736,31 @@ export class RecommendationService {
         return !avgRating || avgRating > 4;
       });
 
-      return filteredProducts.slice(0, limit);
+      // Add optionTypes to each product before returning
+      const productsWithOptions = filteredProducts.map((product) => {
+        const productOptionTypes =
+          optionTypesByProduct.get(product._id.toString()) || [];
+
+        if (productOptionTypes.length > 0) {
+          (product as any).optionTypes = productOptionTypes.map((ot) => ({
+            id: ot._id.toString(),
+            name: ot.name,
+            values: (optionValuesByType.get(ot._id.toString()) || []).map(
+              (ov) => ({
+                id: ov._id.toString(),
+                value: ov.value,
+                img: ov.img,
+                price: ov.price,
+                stock: ov.stock,
+              })
+            ),
+          }));
+        }
+
+        return product;
+      });
+
+      return productsWithOptions.slice(0, limit);
     } catch (error) {
       console.error("Popular products error:", error);
       return [];
@@ -857,7 +881,31 @@ export class RecommendationService {
         return !avgRating || avgRating > 4;
       });
 
-      return filteredProducts.slice(0, limit);
+      // Add optionTypes to each product before returning
+      const productsWithOptions = filteredProducts.map((product) => {
+        const productOptionTypes =
+          optionTypesByProduct.get(product._id.toString()) || [];
+
+        if (productOptionTypes.length > 0) {
+          (product as any).optionTypes = productOptionTypes.map((ot) => ({
+            id: ot._id.toString(),
+            name: ot.name,
+            values: (optionValuesByType.get(ot._id.toString()) || []).map(
+              (ov) => ({
+                id: ov._id.toString(),
+                value: ov.value,
+                img: ov.img,
+                price: ov.price,
+                stock: ov.stock,
+              })
+            ),
+          }));
+        }
+
+        return product;
+      });
+
+      return productsWithOptions.slice(0, limit);
     } catch (error) {
       console.error("Trending products error:", error);
       return [];
@@ -930,7 +978,31 @@ export class RecommendationService {
         return product.stock > 0;
       });
 
-      return productsWithStock.slice(0, limit);
+      // Add optionTypes to each product before returning
+      const productsWithOptions = productsWithStock.map((product) => {
+        const productOptionTypes =
+          optionTypesByProduct.get(product._id.toString()) || [];
+
+        if (productOptionTypes.length > 0) {
+          (product as any).optionTypes = productOptionTypes.map((ot) => ({
+            id: ot._id.toString(),
+            name: ot.name,
+            values: (optionValuesByType.get(ot._id.toString()) || []).map(
+              (ov) => ({
+                id: ov._id.toString(),
+                value: ov.value,
+                img: ov.img,
+                price: ov.price,
+                stock: ov.stock,
+              })
+            ),
+          }));
+        }
+
+        return product;
+      });
+
+      return productsWithOptions.slice(0, limit);
     } catch (error) {
       console.error("New arrivals error:", error);
       return [];
