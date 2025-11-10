@@ -65,4 +65,5 @@ jobs:
           script: |
             echo "Running commands on remote host"
             docker-compose pull
+            docker-compose down
             docker-compose up -d
