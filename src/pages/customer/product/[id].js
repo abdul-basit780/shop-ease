@@ -35,7 +35,8 @@ export default function ProductDetails() {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState({});
   const [displayImage, setDisplayImage] = useState("");
-  const [showRecommendationsModal, setShowRecommendationsModal] = useState(false);
+  const [showRecommendationsModal, setShowRecommendationsModal] =
+    useState(false);
   const [recommendations, setRecommendations] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
@@ -45,14 +46,14 @@ export default function ProductDetails() {
 
   // Check if there are stored recommendations on mount
   useEffect(() => {
-    const storedRecs = sessionStorage.getItem('recommendationsModal');
+    const storedRecs = sessionStorage.getItem("recommendationsModal");
     if (storedRecs) {
       try {
         const { recommendations: recs, show } = JSON.parse(storedRecs);
         setRecommendations(recs);
         setShowRecommendationsModal(show);
       } catch (e) {
-        console.error('Error parsing stored recommendations:', e);
+        console.error("Error parsing stored recommendations:", e);
       }
     }
   }, []);
@@ -194,11 +195,12 @@ export default function ProductDetails() {
     setIsAddingToCart(true);
 
     try {
-      const optionIds = product.optionTypes && product.optionTypes.length > 0
-        ? Object.values(selectedOptions)
-            .filter((opt) => opt && opt.id)
-            .map((opt) => opt.id)
-        : [];
+      const optionIds =
+        product.optionTypes && product.optionTypes.length > 0
+          ? Object.values(selectedOptions)
+              .filter((opt) => opt && opt.id)
+              .map((opt) => opt.id)
+          : [];
 
       const result = await addToCart(product.id, quantity, optionIds);
 
@@ -208,7 +210,7 @@ export default function ProductDetails() {
         });
 
         setQuantity(1);
-        
+
         // Fetch and show personalized recommendations
         fetchRecommendations();
       } else {
@@ -223,18 +225,23 @@ export default function ProductDetails() {
 
   const fetchRecommendations = async () => {
     try {
-      const response = await apiClient.get("/api/customer/recommendations?limit=6");
-      
+      const response = await apiClient.get(
+        "/api/customer/recommendations?limit=9"
+      );
+
       if (response.success && response.data?.recommendations) {
         const recs = response.data.recommendations;
         setRecommendations(recs);
         setShowRecommendationsModal(true);
-        
+
         // Store in sessionStorage so it persists across page changes
-        sessionStorage.setItem('recommendationsModal', JSON.stringify({
-          recommendations: recs,
-          show: true
-        }));
+        sessionStorage.setItem(
+          "recommendationsModal",
+          JSON.stringify({
+            recommendations: recs,
+            show: true,
+          })
+        );
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
@@ -244,35 +251,41 @@ export default function ProductDetails() {
   const handleCloseRecommendations = () => {
     setShowRecommendationsModal(false);
     // Keep recommendations in sessionStorage but mark as closed
-    const storedRecs = sessionStorage.getItem('recommendationsModal');
+    const storedRecs = sessionStorage.getItem("recommendationsModal");
     if (storedRecs) {
       try {
         const data = JSON.parse(storedRecs);
-        sessionStorage.setItem('recommendationsModal', JSON.stringify({
-          ...data,
-          show: false
-        }));
+        sessionStorage.setItem(
+          "recommendationsModal",
+          JSON.stringify({
+            ...data,
+            show: false,
+          })
+        );
       } catch (e) {
-        sessionStorage.removeItem('recommendationsModal');
+        sessionStorage.removeItem("recommendationsModal");
       }
     }
   };
 
   const handleReopenRecommendations = () => {
-    const storedRecs = sessionStorage.getItem('recommendationsModal');
+    const storedRecs = sessionStorage.getItem("recommendationsModal");
     if (storedRecs) {
       try {
         const data = JSON.parse(storedRecs);
         if (data.recommendations && data.recommendations.length > 0) {
           setRecommendations(data.recommendations);
           setShowRecommendationsModal(true);
-          sessionStorage.setItem('recommendationsModal', JSON.stringify({
-            ...data,
-            show: true
-          }));
+          sessionStorage.setItem(
+            "recommendationsModal",
+            JSON.stringify({
+              ...data,
+              show: true,
+            })
+          );
         }
       } catch (e) {
-        console.error('Error reopening recommendations:', e);
+        console.error("Error reopening recommendations:", e);
       }
     }
   };
@@ -352,17 +365,21 @@ export default function ProductDetails() {
   const getQuantityInCart = () => {
     if (!cart || !cart.products || !product) return 0;
 
-    const selectedOptionIds = product.optionTypes && product.optionTypes.length > 0
-      ? Object.values(selectedOptions)
-          .filter((opt) => opt && opt.id)
-          .map((opt) => opt.id)
-          .sort()
-      : [];
+    const selectedOptionIds =
+      product.optionTypes && product.optionTypes.length > 0
+        ? Object.values(selectedOptions)
+            .filter((opt) => opt && opt.id)
+            .map((opt) => opt.id)
+            .sort()
+        : [];
 
     const cartItem = cart.products.find((item) => {
       if (item.productId !== product.id) return false;
 
-      if (selectedOptionIds.length === 0 && (!item.selectedOptions || item.selectedOptions.length === 0)) {
+      if (
+        selectedOptionIds.length === 0 &&
+        (!item.selectedOptions || item.selectedOptions.length === 0)
+      ) {
         return true;
       }
 
@@ -374,7 +391,9 @@ export default function ProductDetails() {
         .map((opt) => opt.id)
         .sort();
 
-      return JSON.stringify(selectedOptionIds) === JSON.stringify(itemOptionIds);
+      return (
+        JSON.stringify(selectedOptionIds) === JSON.stringify(itemOptionIds)
+      );
     });
 
     return cartItem ? cartItem.quantity : 0;
@@ -428,11 +447,17 @@ export default function ProductDetails() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 animate-fade-in">
-          <Link href="/" className="text-blue-600 hover:text-blue-700 font-medium">
+          <Link
+            href="/"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
             Home
           </Link>
           <ChevronRight className="inline h-4 w-4 mx-2 text-gray-400" />
-          <Link href="/customer/all-products" className="text-blue-600 hover:text-blue-700 font-medium">
+          <Link
+            href="/customer/all-products"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
             Products
           </Link>
           <ChevronRight className="inline h-4 w-4 mx-2 text-gray-400" />
@@ -520,7 +545,8 @@ export default function ProductDetails() {
 
               {effectiveStock === 0 && baseStock > 0 && quantityInCart > 0 && (
                 <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 text-blue-800 text-sm font-medium">
-                  ℹ️ You already have {quantityInCart} in your cart (all available stock)
+                  ℹ️ You already have {quantityInCart} in your cart (all
+                  available stock)
                 </div>
               )}
 
@@ -749,7 +775,9 @@ export default function ProductDetails() {
                   <div className="animate-spin h-5 w-5 sm:h-6 sm:w-6 border-2 border-current border-t-transparent rounded-full"></div>
                 ) : (
                   <Heart
-                    className={`h-5 w-5 sm:h-6 sm:w-6 ${productInWishlist ? "fill-current" : ""}`}
+                    className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                      productInWishlist ? "fill-current" : ""
+                    }`}
                   />
                 )}
               </button>
@@ -847,7 +875,9 @@ export default function ProductDetails() {
                       ))}
                     </div>
                   </div>
-                  <p className="text-sm sm:text-base text-gray-700">{feedback.comment}</p>
+                  <p className="text-sm sm:text-base text-gray-700">
+                    {feedback.comment}
+                  </p>
                 </div>
               ))}
             </div>
@@ -916,6 +946,10 @@ export default function ProductDetails() {
         recommendations={recommendations}
         onProductClick={(productId) => {
           handleCloseRecommendations();
+          router.push(`/customer/product/${productId}`);
+        }}
+        onViewCart={() => {
+          router.push("/customer/cart");
         }}
       />
 
@@ -925,8 +959,12 @@ export default function ProductDetails() {
           className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all transform hover:scale-110 flex items-center gap-2 animate-bounce-gentle"
         >
           <Sparkles className="h-5 w-5" />
-          <span className="font-bold text-sm sm:text-base hidden sm:inline">View Recommendations</span>
-          <span className="font-bold text-sm sm:text-base sm:hidden">Picks</span>
+          <span className="font-bold text-sm sm:text-base hidden sm:inline">
+            View Recommendations
+          </span>
+          <span className="font-bold text-sm sm:text-base sm:hidden">
+            Picks
+          </span>
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
             {recommendations.length}
           </span>
@@ -957,7 +995,8 @@ export default function ProductDetails() {
         }
 
         @keyframes bounce-gentle {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0);
           }
           50% {

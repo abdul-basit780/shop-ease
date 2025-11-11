@@ -12,8 +12,8 @@ export default function HomePage() {
       <TrustBadge></TrustBadge>
       <Categories></Categories>
       <Products></Products>
-      <PopularProducts></PopularProducts>
       <TrendingProducts></TrendingProducts>
+      <PopularProducts></PopularProducts>
     </div>
   );
 }
