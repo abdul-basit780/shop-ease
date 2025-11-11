@@ -37,7 +37,6 @@ export const CartWishlistProvider = ({ children }) => {
         setCartCount(response.data.count || 0);
       }
     } catch (error) {
-      console.error('Error fetching cart:', error);
       setCart(null);
       setCartCount(0);
     } finally {
@@ -62,7 +61,6 @@ export const CartWishlistProvider = ({ children }) => {
         setWishlistCount(response.data.products?.length || 0);
       }
     } catch (error) {
-      console.error('Error fetching wishlist:', error);
       setWishlist(null);
       setWishlistCount(0);
     } finally {
@@ -90,7 +88,6 @@ export const CartWishlistProvider = ({ children }) => {
       }
       return { success: false, error: response.error };
     } catch (error) {
-      console.error('Error adding to cart:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Failed to add to cart' 
@@ -116,7 +113,6 @@ export const CartWishlistProvider = ({ children }) => {
       }
       return { success: false, error: response.error };
     } catch (error) {
-      console.error('Error updating cart:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Failed to update cart' 
@@ -135,14 +131,7 @@ export const CartWishlistProvider = ({ children }) => {
         requestBody = { selectedOptions: optionIds };
       }
 
-      console.log('Removing from cart:', {
-        productId,
-        requestBody
-      });
-
       const response = await apiClient.delete(`/api/customer/cart/${productId}`, requestBody);
-
-      console.log('Remove from cart response:', response);
 
       if (response.success) {
         // Update cart state with the returned cart data
@@ -157,7 +146,6 @@ export const CartWishlistProvider = ({ children }) => {
       }
       return { success: false, error: response.error || response.message };
     } catch (error) {
-      console.error('Error removing from cart:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || error.message || 'Failed to remove from cart' 
@@ -176,7 +164,6 @@ export const CartWishlistProvider = ({ children }) => {
       }
       return { success: false, error: response.error };
     } catch (error) {
-      console.error('Error adding to wishlist:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Failed to add to wishlist' 
@@ -200,7 +187,6 @@ export const CartWishlistProvider = ({ children }) => {
       }
       return { success: false, error: response.error };
     } catch (error) {
-      console.error('Error removing from wishlist:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Failed to remove from wishlist' 

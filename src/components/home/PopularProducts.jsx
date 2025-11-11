@@ -22,6 +22,7 @@ export default function PopularProducts() {
     try {
       setIsLoading(true);
       const response = await apiClient.get('/api/public/recommendations/popular');
+      console.log(response)
       
       if (response.success && response.data?.products) {
         setProducts(response.data.products.slice(0, 8)); // Show first 8 products
@@ -90,6 +91,12 @@ export default function PopularProducts() {
     }
   };
 
+  const handleViewDetails = (e, productId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/customer/product/${productId}`);
+  };
+
   if (isLoading) {
     return (
       <section className="py-20 bg-white">
@@ -149,8 +156,13 @@ export default function PopularProducts() {
               const isWishlistLoading = wishlistLoading[product.id];
               
               return (
-                <Link key={product.id} href={`/customer/product/${product.id}`} className="group animate-scale-in" style={{ animationDelay: `${idx * 100}ms` }}>
-                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:-translate-y-2 border border-gray-100">
+                <div 
+                  key={product.id} 
+                  onClick={() => router.push(`/customer/product/${product.id}`)}
+                  className="group animate-scale-in cursor-pointer" 
+                  style={{ animationDelay: `${idx * 100}ms` }}
+                >
+                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100">
                     {/* Rank Badge */}
                     <div className="absolute top-3 left-3 z-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
                       {idx + 1}
@@ -178,14 +190,13 @@ export default function PopularProducts() {
                       {/* Hover Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                         <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2">
-                          <Link
-                            href={`/customer/product/${product.id}`}
+                          <button
+                            onClick={(e) => handleViewDetails(e, product.id)}
                             className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all transform translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             <ShoppingCart className="h-4 w-4" />
                             <span>View Details</span>
-                          </Link>
+                          </button>
                           
                           <button
                             onClick={(e) => handleAddToWishlist(e, product)}
@@ -254,13 +265,12 @@ export default function PopularProducts() {
                           )}
                         </div>
                         
-                        <Link
-                          href={`/customer/product/${product.id}`}
-                          onClick={(e) => e.stopPropagation()}
+                        <button
+                          onClick={(e) => handleViewDetails(e, product.id)}
                           className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg transition-all transform hover:scale-105"
                         >
                           <ShoppingCart className="h-5 w-5" />
-                        </Link>
+                        </button>
                       </div>
                     </div>
 
@@ -269,7 +279,7 @@ export default function PopularProducts() {
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
                     </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

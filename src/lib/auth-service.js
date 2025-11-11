@@ -76,6 +76,9 @@ export const authService = {
       localStorage.removeItem('cart');
       localStorage.removeItem('wishlist');
       
+       // ✅ Clear recommendations from sessionStorage
+      sessionStorage.removeItem('recommendationsModal');
+
       // Dispatch event before redirect
       window.dispatchEvent(new Event('userLoggedOut'));
       
@@ -175,13 +178,14 @@ export const authService = {
         // Token is expired or invalid, clear storage
         localStorage.removeItem('user');
         Cookies.remove('auth_token');
+        // ✅ Also clear recommendations when token is invalid
+        sessionStorage.removeItem('recommendationsModal');
         return null;
       }
       
       const userStr = localStorage.getItem('user');
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
-      console.error('Error parsing user data:', error);
       return null;
     }
   },

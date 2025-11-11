@@ -124,14 +124,14 @@ function Banner() {
                     </div>
                   </div>
 
-                  {/* <div className="bg-white/90 rounded-2xl py-2 mb-4 h-64 flex items-center justify-center"> */}
                   <div className="bg-white/90 rounded-2xl py-2 mb-4 h-64 relative overflow-hidden">
-                  {/* <ShoppingBag className="h-32 w-32 text-primary-600" /> */}
                     <Image
                       src={shopping}
                       alt="Shopping"
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover rounded-xl p-3"
+                      priority
                     />
                   </div>
 
