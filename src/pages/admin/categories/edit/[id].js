@@ -396,10 +396,10 @@ export default function CategoryEdit() {
   return (
     <AdminLayout title="Edit Category" subtitle="Update category information">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/categories">
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href="/admin/categories" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Categories
             </Button>
@@ -520,7 +520,7 @@ export default function CategoryEdit() {
             <div className="space-y-6">
               <Card>
                 <CardBody>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Button
                       type="submit"
                       variant="primary"

@@ -303,11 +303,6 @@ export default function OptionValues() {
       return;
     }
 
-    if (!newValue.image) {
-      toast.error('Image is required');
-      return;
-    }
-
     try {
       console.log('Creating option value:', newValue);
       
@@ -316,9 +311,8 @@ export default function OptionValues() {
       formData.append('value', newValue.value.trim());
       formData.append('price', parseFloat(newValue.price) || 0);
       formData.append('stock', parseInt(newValue.stock) || 0);
-      if (newValue.image) {
-        formData.append('image', newValue.image);
-      }
+
+      formData.append('image', newValue.image || '');
       
       const response = await apiClient.post('/api/admin/option-value', formData, {
         headers: {
@@ -422,10 +416,10 @@ export default function OptionValues() {
   return (
     <AdminLayout title="Option Values" subtitle={`Manage values for ${optionType?.name || 'Option Type'}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link href={`/admin/products/options/${productId}`}>
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href={`/admin/products/options/${productId}`} className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Options
             </Button>
@@ -435,7 +429,7 @@ export default function OptionValues() {
             <p className="text-gray-600">{optionType?.name || 'Option Type'} for {product?.name || 'Product'}</p>
           </div>
         </div>
-        <Button onClick={() => setShowCreateValue(true)}>
+        <Button onClick={() => setShowCreateValue(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Value
         </Button>
@@ -519,7 +513,7 @@ export default function OptionValues() {
                   {!editingValue && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Image *
+                        Option Image (optional)
                       </label>
                       <input
                         type="file"
@@ -528,22 +522,18 @@ export default function OptionValues() {
                           setNewValue({ ...newValue, image: e.target.files[0] });
                         }}
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                        required
                       />
                       <p className="text-sm text-gray-500 mt-1">
-                        Image for this option value (required)
+                        Upload a specific image for this option value or leave empty to reuse the product&apos;s featured image.
                       </p>
                     </div>
                   )}
                   
-                  <div className="flex space-x-3">
-                    <Button type="submit" className="flex-1">
-                      <Save className="h-4 w-4 mr-2" />
-                      {editingValue ? 'Update Value' : 'Create Value'}
-                    </Button>
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:space-x-3">
                     <Button 
                       type="button" 
                       variant="outline" 
+                      className="w-full sm:w-auto"
                       onClick={() => {
                         if (editingValue) {
                           cancelEdit();
@@ -555,6 +545,10 @@ export default function OptionValues() {
                     >
                       <X className="h-4 w-4 mr-2" />
                       Cancel
+                    </Button>
+                    <Button type="submit" className="w-full sm:w-auto">
+                      <Save className="h-4 w-4 mr-2" />
+                      {editingValue ? 'Update Value' : 'Create Value'}
                     </Button>
                   </div>
                 </form>
@@ -583,16 +577,17 @@ export default function OptionValues() {
             {optionValues.map((value) => (
               <Card key={value.id}>
                 <CardBody>
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{value.value}</h3>
                       <p className="text-sm text-gray-600">Option Value</p>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => startEdit(value)}
+                        className="w-full sm:w-auto"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -600,24 +595,25 @@ export default function OptionValues() {
                         variant="danger" 
                         size="sm"
                         onClick={() => handleDeleteValue(value.id)}
+                        className="w-full sm:w-auto"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                   
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                  <div className="space-y-3 text-sm text-gray-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                       <span className="text-sm text-gray-600">Price Adjustment:</span>
                       <span className={`font-semibold ${value.price >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {value.price >= 0 ? '+' : ''}${value.price.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                       <span className="text-sm text-gray-600">Stock:</span>
                       <span className="font-semibold text-gray-900">{value.stock}</span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                       <span className="text-sm text-gray-600">Total Price:</span>
                       <span className="font-semibold text-blue-600">
                         ${((product?.price || 0) + value.price).toFixed(2)}

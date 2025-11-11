@@ -64,7 +64,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -72,7 +76,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -484,10 +488,10 @@ export default function CreateCategoryPage() {
   return (
     <AdminLayout title="Create Category" subtitle="Add a new category to organize your products">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/categories">
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href="/admin/categories" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Categories
             </Button>
@@ -565,7 +569,7 @@ export default function CreateCategoryPage() {
 
                   {/* Category Type Selection */}
                   <div className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
                       <h3 className="text-sm font-semibold text-gray-700">Category Type</h3>
                       <button
                         type="button"
@@ -583,7 +587,7 @@ export default function CreateCategoryPage() {
                   </div>
                     
                     {!showSubcategoryOptions ? (
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                           <Tag className="h-5 w-5 text-white" />
                         </div>
@@ -594,7 +598,7 @@ export default function CreateCategoryPage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
                           <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
                             <Tag className="h-5 w-5 text-white" />
                   </div>
@@ -692,7 +696,7 @@ export default function CreateCategoryPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg">
                         <div className="text-xs text-gray-400">
                           {showSubcategoryOptions ? 'Subcategory' : 'Main Category'}
                     </div>
@@ -704,25 +708,17 @@ export default function CreateCategoryPage() {
               {/* Actions */}
               <Card>
                 <CardBody>
-                  <div className="space-y-3">
-
-                    <button
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
                       type="submit"
-                      disabled={loading}
-                      className={`w-full flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200 ${
-                        showSubcategoryOptions 
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl' 
-                          : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-lg hover:shadow-xl'
-                      } ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                      variant={showSubcategoryOptions ? 'success' : 'primary'}
+                      className="w-full"
+                      isLoading={loading}
                     >
-                      {loading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      ) : (
-                        <Save className="h-5 w-5 mr-2" />
-                      )}
-                      {showSubcategoryOptions ? 'Create Subcategory' : 'Create Category'}
-                    </button>
-                    <Link href="/admin/categories">
+                      {!loading && <Save className="h-4 w-4 mr-2" />}
+                      <span className="whitespace-nowrap">Create</span>
+                    </Button>
+                    <Link href="/admin/categories" className="w-full">
                       <Button
                         type="button"
                         variant="outline"

@@ -68,7 +68,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -76,7 +80,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -747,9 +751,13 @@ export default function CreateProductPage() {
     if (images.length === 0) {
       newErrors.images = 'Product image is required';
     }
+
+    // Validate option value images / featured usage
+    setOptionErrors({});
     
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const hasFieldErrors = Object.keys(newErrors).length > 0;
+    return !hasFieldErrors;
   };
 
   const handleSubmit = async (e) => {
@@ -812,7 +820,7 @@ export default function CreateProductPage() {
         const productId = product?.id;
         let optionTypesCreated = 0;
         let optionValuesCreated = 0;
-        
+
         // Create option types and values if any were added in the form
         if (productId && formData.options && formData.options.length > 0) {
           try {
@@ -837,7 +845,7 @@ export default function CreateProductPage() {
                       if (option.values && option.values.length > 0) {
                         const valuesResults = await Promise.all(
                           option.values
-                            .filter(val => val.value && val.value.trim() && val.image) // Only values with text and image
+                            .filter(val => val.value && val.value.trim())
                             .map(async (val) => {
                               try {
                                 const formData = new FormData();
@@ -845,8 +853,9 @@ export default function CreateProductPage() {
                                 formData.append('value', val.value.trim());
                                 formData.append('price', parseFloat(val.price) || 0);
                                 formData.append('stock', parseInt(val.stock) || 0);
-                                formData.append('image', val.image);
-                                
+
+                                formData.append('image', val.image || '');
+
                                 const valueResponse = await apiClient.post('/api/admin/option-value', formData, {
                                   headers: {
                                     'Content-Type': 'multipart/form-data',
@@ -1090,10 +1099,10 @@ export default function CreateProductPage() {
   return (
     <AdminLayout title="Create Product" subtitle="Add a new product to your catalog">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/products">
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href="/admin/products" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Products
             </Button>
@@ -1338,13 +1347,16 @@ export default function CreateProductPage() {
             <Card>
               <CardHeader>
                 <h3 className="text-lg font-semibold text-gray-900">Product Options (Optional)</h3>
-                <p className="text-sm text-gray-600">Add product variants with their values, pricing, stock, and images. Examples: Size (Small, Medium, Large), Color (Red, Blue, Green), etc.</p>
+                <p className="text-sm text-gray-600">
+                  Add product variants with their values, pricing, stock, and images. Examples: Size (Small, Medium, Large), Color (Red, Blue, Green), etc.
+                  Upload the featured product image first if you plan to reuse it for option values.
+                </p>
               </CardHeader>
               <CardBody>
                 <div className="space-y-6">
                   {formData.options.map((option, optionIndex) => (
                     <div key={optionIndex} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:space-x-3">
                         <input
                           type="text"
                           value={option.name}
@@ -1366,7 +1378,7 @@ export default function CreateProductPage() {
                         <label className="block text-sm font-medium text-gray-700">Values:</label>
                         {option.values.map((value, valueIndex) => (
                           <div key={valueIndex} className="border border-gray-200 rounded-lg p-3 space-y-3">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 sm:space-x-2">
                               <input
                                 type="text"
                                 value={typeof value === 'string' ? value : (value?.value || value?.name || '')}
@@ -1383,7 +1395,7 @@ export default function CreateProductPage() {
                               </button>
                             </div>
                             
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                               <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Price Adjustment</label>
                                 <div className="relative">
@@ -1428,31 +1440,46 @@ export default function CreateProductPage() {
                               </div>
 
                               <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Image *</label>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Option Image (optional)
+                                </label>
                                 <input
                                   type="file"
                                   accept="image/*"
                                   onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        options: prev.options.map((opt, i) => 
-                                          i === optionIndex 
-                                            ? {
-                                                ...opt,
-                                                values: opt.values.map((val, j) => 
-                                                  j === valueIndex ? { ...val, image: file } : val
-                                                )
-                                              }
-                                            : opt
-                                        )
-                                      }));
-                                    }
+                                    const file = e.target.files?.[0] || null;
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      options: prev.options.map((opt, i) => 
+                                        i === optionIndex 
+                                          ? {
+                                              ...opt,
+                                              values: opt.values.map((val, j) => 
+                                                j === valueIndex ? { ...val, image: file } : val
+                                              )
+                                            }
+                                          : opt
+                                      )
+                                    }));
+                                    const errorKey = `option_${optionIndex}_value_${valueIndex}_image`;
+                                    setOptionErrors(prev => {
+                                      const next = { ...prev };
+                                      if (file) {
+                                        delete next[errorKey];
+                                      }
+                                      return next;
+                                    });
                                   }}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                  required
+                                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm border-gray-300"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Upload a specific image for this option value or leave empty to reuse the product&apos;s featured image.
+                                </p>
+                                {images.length === 0 && !value.image && (
+                                  <p className="text-[11px] text-amber-600 mt-1">
+                                    Without a featured product image, each option value needs its own upload.
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1509,7 +1536,7 @@ export default function CreateProductPage() {
             {/* Actions */}
             <Card>
               <CardBody>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Button
                     type="submit"
                     variant="primary"

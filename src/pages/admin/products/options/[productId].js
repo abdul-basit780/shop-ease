@@ -418,10 +418,10 @@ export default function ProductOptions() {
   return (
     <AdminLayout title="Product Options" subtitle={`Manage variants for ${product?.name || 'Product'}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/products">
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href="/admin/products" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Products
             </Button>
@@ -431,7 +431,7 @@ export default function ProductOptions() {
             <p className="text-gray-600">{product?.name || 'Product'}</p>
           </div>
         </div>
-        <Button onClick={() => setShowCreateOptionType(true)}>
+        <Button onClick={() => setShowCreateOptionType(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Option Type
         </Button>
@@ -502,7 +502,7 @@ export default function ProductOptions() {
             {optionTypes.map((optionType) => (
               <Card key={optionType.id}>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                         <Tag className="h-5 w-5 text-white" />
@@ -512,9 +512,9 @@ export default function ProductOptions() {
                         <p className="text-sm text-gray-600">Option Type</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Link href={`/admin/products/options/${productId}/values/${optionType.id}`}>
-                        <Button variant="outline" size="sm">
+                    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
+                      <Link href={`/admin/products/options/${productId}/values/${optionType.id}`} className="flex-1 sm:flex-initial">
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto">
                           <Edit className="h-4 w-4 mr-2" />
                           Manage Values
                         </Button>
@@ -523,6 +523,7 @@ export default function ProductOptions() {
                         variant="danger" 
                         size="sm"
                         onClick={() => handleDeleteOptionType(optionType.id)}
+                        className="flex-1 sm:flex-initial w-full sm:w-auto"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
@@ -533,13 +534,13 @@ export default function ProductOptions() {
                 <CardBody>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">
+                      <div className="text-xl sm:text-2xl font-bold text-blue-600">
                         {optionTypeStats[optionType.id]?.valueCount || 0}
                       </div>
                       <div className="text-sm text-blue-600">Values</div>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
+                      <div className="text-xl sm:text-2xl font-bold text-green-600">
                         {optionTypeStats[optionType.id]?.totalStock || 0}
                       </div>
                       <div className="text-sm text-green-600">Total Stock</div>
@@ -565,7 +566,7 @@ export default function ProductOptions() {
                         }
                         
                         return (
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                             {values.map((value, idx) => {
                               const adjustment = parseFloat(value.price);
                               if (isNaN(adjustment)) {
@@ -580,21 +581,21 @@ export default function ProductOptions() {
                               return (
                                 <div key={value.id || value._id || idx} className="bg-white rounded-md p-2.5 border border-purple-100 hover:border-purple-200 transition-colors">
                                   <div className="text-sm font-semibold text-gray-800 mb-1.5">{valueName}</div>
-                                  <div className="flex items-center justify-between text-xs space-x-2">
-                                    <div className="flex items-center space-x-1">
-                                      <span className="text-gray-600">Base:</span>
+                                  <div className="grid grid-cols-1 gap-1 text-xs text-gray-600 sm:flex sm:items-center sm:justify-between sm:space-x-2">
+                                    <div className="flex items-center gap-1">
+                                      <span>Base:</span>
                                       <span className="font-medium text-gray-700">${basePrice.toFixed(2)}</span>
                                     </div>
-                                    <span className="text-gray-400">+</span>
-                                    <div className="flex items-center space-x-1">
-                                      <span className="text-gray-600">Adjustment:</span>
+                                    <span className="hidden sm:inline text-gray-400">+</span>
+                                    <div className="flex items-center gap-1">
+                                      <span>Adjustment:</span>
                                       <span className={`font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                                         {isPositive ? '+' : '-'}${adjustmentDisplay}
                                       </span>
                                     </div>
-                                    <span className="text-gray-400">=</span>
-                                    <div className="flex items-center space-x-1">
-                                      <span className="text-gray-600">Total:</span>
+                                    <span className="hidden sm:inline text-gray-400">=</span>
+                                    <div className="flex items-center gap-1">
+                                      <span>Total:</span>
                                       <span className="font-semibold text-purple-700">${totalPrice.toFixed(2)}</span>
                                     </div>
                                   </div>
