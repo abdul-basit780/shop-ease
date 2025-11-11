@@ -18,7 +18,7 @@ interface PublicProductWithOptions extends PublicProductResponse {
     values: Array<{
       id: string;
       value: string;
-      img: string;
+      img: string | undefined;
       price: number;
       stock: number;
     }>;
@@ -257,7 +257,7 @@ export const getProduct = async (req: NextApiRequest, res: NextApiResponse) => {
           .map((ov) => ({
             id: ov._id.toString(),
             value: ov.value,
-            img: ov.img,
+            img: ov.img || undefined,
             price: ov.price,
             stock: ov.stock,
           })),

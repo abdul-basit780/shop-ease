@@ -64,7 +64,7 @@ export const optionSchemas = {
   // Option Value Schemas
   OptionValueRequest: {
     type: "object",
-    required: ["optionTypeId", "value", "image"],
+    required: ["optionTypeId", "value"],
     properties: {
       optionTypeId: {
         type: "string",
@@ -82,7 +82,8 @@ export const optionSchemas = {
       image: {
         type: "string",
         format: "binary",
-        description: "Option value image file (JPEG, PNG, WebP - max 5MB)",
+        description:
+          "Option value image file (JPEG, PNG, WebP - max 5MB) - Optional",
       },
       price: {
         type: "number",
@@ -119,7 +120,7 @@ export const optionSchemas = {
         type: "string",
         format: "binary",
         description:
-          "Updated option value image file (JPEG, PNG, WebP - max 5MB)",
+          "Updated option value image file (JPEG, PNG, WebP - max 5MB) - Optional",
       },
       price: {
         type: "number",
@@ -166,8 +167,9 @@ export const optionSchemas = {
       img: {
         type: "string",
         format: "uri",
+        nullable: true,
         example: "https://ik.imagekit.io/your_id/option-values/image_xyz.jpg",
-        description: "ImageKit CDN URL for the option value image",
+        description: "ImageKit CDN URL for the option value image (optional)",
       },
       price: {
         type: "number",
