@@ -208,7 +208,6 @@ export default function CategoryView() {
   const [error, setError] = useState(null);
   const [parentCategory, setParentCategory] = useState(null);
   const [stats, setStats] = useState({
-    productCount: 0,
     subcategoryCount: 0
   });
 
@@ -297,83 +296,20 @@ export default function CategoryView() {
 
   const fetchCategoryStats = async () => {
     try {
-      console.log('Fetching category stats for ID:', id);
-      
-      // Get all categories to find subcategories
       const categoriesResponse = await apiClient.get('/api/admin/category?limit=100&includeDeleted=false');
-      const allCategories = categoriesResponse.data?.categories || 
-                           categoriesResponse.categories || [];
-      
-      // Find the current category
-      const currentCategory = allCategories.find(cat => (cat.id || cat._id) === id);
-      const isParentCategory = !currentCategory?.parentId;
-      
-      // Get subcategories (categories with this as parent)
+      const allCategories = categoriesResponse.data?.categories || categoriesResponse.categories || [];
+
       const subcategories = allCategories.filter(cat => {
         const catParentId = cat.parentId?.toString() || cat.parentId;
-        const currentIdStr = (id || currentCategory?.id || currentCategory?._id).toString();
+        const currentIdStr = id?.toString();
         return catParentId === currentIdStr;
       });
-      const subcategoryCount = subcategories.length;
-      
-      // Calculate product count
-      let productCount = 0;
-      
-      if (isParentCategory) {
-        // For parent categories: count products directly in parent + all subcategories
-        const categoryId = id || currentCategory?.id || currentCategory?._id;
-        
-        // Get products directly in parent category
-        try {
-          const parentProductsResponse = await apiClient.get(`/api/admin/product?categoryId=${categoryId}&limit=1`);
-          const parentProductCount = parentProductsResponse.data?.pagination?.total || 
-                                    parentProductsResponse.pagination?.total || 0;
-          productCount += parentProductCount;
-        } catch (error) {
-          console.error('Error fetching parent category products:', error);
-        }
-        
-        // Get products from all subcategories
-        const subcategoryProductPromises = subcategories.map(async (sub) => {
-          try {
-            const subId = sub.id || sub._id;
-            const response = await apiClient.get(`/api/admin/product?categoryId=${subId}&limit=1`);
-            return response.data?.pagination?.total || response.pagination?.total || 0;
-          } catch (error) {
-            console.error(`Error fetching products for subcategory ${sub.name}:`, error);
-            return 0;
-          }
-        });
-        
-        const subcategoryProductCounts = await Promise.all(subcategoryProductPromises);
-        productCount += subcategoryProductCounts.reduce((sum, count) => sum + count, 0);
-      } else {
-        // For subcategories: count products directly in this subcategory
-        try {
-          const categoryId = id || currentCategory?.id || currentCategory?._id;
-          const productsResponse = await apiClient.get(`/api/admin/product?categoryId=${categoryId}&limit=1`);
-          productCount = productsResponse.data?.pagination?.total || 
-                        productsResponse.pagination?.total || 0;
-        } catch (error) {
-          console.error('Error fetching subcategory products:', error);
-        }
-      }
-      
+
       setStats({
-        productCount,
-        subcategoryCount
-      });
-      
-      console.log('Category stats calculated:', { 
-        productCount, 
-        subcategoryCount, 
-        isParentCategory,
-        allCategories: allCategories.length 
+        subcategoryCount: subcategories.length
       });
     } catch (error) {
       console.error('Error fetching category stats:', error);
-      console.error('Error details:', error.response?.data);
-      // Don't show error for stats, just use defaults
     }
   };
 
@@ -462,23 +398,14 @@ export default function CategoryView() {
   return (
     <AdminLayout title="Category Details" subtitle={`Viewing ${category.name}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/categories">
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href="/admin/categories" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Categories
             </Button>
           </Link>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={fetchCategoryStats}
-            className="flex items-center space-x-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh Stats
-          </Button>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{category.name}</h2>
             <p className="text-gray-600">Category ID: {category.id}</p>
@@ -496,14 +423,14 @@ export default function CategoryView() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href={`/admin/categories/edit/${category.id}`}>
-            <Button variant="outline">
+        <div className="flex flex-wrap gap-3 sm:flex-nowrap sm:items-center">
+          <Link href={`/admin/categories/edit/${category.id}`} className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Edit className="h-4 w-4 mr-2" />
               Edit Category
             </Button>
           </Link>
-          <Button variant="danger" onClick={handleDelete}>
+          <Button variant="danger" onClick={handleDelete} className="flex-1 sm:flex-initial w-full sm:w-auto">
             <Trash2 className="h-4 w-4 mr-2" />
             Delete Category
           </Button>
@@ -550,20 +477,9 @@ export default function CategoryView() {
                 <h3 className="text-lg font-semibold text-gray-900">Category Statistics</h3>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{stats.productCount}</div>
-                    <div className="text-sm text-blue-600">Products</div>
-                    {!category.parentId && stats.subcategoryCount > 0 && (
-                      <div className="text-xs text-blue-500 mt-1">
-                        (Includes products from subcategories)
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">{stats.subcategoryCount}</div>
-                    <div className="text-sm text-green-600">Subcategories</div>
-                  </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{stats.subcategoryCount}</div>
+                  <div className="text-sm text-green-600">Subcategories</div>
                 </div>
               </CardBody>
             </Card>

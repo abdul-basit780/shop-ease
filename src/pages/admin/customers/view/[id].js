@@ -77,7 +77,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -85,7 +89,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -429,11 +433,12 @@ export default function CustomerViewPage() {
   return (
     <AdminLayout title={`${customer.name || 'Customer'}`} subtitle="View customer details and order history">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
           <Button
             variant="outline"
             onClick={() => router.push('/admin/customers')}
+            className="w-full sm:w-auto"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Customers
@@ -447,11 +452,12 @@ export default function CustomerViewPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
           <Button
             variant="outline"
             onClick={fetchCustomer}
             isLoading={loading}
+            className="w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -465,7 +471,7 @@ export default function CustomerViewPage() {
           {/* Customer Information */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
                 <CustomerStatusBadge isActive={customer.isActive} />
               </div>
@@ -557,12 +563,13 @@ export default function CustomerViewPage() {
           {/* Recent Orders */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => router.push(`/admin/orders?customerId=${id}`)}
+                  className="w-full sm:w-auto"
                 >
                   View All Orders
                 </Button>
@@ -576,7 +583,7 @@ export default function CustomerViewPage() {
               ) : orders.length > 0 ? (
                 <div className="space-y-4">
                   {orders.map((order) => (
-                    <div key={order._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div key={order._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-4">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                           <ShoppingBag className="h-5 w-5 text-white" />
@@ -590,7 +597,7 @@ export default function CustomerViewPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <p className="font-medium text-gray-900">
                           {formatCurrency(order.totalAmount || order.total || 0)}
                         </p>
@@ -625,11 +632,11 @@ export default function CustomerViewPage() {
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Status</span>
                   <CustomerStatusBadge isActive={customer.isActive} />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Email Verified</span>
                   <span className={`text-sm font-medium ${
                     customer.emailVerified ? 'text-green-600' : 'text-red-600'

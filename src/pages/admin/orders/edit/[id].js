@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { toast } from 'react-hot-toast';
 import { useAdminAuth } from '../../utils/adminAuth';
@@ -49,7 +50,19 @@ const AdminLayout = ({ children, title, subtitle }) => {
           </div>
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
-              <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+              <Link
+                href="/"
+                className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 transition-colors hover:text-blue-600"
+                aria-label="Go to ShopEase storefront"
+              >
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">SE</span>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
+                  <p className="text-xs text-gray-500">Admin Panel</p>
+                </div>
+              </Link>
             </div>
             <nav className="mt-5 px-2 space-y-1">
               {sidebarItems.map((item) => (
@@ -91,7 +104,19 @@ const AdminLayout = ({ children, title, subtitle }) => {
           <div className="flex flex-col h-0 flex-1 border-r border-gray-200 bg-white">
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
               <div className="flex items-center flex-shrink-0 px-4">
-                <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+                <Link
+                  href="/"
+                  className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 transition-colors hover:text-blue-600"
+                  aria-label="Go to ShopEase storefront"
+                >
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">SE</span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
+                    <p className="text-xs text-gray-500">Admin Panel</p>
+                  </div>
+                </Link>
               </div>
               <nav className="mt-5 flex-1 px-2 space-y-1">
                 {sidebarItems.map((item) => (
@@ -304,8 +329,8 @@ export default function OrderEdit() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
                 Order Status
               </label>
@@ -336,18 +361,18 @@ export default function OrderEdit() {
               </p>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:items-center">
               <button
                 type="button"
                 onClick={() => router.push('/admin/orders')}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Saving...' : 'Update Order'}
               </button>
