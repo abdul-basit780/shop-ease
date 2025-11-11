@@ -19,7 +19,7 @@ export interface WishlistProductResponse {
     values: Array<{
       id: string;
       value: string;
-      img: string;
+      img: string | undefined;
       price: number;
       stock: number;
     }>;
