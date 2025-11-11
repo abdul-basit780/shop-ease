@@ -9,7 +9,6 @@ import {
   Edit, 
   Trash2, 
   Eye, 
-  MoreVertical,
   ChevronLeft,
   ChevronRight,
   Grid,
@@ -71,7 +70,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -79,7 +82,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -156,7 +159,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-3">
             </div>
           </div>
         </div>
@@ -246,7 +249,7 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
       isParentCategory ? 'border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white' : 'border-l-4 border-l-green-500'
     }`}>
       <CardBody>
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
               isParentCategory 
@@ -276,18 +279,8 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
                 )}
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {category.productCount || 0} products
-                {hasSubcategories && (
-                  <span className="ml-2 text-blue-600">
-                    • {subcategories.length} subcategories
-                  </span>
-                )}
+                {hasSubcategories ? `${subcategories.length} subcategories` : 'No subcategories yet'}
               </p>
-              {isParentCategory && hasSubcategories && (
-                <p className="text-xs text-gray-400 mt-1">
-                  (Includes products from subcategories)
-                </p>
-              )}
               {parentCategory && (
                 <div className="flex items-center mt-1">
                   <span className="text-xs text-gray-400">└─</span>
@@ -298,15 +291,12 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 sm:justify-end">
             {isParentCategory && (
               <span className="text-xs text-gray-500">
                 {subcategories.length} subcategories
               </span>
             )}
-            <button className="text-gray-400 hover:text-gray-600">
-              <MoreVertical className="h-5 w-5" />
-            </button>
           </div>
         </div>
         
@@ -331,12 +321,12 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
         
         <div className="space-y-3">
           {/* Action Buttons */}
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onView(category)}
-              className="flex-1"
+              className="flex-1 min-w-[6rem]"
             >
               <Eye className="h-4 w-4" />
               View
@@ -379,7 +369,7 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
           {/* Subcategories List */}
           {hasSubcategories && (
             <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <p className="text-sm font-medium text-gray-700">Subcategories</p>
                 <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                   {subcategories.length}
@@ -394,9 +384,6 @@ const CategoryCard = ({ category, onEdit, onDelete, onView, onCreateSubcategory,
                       </div>
                       <span className="text-sm font-medium text-gray-700">{sub.name}</span>
                     </div>
-                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
-                      {sub.productCount || 0} products
-                    </span>
                   </div>
                 ))}
                 {subcategories.length > 3 && (
@@ -431,7 +418,6 @@ export default function CategoriesPage() {
   const [parentCategories, setParentCategories] = useState([]);
   const [categorySubcategories, setCategorySubcategories] = useState({});
 
-
   const fetchParentCategories = async () => {
     try {
       // Try with /api prefix first, fallback to direct call
@@ -448,120 +434,6 @@ export default function CategoriesPage() {
       }
     } catch (error) {
       console.error('Error fetching parent categories:', error);
-    }
-  };
-
-  const fetchProductCounts = async (allCategories) => {
-    try {
-      console.log('Fetching product counts for categories:', allCategories.length);
-      
-      // Fetch product counts for each category (including subcategories)
-      const productCountPromises = allCategories.map(async (category) => {
-        try {
-          const categoryId = category.id || category._id;
-          const response = await apiClient.get(`/api/admin/product?categoryId=${categoryId}&limit=1`);
-          const count = response.data?.pagination?.total || 0;
-          console.log(`Category ${category.name}: ${count} products`);
-          return { id: categoryId, productCount: count };
-        } catch (error) {
-          console.error(`Error fetching product count for category ${category.name}:`, error);
-          const categoryId = category.id || category._id;
-          return { id: categoryId, productCount: 0 };
-        }
-      });
-      
-      const productCounts = await Promise.all(productCountPromises);
-      console.log('Product counts fetched:', productCounts);
-      
-      // Create a map for quick lookup
-      const countMap = new Map();
-      productCounts.forEach(pc => {
-        countMap.set(pc.id, pc.productCount);
-      });
-      
-      // Calculate total product counts for parent categories (including subcategory products)
-      const parentCountsMap = new Map();
-      allCategories.forEach(category => {
-        if (!category.parentId) {
-          // This is a parent category - calculate total including subcategories
-          const categoryId = category.id || category._id;
-          let totalCount = countMap.get(categoryId) || 0;
-          
-          // Find all subcategories of this parent (handle both string and ObjectId comparisons)
-          const subcategories = allCategories.filter(cat => {
-            const catParentId = cat.parentId?.toString() || cat.parentId;
-            const parentIdStr = categoryId.toString();
-            return catParentId === parentIdStr;
-          });
-          
-          subcategories.forEach(sub => {
-            const subId = sub.id || sub._id;
-            const subCount = countMap.get(subId) || 0;
-            totalCount += subCount;
-          });
-          
-          parentCountsMap.set(categoryId, totalCount);
-        }
-      });
-      
-      // Update categories with product counts (use calculated totals for parents)
-      setCategories(prevCategories => 
-        prevCategories.map(category => {
-          const categoryId = category.id || category._id;
-          if (!category.parentId && parentCountsMap.has(categoryId)) {
-            // Parent category - use calculated total
-            return {
-              ...category,
-              productCount: parentCountsMap.get(categoryId)
-            };
-          } else {
-            // Subcategory - use direct count
-            const countData = productCounts.find(pc => (pc.id === categoryId) || (pc.id === category._id));
-            return {
-              ...category,
-              productCount: countData?.productCount || 0
-            };
-          }
-        })
-      );
-      
-      // Update parent categories with calculated totals
-      setParentCategories(prevParentCategories =>
-        prevParentCategories.map(category => {
-          const categoryId = category.id || category._id;
-          if (parentCountsMap.has(categoryId)) {
-            return {
-              ...category,
-              productCount: parentCountsMap.get(categoryId)
-            };
-          } else {
-            const countData = productCounts.find(pc => (pc.id === categoryId) || (pc.id === category._id));
-            return {
-              ...category,
-              productCount: countData?.productCount || 0
-            };
-          }
-        })
-      );
-      
-      // Update subcategories with product counts
-      setCategorySubcategories(prevSubcategories => {
-        const updatedSubcategories = { ...prevSubcategories };
-        Object.keys(updatedSubcategories).forEach(parentId => {
-          updatedSubcategories[parentId] = updatedSubcategories[parentId].map(subcategory => {
-            const subId = subcategory.id || subcategory._id;
-            const countData = productCounts.find(pc => (pc.id === subId) || (pc.id === subcategory._id));
-            return {
-              ...subcategory,
-              productCount: countData?.productCount || 0
-            };
-          });
-        });
-        return updatedSubcategories;
-      });
-      
-    } catch (error) {
-      console.error('Error fetching product counts:', error);
     }
   };
 
@@ -688,9 +560,6 @@ export default function CategoriesPage() {
         setParentCategories(parentCats);
         setCategorySubcategories(subcategoriesMap);
         setTotalPages(response.data?.pagination?.totalPages || response.pagination?.totalPages || 1);
-        
-        // Fetch product counts for all categories
-        fetchProductCounts(allCategories);
       } else {
         toast.error('Failed to load categories');
       }
@@ -708,6 +577,7 @@ export default function CategoriesPage() {
       setRefreshing(false);
     }
   };
+
 
   useEffect(() => {
     if (isAdmin) {
@@ -780,14 +650,14 @@ export default function CategoriesPage() {
   return (
     <AdminLayout title="Categories" subtitle="Manage your product categories and organization">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Product Categories</h2>
           <p className="text-gray-600">Organize your products with categories</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <Link href="/admin/categories/create">
-            <Button variant="primary">
+        <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
+          <Link href="/admin/categories/create" className="w-full sm:w-auto">
+            <Button variant="primary" className="w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Add Category
             </Button>
@@ -796,6 +666,7 @@ export default function CategoriesPage() {
             variant="outline"
             onClick={handleRefresh}
             isLoading={refreshing}
+            className="w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -829,7 +700,6 @@ export default function CategoriesPage() {
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">All Categories</option>
-                <option value="null">Top Level Only</option>
                 {parentCategories.map((parent) => (
                   <option key={parent.id} value={parent.id}>
                     {parent.name}
@@ -840,7 +710,7 @@ export default function CategoriesPage() {
               {/* Show Subcategories Toggle */}
               <button
                 onClick={handleShowSubcategories}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto ${
                   showSubcategories
                     ? 'bg-blue-100 text-blue-700 border border-blue-200'
                     : 'bg-gray-100 text-gray-700 border border-gray-200'
@@ -852,7 +722,7 @@ export default function CategoriesPage() {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center bg-gray-100 rounded-lg p-1 w-fit">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-md transition-colors ${
@@ -931,7 +801,7 @@ export default function CategoriesPage() {
                       : 'border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white'
                   }`}>
                     <CardBody>
-                      <div className="flex items-start justify-between">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">
@@ -961,25 +831,22 @@ export default function CategoriesPage() {
                           )}
 
                           {/* Stats Row */}
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <span className="flex items-center">
-                              <Tag className="h-4 w-4 mr-1" />
-                              {category.productCount || 0} products
-                            </span>
-                            {subcategories.length > 0 && (
+                          {subcategories.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
                               <span className="flex items-center">
                                 <span className="mr-1">└─</span>
                                 {subcategories.length} subcategories
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="flex items-center space-x-2 ml-4">
+                        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center ml-0 sm:ml-4">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleView(category)}
+                            className="w-full sm:w-auto"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -987,6 +854,7 @@ export default function CategoriesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleEdit(category)}
+                            className="w-full sm:w-auto"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -995,6 +863,7 @@ export default function CategoriesPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleCreateSubcategory(category)}
+                              className="w-full sm:w-auto"
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
@@ -1003,7 +872,7 @@ export default function CategoriesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleDelete(category)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1020,11 +889,11 @@ export default function CategoriesPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-gray-700">
             Showing page {currentPage} of {totalPages}
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"

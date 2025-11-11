@@ -70,7 +70,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -78,7 +82,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -538,12 +542,12 @@ export default function OrdersPage() {
   return (
     <AdminLayout title="Orders" subtitle="Manage customer orders and track fulfillment">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Order Management</h2>
           <p className="text-gray-600">Track and manage customer orders</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap gap-3 sm:flex-nowrap sm:items-center">
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -678,7 +682,7 @@ export default function OrdersPage() {
         </Card>
       ) : (
         <>
-          <Card className="mb-8">
+          <Card className="mb-8 hidden md:block">
             <CardBody>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -795,6 +799,99 @@ export default function OrdersPage() {
               </div>
             </CardBody>
           </Card>
+
+          {/* Mobile Order Cards */}
+          <div className="space-y-4 md:hidden mb-8">
+            {orders.map((order) => (
+              <Card key={order._id}>
+                <CardBody className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">Order</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        #{order.orderNumber || order.id?.slice(-8) || order._id?.slice(-8)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {order.products?.length || 0} items • {formatDate(order.createdAt)}
+                      </p>
+                    </div>
+                    <OrderStatusBadge status={order.status} />
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+                      <User className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {order.customer?.name || 'Unknown Customer'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {order.customer?.email || 'No email'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm text-gray-600">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-400">Total</p>
+                      <p className="font-semibold text-gray-900">
+                        ${order.totalAmount?.toFixed(2) || '0.00'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-400">Payment</p>
+                      <p className="font-medium text-gray-900">
+                        {order.paymentMethod || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleView(order)}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Button>
+                    {order.status === 'pending' && (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleUpdateStatus(order, 'processing')}
+                      >
+                        Process
+                      </Button>
+                    )}
+                    {order.status === 'processing' && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleUpdateStatus(order, 'shipped')}
+                      >
+                        Ship
+                      </Button>
+                    )}
+                    {order.status === 'shipped' && (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleUpdateStatus(order, 'completed')}
+                      >
+                        Deliver
+                      </Button>
+                    )}
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (

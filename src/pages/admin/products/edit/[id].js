@@ -635,10 +635,10 @@ export default function ProductEdit() {
   return (
     <AdminLayout title="Edit Product" subtitle="Update product information">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/products">
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href="/admin/products" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Products
             </Button>
@@ -648,9 +648,9 @@ export default function ProductEdit() {
             <p className="text-gray-600">Update the product information below</p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Link href={`/admin/products/options/${id}`}>
-            <Button variant="outline">
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center sm:space-x-3">
+          <Link href={`/admin/products/options/${id}`} className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Settings className="h-4 w-4 mr-2" />
               Manage Options
             </Button>
@@ -878,14 +878,14 @@ export default function ProductEdit() {
                     </div>
                   ) : (
                     optionTypes.map((option) => (
-                      <div key={option.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
+                      <div key={option.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
                           <Tag className="h-5 w-5 text-blue-500" />
                           <span className="font-medium">{option.name}</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Link href={`/admin/products/options/${id}/values/${option.id}`}>
-                            <Button variant="outline" size="sm">
+                        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
+                          <Link href={`/admin/products/options/${id}/values/${option.id}`} className="flex-1 sm:flex-initial">
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto">
                               <Settings className="h-3 w-3" />
                             </Button>
                           </Link>
@@ -893,6 +893,7 @@ export default function ProductEdit() {
                             variant="danger" 
                             size="sm" 
                             onClick={() => handleDeleteOptionType(option.id)}
+                            className="flex-1 sm:flex-initial w-full sm:w-auto"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -915,7 +916,7 @@ export default function ProductEdit() {
                   <div className="space-y-6">
                     {newOptions.map((option, optionIndex) => (
                       <div key={optionIndex} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:space-x-3">
                           <input
                             type="text"
                             value={option.name}
@@ -936,7 +937,7 @@ export default function ProductEdit() {
                           <label className="block text-sm font-medium text-gray-700">Values:</label>
                           {option.values.map((value, valueIndex) => (
                             <div key={valueIndex} className="border border-gray-200 rounded-lg p-3 space-y-3">
-                              <div className="flex items-center space-x-2">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 sm:space-x-2">
                                 <input
                                   type="text"
                                   value={value.value || value.name || value}
@@ -953,7 +954,7 @@ export default function ProductEdit() {
                                 </button>
                               </div>
                               
-                              <div className="grid grid-cols-3 gap-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 <div>
                                   <label className="block text-xs font-medium text-gray-600 mb-1">Price Adjustment</label>
                                   <div className="relative">

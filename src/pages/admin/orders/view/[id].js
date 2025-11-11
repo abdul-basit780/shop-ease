@@ -74,7 +74,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -82,7 +86,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -450,11 +454,12 @@ export default function OrderViewPage() {
   return (
     <AdminLayout title={`Order #${order.orderNumber || order.id?.slice(-8) || order._id?.slice(-8) || 'N/A'}`} subtitle="View order details and manage status">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
           <Button
             variant="outline"
             onClick={() => router.push('/admin/orders')}
+            className="w-full sm:w-auto"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Orders
@@ -468,11 +473,12 @@ export default function OrderViewPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
           <Button
             variant="outline"
             onClick={fetchOrder}
             isLoading={updating}
+            className="w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -482,6 +488,7 @@ export default function OrderViewPage() {
               variant="danger"
               onClick={handleCancelOrder}
               isLoading={updating}
+              className="w-full sm:w-auto"
             >
               <X className="h-4 w-4 mr-2" />
               Cancel Order
@@ -496,25 +503,25 @@ export default function OrderViewPage() {
           {/* Order Status */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Order Status</h3>
                 <OrderStatusBadge status={order.status} />
               </div>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Current Status</span>
                   <span className="font-medium">
                     {order.status === 'completed' ? 'Delivered' : (order.status?.charAt(0).toUpperCase() + order.status?.slice(1))}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Order Date</span>
                   <span className="font-medium">{formatDate(order.createdAt)}</span>
                 </div>
                 {order.updatedAt && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-sm text-gray-600">Last Updated</span>
                     <span className="font-medium">{formatDate(order.updatedAt)}</span>
                   </div>
@@ -572,7 +579,7 @@ export default function OrderViewPage() {
               {order.products && order.products.length > 0 ? (
                 <div className="space-y-4">
                   {order.products.map((item, index) => (
-                    <div key={index} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
+                    <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 gap-4 p-4 border border-gray-200 rounded-lg">
                       <div className="flex-shrink-0">
                         {item.img ? (
                           <img
@@ -603,7 +610,7 @@ export default function OrderViewPage() {
                           </div>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right w-full sm:w-auto">
                         <p className="text-sm font-medium text-gray-900">
                           {formatCurrency(item.subtotal)}
                         </p>
@@ -633,7 +640,7 @@ export default function OrderViewPage() {
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 gap-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                     <User className="h-5 w-5 text-white" />
                   </div>
@@ -690,13 +697,13 @@ export default function OrderViewPage() {
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Payment Method</span>
                   <span className="font-medium">
                     {order.payment?.method || 'Unknown'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Payment Status</span>
                   <span className={`font-medium ${
                     order.payment?.status === 'completed' ? 'text-green-600' : 
@@ -707,7 +714,7 @@ export default function OrderViewPage() {
                   </span>
                 </div>
                 {order.payment?.transactionId && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-sm text-gray-600">Transaction ID</span>
                     <span className="font-medium text-xs">
                       {order.payment.transactionId}
@@ -725,26 +732,26 @@ export default function OrderViewPage() {
             </CardHeader>
             <CardBody>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Subtotal</span>
                   <span className="font-medium">
                     {formatCurrency(order.subtotal || 0)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Tax</span>
                   <span className="font-medium">
                     {formatCurrency(order.tax || 0)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Shipping</span>
                   <span className={`font-medium ${order.shipping === 0 ? 'text-green-600' : ''}`}>
                     {order.shipping === 0 ? 'FREE' : formatCurrency(order.shipping || 0)}
                   </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-base font-semibold text-gray-900">Total</span>
                     <span className="text-lg font-bold text-gray-900">
                       {formatCurrency(order.totalAmount || 0)}

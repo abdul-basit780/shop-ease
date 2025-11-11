@@ -71,7 +71,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -79,7 +83,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -257,7 +261,7 @@ const StatCard = ({ title, value, subtitle, change, changeType, icon: Icon, colo
   return (
     <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
             <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
@@ -273,7 +277,7 @@ const StatCard = ({ title, value, subtitle, change, changeType, icon: Icon, colo
               </div>
             )}
           </div>
-          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${colorClasses[color]} flex items-center justify-center shadow-lg`}>
+          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-r ${colorClasses[color]} flex items-center justify-center shadow-lg self-start sm:self-auto`}>
             <Icon className="h-7 w-7 text-white" />
           </div>
         </div>
@@ -287,7 +291,7 @@ const LowStockAlert = ({ products }) => {
   return (
     <Card className="animate-fade-in-up animation-delay-500">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Low Stock Alert</h3>
           <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
             {products?.length || 0} items
@@ -298,7 +302,7 @@ const LowStockAlert = ({ products }) => {
         <div className="space-y-3">
           {products && products.length > 0 ? (
             products.slice(0, 5).map((product) => (
-              <div key={product._id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+              <div key={product._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
                 <div className="flex items-center space-x-3">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
                   <div>
@@ -306,7 +310,7 @@ const LowStockAlert = ({ products }) => {
                     <p className="text-sm text-gray-500">{product.category}</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="font-semibold text-red-600">{product.stock} left</p>
                   <p className="text-sm text-gray-500">${product.price}</p>
                 </div>
@@ -339,7 +343,7 @@ const RecentOrders = ({ orders }) => {
   return (
     <Card className="animate-fade-in-up animation-delay-600">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
           <Link href="/admin/orders" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
             View all
@@ -350,7 +354,7 @@ const RecentOrders = ({ orders }) => {
         <div className="space-y-4">
           {orders && orders.length > 0 ? (
             orders.map((order) => (
-              <div key={order._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+              <div key={order._id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
                     <ShoppingBag className="h-5 w-5 text-white" />
@@ -360,7 +364,7 @@ const RecentOrders = ({ orders }) => {
                     <p className="text-sm text-gray-500">{order.customer?.name || 'Unknown Customer'}</p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="font-semibold text-gray-900">${order.totalAmount?.toFixed(2) || '0.00'}</p>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                     {order.status || 'Unknown'}
@@ -433,9 +437,9 @@ const RevenueChart = ({ trends }) => {
         const formattedDate = formatDate(dateValue);
         return (
           <div key={index} className="space-y-1">
-            <div className="flex justify-between text-sm">
+            <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
               <span className="text-gray-600">{formattedDate}</span>
-              <span className="font-medium text-gray-900">${(item.revenue || 0).toLocaleString()}</span>
+              <span className="font-medium text-gray-900 sm:text-right">${(item.revenue || 0).toLocaleString()}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
@@ -459,7 +463,7 @@ const SystemHealth = ({ health }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-4 max-[360px]:grid-cols-1 md:grid-cols-4">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
         <p className="text-xs text-gray-500 mb-1">Database Status</p>
         <p className="text-lg font-bold text-gray-900">
@@ -693,25 +697,25 @@ export default function AdminDashboard() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-        <div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600">Welcome back! Here's what's happening with your store.</p>
-        </div>
-          <div className="flex items-center space-x-4">
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
             <button
-            onClick={handleRefresh}
+              onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           </div>
-      </div>
+        </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 gap-4 max-[360px]:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
           <StatCard
             title="Total Orders"
             value={stats?.overview?.totalOrders || 0}
@@ -735,7 +739,7 @@ export default function AdminDashboard() {
       </div>
 
         {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-4 max-[360px]:grid-cols-1 md:grid-cols-3 md:gap-6">
         <StatCard
             title="Active Customers"
             value={stats?.customers?.active || 0}
@@ -768,21 +772,21 @@ export default function AdminDashboard() {
         <CardBody>
               <div className="space-y-4">
                 {stats.topSellingProducts.slice(0, 5).map((product, index) => (
-                  <div key={product.productId || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div key={product.productId || index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                         <span className="text-white font-semibold text-sm">{index + 1}</span>
-              </div>
-              <div>
+                      </div>
+                      <div>
                         <p className="font-medium text-gray-900">{product.name || 'Unknown Product'}</p>
                         <p className="text-sm text-gray-500">{product.totalSold || 0} sold</p>
-              </div>
-              </div>
-                    <div className="text-right">
+                      </div>
+                    </div>
+                    <div className="text-left sm:text-right">
                       <p className="font-semibold text-gray-900">${(product.revenue || 0).toLocaleString()}</p>
                       <p className="text-sm text-gray-500">Revenue</p>
-              </div>
-              </div>
+                    </div>
+                  </div>
                 ))}
           </div>
         </CardBody>
