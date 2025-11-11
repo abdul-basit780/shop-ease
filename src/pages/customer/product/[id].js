@@ -40,12 +40,47 @@ export default function ProductDetails() {
   const [recommendations, setRecommendations] = useState([]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
+  const [user, setUser] = useState(null);
 
   // Use context for cart and wishlist
   const { cart, addToCart, addToWishlist, isInWishlist } = useCartWishlist();
 
-  // Check if there are stored recommendations on mount
+  // ✅ Check authentication and clear recommendations if not logged in
   useEffect(() => {
+    const checkAuthAndClearRecommendations = () => {
+      if (!authService.isAuthenticated()) {
+        // User is not authenticated, clear any stored recommendations
+        sessionStorage.removeItem('recommendationsModal');
+        setRecommendations([]);
+        setShowRecommendationsModal(false);
+      }
+    };
+
+    // Check on mount
+    checkAuthAndClearRecommendations();
+
+    // Listen for logout events
+    const handleLogout = () => {
+      sessionStorage.removeItem('recommendationsModal');
+      setRecommendations([]);
+      setShowRecommendationsModal(false);
+    };
+
+    window.addEventListener('userLoggedOut', handleLogout);
+
+    return () => {
+      window.removeEventListener('userLoggedOut', handleLogout);
+    };
+  }, []);
+
+  // ✅ Check if there are stored recommendations on mount (only if authenticated)
+  useEffect(() => {
+    // Only load recommendations if user is authenticated
+    if (!authService.isAuthenticated()) {
+      sessionStorage.removeItem('recommendationsModal');
+      return;
+    }
+
     const storedRecs = sessionStorage.getItem("recommendationsModal");
     if (storedRecs) {
       try {
@@ -54,6 +89,7 @@ export default function ProductDetails() {
         setShowRecommendationsModal(show);
       } catch (e) {
         console.error("Error parsing stored recommendations:", e);
+        sessionStorage.removeItem('recommendationsModal');
       }
     }
   }, []);
@@ -71,6 +107,11 @@ export default function ProductDetails() {
       setDisplayImage(product.img);
     }
   }, [product]);
+
+  const checkUser = () => {
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+  };
 
   const fetchProductDetails = async () => {
     try {
@@ -224,6 +265,11 @@ export default function ProductDetails() {
   };
 
   const fetchRecommendations = async () => {
+    // ✅ Double-check authentication before fetching
+    if (!authService.isAuthenticated()) {
+      return;
+    }
+
     try {
       const response = await apiClient.get(
         "/api/customer/recommendations?limit=9"
@@ -269,6 +315,13 @@ export default function ProductDetails() {
   };
 
   const handleReopenRecommendations = () => {
+    // ✅ Check authentication before reopening
+    if (!authService.isAuthenticated()) {
+      sessionStorage.removeItem('recommendationsModal');
+      setRecommendations([]);
+      return;
+    }
+
     const storedRecs = sessionStorage.getItem("recommendationsModal");
     if (storedRecs) {
       try {
@@ -286,6 +339,7 @@ export default function ProductDetails() {
         }
       } catch (e) {
         console.error("Error reopening recommendations:", e);
+        sessionStorage.removeItem('recommendationsModal');
       }
     }
   };
@@ -405,6 +459,8 @@ export default function ProductDetails() {
   const effectiveStock = Math.max(0, baseStock - quantityInCart);
   const displayedReviews = showAllReviews ? feedbacks : feedbacks.slice(0, 2);
   const productInWishlist = product ? isInWishlist(product.id) : false;
+  // ✅ Check if user is authenticated for showing recommendations button
+  const isAuthenticated = authService.isAuthenticated();
 
   if (isLoading) {
     return (
@@ -953,7 +1009,8 @@ export default function ProductDetails() {
         }}
       />
 
-      {!showRecommendationsModal && recommendations.length > 0 && (
+      {/* ✅ Only show recommendations button if user is authenticated */}
+      {isAuthenticated && !showRecommendationsModal && recommendations.length > 0 && (
         <button
           onClick={handleReopenRecommendations}
           className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all transform hover:scale-110 flex items-center gap-2 animate-bounce-gentle"

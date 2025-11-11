@@ -87,14 +87,6 @@ class ApiClient {
   try {
     const token = Cookies.get("auth_token");
     
-    console.log('DELETE Request:', {
-      fullUrl: `${this.client.defaults.baseURL}${url}`,
-      hasToken: !!token
-    });
-    
-    // Try using fetch instead of axios temporarily
-    const fullUrl = url.startsWith('http') ? url : `${this.client.defaults.baseURL}${url}`;
-    
     const fetchOptions = {
       method: 'DELETE',
       headers: {
@@ -108,10 +100,9 @@ class ApiClient {
       fetchOptions.body = JSON.stringify(data);
     }
     
-    const response = await fetch(fullUrl, fetchOptions);
+    const response = await fetch(url, fetchOptions);
     const result = await response.json();
     
-    console.log('DELETE Response:', result);
     return result;
     
   } catch (error) {
