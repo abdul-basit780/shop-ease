@@ -5,7 +5,7 @@ export interface IOptionValue extends Document {
   _id: string;
   optionTypeId: mongoose.Types.ObjectId;
   value: string;
-  img: string;
+  img: string | undefined;
   price: number;
   stock: number;
   deletedAt: Date | null;
@@ -26,7 +26,7 @@ const OptionValueSchema = new Schema<IOptionValue>(
     },
     img: {
       type: String,
-      required: true,
+      // required: true,
     },
     price: {
       type: Number,
