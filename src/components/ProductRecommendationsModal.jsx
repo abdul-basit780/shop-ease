@@ -6,6 +6,7 @@ export default function RecommendationsModal({
   onClose,
   recommendations = [],
   onProductClick,
+  onViewCart,
 }) {
   const router = useRouter();
 
@@ -19,10 +20,11 @@ export default function RecommendationsModal({
       onProductClick(productId);
     }
   };
+  console.log(recommendations);
 
   const handleViewCart = () => {
     onClose();
-    router.push("/customer/cart");
+    onViewCart();
   };
 
   return (
