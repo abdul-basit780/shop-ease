@@ -46,7 +46,6 @@ class ApiClient {
       const response = await this.client.get(url, config);
       return response.data;
     } catch (error) {
-      console.error("API Error:", error.message);
       return {
         success: false,
         error: error.response?.data?.message || error.message || "API Error",
@@ -60,7 +59,6 @@ class ApiClient {
       const response = await this.client.post(url, data, config);
       return response.data;
     } catch (error) {
-      console.error("API Error:", error.message);
       return {
         success: false,
         error: error.response?.data?.message || error.message || "API Error",
@@ -74,7 +72,6 @@ class ApiClient {
       const response = await this.client.put(url, data, config);
       return response.data;
     } catch (error) {
-      console.error("API Error:", error.message);
       return {
         success: false,
         error: error.response?.data?.message || error.message || "API Error",
@@ -106,7 +103,6 @@ class ApiClient {
     return result;
     
   } catch (error) {
-    console.error('DELETE Error:', error);
     return {
       success: false,
       error: error.message || 'API Error',
@@ -120,7 +116,6 @@ class ApiClient {
       const response = await this.client.patch(url, data, config);
       return response.data;
     } catch (error) {
-      console.error("API Error:", error.message);
       return {
         success: false,
         error: error.response?.data?.message || error.message || "API Error",

@@ -81,10 +81,23 @@ export const authService = {
 
       // Dispatch event before redirect
       window.dispatchEvent(new Event('userLoggedOut'));
+
+        // Check if current page requires authentication based on URL structure
+      const currentPath = window.location.pathname;
+
+      // Protected routes typically contain these keywords in their path
+      const protectedKeywords = ['/profile', '/orders', '/cart', '/wishlist', '/checkout', '/admin'];
+      const requiresAuth = protectedKeywords.some(keyword => currentPath.includes(keyword));
       
-      // Small delay to allow components to update
+    // Small delay to allow components to update
       setTimeout(() => {
-        window.location.href = '/auth/login';
+        if (requiresAuth) {
+          // Redirect to login for protected pages
+          window.location.href = '/auth/login';
+        } else {
+          // Stay on current page if it's public, just reload to clear state
+          window.location.reload();
+        }
       }, 100);
     }
   },
@@ -163,7 +176,6 @@ export const authService = {
       // Check if token is not expired (exp is in seconds, Date.now() is in milliseconds)
       return decoded.exp * 1000 > Date.now();
     } catch (error) {
-      console.error("Invalid token:", error);
       return false;
     }
   },

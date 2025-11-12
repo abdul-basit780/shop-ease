@@ -17,6 +17,8 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { returnUrl } = router.query; // Get returnUrl from query params
+  
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -82,12 +84,17 @@ export default function LoginPage() {
         // Wait for toast to show and events to propagate
         await new Promise((resolve) => setTimeout(resolve, 800));
 
-        // Navigate based on user role
-        const user = authService.getCurrentUser();
-        if (user?.role === "admin") {
-          await router.push("/admin");
+        // Check if there's a returnUrl to redirect back to
+        if (returnUrl) {
+          await router.push(decodeURIComponent(returnUrl));
         } else {
-          await router.push("/");
+          // Navigate based on user role
+          const user = authService.getCurrentUser();
+          if (user?.role === "admin") {
+            await router.push("/admin");
+          } else {
+            await router.push("/");
+          }
         }
 
         // Dispatch event again after navigation to ensure navbar updates
@@ -104,7 +111,6 @@ export default function LoginPage() {
         });
       }
     } catch (error) {
-      console.error("Login error:", error);
       toast.error("An error occurred. Please try again.", {
         style: {
           borderRadius: "12px",
