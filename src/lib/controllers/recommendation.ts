@@ -46,7 +46,7 @@ export const getRecommendations = async (
       customerId,
       limit,
     );
-    response.data = buildRecommendationResponse(
+    response.data = await buildRecommendationResponse(
       recommendations,
       'personalized'
     );

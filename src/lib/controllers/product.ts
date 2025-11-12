@@ -148,7 +148,7 @@ export const index = async (
       total
     );
 
-    const responseProducts = products.map(buildProductResponse);
+    const responseProducts = products.map((p) => buildProductResponse(p));
 
     productResponse.success = true;
     productResponse.message = "Products retrieved successfully";

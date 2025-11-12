@@ -51,7 +51,7 @@ const categoriesHandler = async (req: NextApiRequest, res: NextApiResponse) => {
 // Apply middleware and export (no authentication required)
 export default asyncHandler(
   composeMiddleware(
-    rateLimit(1000, 15 * 60 * 1000), // 1000 requests per 15 minutes (more generous for public)
+    rateLimit(15000, 15 * 60 * 1000), // 15000 requests per 15 minutes (more generous for public)
     allowMethods(["GET"]),
     categoriesHandler
   )

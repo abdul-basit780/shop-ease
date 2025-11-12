@@ -45,6 +45,17 @@ export const publicProductSchemas = {
         example: "Clothing",
         description: "Category name (populated from category)",
       },
+      averageRating: {
+        type: "number",
+        format: "float",
+        example: 4.5,
+        description: "Average product rating from customer feedback",
+      },
+      totalReviews: {
+        type: "integer",
+        example: 150,
+        description: "Total number of reviews for the product",
+      },
       optionTypes: {
         type: "array",
         description:

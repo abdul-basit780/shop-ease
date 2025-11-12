@@ -35,6 +35,69 @@ export const recommendationSchemas = {
         example: 50,
         description: "Available stock quantity",
       },
+      averageRating: {
+        type: "number",
+        example: 4.3,
+        description: "Average product rating",
+      },
+      totalReviews: {
+        type: "integer",
+        example: 120,
+        description: "Total number of reviews",
+      },
+      optionTypes: {
+        type: "array",
+        description: "List of option types for the product",
+        items: {
+          type: "object",
+          properties: {
+            id: {
+              type: "string",
+              example: "507f1f77bcf86cd799439012",
+              description: "Option Type ID",
+            },
+            name: {
+              type: "string",
+              example: "Color",
+              description: "Option Type name",
+            },
+            values: {
+              type: "array",
+              description: "List of option values",
+              items: {
+                type: "object",
+                properties: {
+                  id: {
+                    type: "string",
+                    example: "507f1f77bcf86cd799439013",
+                    description: "Option Value ID",
+                  },
+                  value: {
+                    type: "string",
+                    example: "Red",
+                    description: "Option Value",
+                  },
+                  img: {
+                    type: "string",
+                    example: "https://example.com/option_value.jpg",
+                    description: "Option Value image URL",
+                  },
+                  price: {
+                    type: "number",
+                    example: 5.0,
+                    description: "Additional price for this option value",
+                  },
+                  stock: {
+                    type: "integer",
+                    example: 20,
+                    description: "Stock for this option value",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
 

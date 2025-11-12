@@ -3,10 +3,24 @@ import {
   buildProductListResponse,
   RECOMMENDATION_MESSAGES,
 } from "../../src/lib/utils/recommendation";
+import { getProductsRatings } from "../../src/lib/utils/product";
+
+// Mock the getProductsRatings function
+jest.mock("../../src/lib/utils/product", () => ({
+  getProductsRatings: jest.fn(),
+}));
 
 describe("recommendation utils", () => {
+  beforeEach(() => {
+    // Reset mock before each test
+    jest.clearAllMocks();
+
+    // Default mock implementation returns empty Map (no ratings)
+    (getProductsRatings as jest.Mock).mockResolvedValue(new Map());
+  });
+
   describe("buildRecommendationResponse", () => {
-    it("should build personalized recommendation response", () => {
+    it("should build personalized recommendation response", async () => {
       const mockRecommendations = [
         {
           product: {
@@ -34,7 +48,7 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildRecommendationResponse(
+      const response = await buildRecommendationResponse(
         mockRecommendations,
         "personalized"
       );
@@ -53,6 +67,8 @@ describe("recommendation utils", () => {
             reason: "Based on your recent purchases",
             score: 0.95,
             optionTypes: [],
+            averageRating: undefined,
+            totalReviews: undefined,
           },
           {
             id: "507f1f77bcf86cd799439012",
@@ -64,12 +80,14 @@ describe("recommendation utils", () => {
             reason: "Frequently bought together",
             score: 0.85,
             optionTypes: [],
+            averageRating: undefined,
+            totalReviews: undefined,
           },
         ],
       });
     });
 
-    it("should build popular recommendation response", () => {
+    it("should build popular recommendation response", async () => {
       const mockRecommendations = [
         {
           product: {
@@ -85,7 +103,7 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildRecommendationResponse(
+      const response = await buildRecommendationResponse(
         mockRecommendations,
         "popular"
       );
@@ -93,9 +111,11 @@ describe("recommendation utils", () => {
       expect(response.type).toBe("popular");
       expect(response.count).toBe(1);
       expect(response.recommendations[0].optionTypes).toEqual([]);
+      expect(response.recommendations[0].averageRating).toBeUndefined();
+      expect(response.recommendations[0].totalReviews).toBeUndefined();
     });
 
-    it("should handle recommendations without product wrapper", () => {
+    it("should handle recommendations without product wrapper", async () => {
       const mockRecommendations = [
         {
           _id: { toString: () => "507f1f77bcf86cd799439011" },
@@ -107,7 +127,7 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildRecommendationResponse(
+      const response = await buildRecommendationResponse(
         mockRecommendations,
         "popular"
       );
@@ -117,9 +137,11 @@ describe("recommendation utils", () => {
       expect(response.recommendations[0].reason).toBe("Popular choice");
       expect(response.recommendations[0].score).toBe(0);
       expect(response.recommendations[0].optionTypes).toEqual([]);
+      expect(response.recommendations[0].averageRating).toBeUndefined();
+      expect(response.recommendations[0].totalReviews).toBeUndefined();
     });
 
-    it("should handle categoryId as string", () => {
+    it("should handle categoryId as string", async () => {
       const mockRecommendations = [
         {
           product: {
@@ -133,17 +155,19 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildRecommendationResponse(
+      const response = await buildRecommendationResponse(
         mockRecommendations,
         "popular"
       );
 
       expect(response.recommendations[0].category).toBe("Electronics");
       expect(response.recommendations[0].optionTypes).toEqual([]);
+      expect(response.recommendations[0].averageRating).toBeUndefined();
+      expect(response.recommendations[0].totalReviews).toBeUndefined();
     });
 
-    it("should return empty recommendations for empty input", () => {
-      const response = buildRecommendationResponse([], "personalized");
+    it("should return empty recommendations for empty input", async () => {
+      const response = await buildRecommendationResponse([], "personalized");
 
       expect(response).toEqual({
         type: "personalized",
@@ -152,7 +176,7 @@ describe("recommendation utils", () => {
       });
     });
 
-    it("should use default reason when not provided", () => {
+    it("should use default reason when not provided", async () => {
       const mockRecommendations = [
         {
           product: {
@@ -166,16 +190,18 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildRecommendationResponse(
+      const response = await buildRecommendationResponse(
         mockRecommendations,
         "popular"
       );
 
       expect(response.recommendations[0].reason).toBe("Popular choice");
       expect(response.recommendations[0].optionTypes).toEqual([]);
+      expect(response.recommendations[0].averageRating).toBeUndefined();
+      expect(response.recommendations[0].totalReviews).toBeUndefined();
     });
 
-    it("should use default score when not provided", () => {
+    it("should use default score when not provided", async () => {
       const mockRecommendations = [
         {
           product: {
@@ -189,18 +215,72 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildRecommendationResponse(
+      const response = await buildRecommendationResponse(
         mockRecommendations,
         "popular"
       );
 
       expect(response.recommendations[0].score).toBe(0);
       expect(response.recommendations[0].optionTypes).toEqual([]);
+      expect(response.recommendations[0].averageRating).toBeUndefined();
+      expect(response.recommendations[0].totalReviews).toBeUndefined();
+    });
+
+    it("should include ratings when available", async () => {
+      // Mock ratings data
+      const mockRatingsMap = new Map();
+      mockRatingsMap.set("507f1f77bcf86cd799439011", {
+        averageRating: 4.5,
+        totalReviews: 120,
+      });
+      mockRatingsMap.set("507f1f77bcf86cd799439012", {
+        averageRating: 3.8,
+        totalReviews: 45,
+      });
+
+      (getProductsRatings as jest.Mock).mockResolvedValue(mockRatingsMap);
+
+      const mockRecommendations = [
+        {
+          product: {
+            _id: { toString: () => "507f1f77bcf86cd799439011" },
+            name: "Laptop",
+            price: 999.99,
+            img: "laptop.jpg",
+            categoryId: { name: "Electronics" },
+            stock: 50,
+          },
+          reason: "Based on your recent purchases",
+          score: 0.95,
+        },
+        {
+          product: {
+            _id: { toString: () => "507f1f77bcf86cd799439012" },
+            name: "Mouse",
+            price: 29.99,
+            img: "mouse.jpg",
+            categoryId: { name: "Accessories" },
+            stock: 100,
+          },
+          reason: "Frequently bought together",
+          score: 0.85,
+        },
+      ];
+
+      const response = await buildRecommendationResponse(
+        mockRecommendations,
+        "personalized"
+      );
+
+      expect(response.recommendations[0].averageRating).toBe(4.5);
+      expect(response.recommendations[0].totalReviews).toBe(120);
+      expect(response.recommendations[1].averageRating).toBe(3.8);
+      expect(response.recommendations[1].totalReviews).toBe(45);
     });
   });
 
   describe("buildProductListResponse", () => {
-    it("should build product list response", () => {
+    it("should build product list response", async () => {
       const mockProducts = [
         {
           _id: { toString: () => "507f1f77bcf86cd799439011" },
@@ -220,7 +300,7 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildProductListResponse(mockProducts);
+      const response = await buildProductListResponse(mockProducts);
 
       expect(response).toEqual({
         count: 2,
@@ -233,6 +313,8 @@ describe("recommendation utils", () => {
             category: "Category 1",
             stock: 50,
             optionTypes: [],
+            averageRating: undefined,
+            totalReviews: undefined,
           },
           {
             id: "507f1f77bcf86cd799439012",
@@ -242,12 +324,14 @@ describe("recommendation utils", () => {
             category: "Category 2",
             stock: 30,
             optionTypes: [],
+            averageRating: undefined,
+            totalReviews: undefined,
           },
         ],
       });
     });
 
-    it("should handle categoryId as string", () => {
+    it("should handle categoryId as string", async () => {
       const mockProducts = [
         {
           _id: { toString: () => "507f1f77bcf86cd799439011" },
@@ -259,14 +343,16 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildProductListResponse(mockProducts);
+      const response = await buildProductListResponse(mockProducts);
 
       expect(response.products[0].category).toBe("Electronics");
       expect(response.products[0].optionTypes).toEqual([]);
+      expect(response.products[0].averageRating).toBeUndefined();
+      expect(response.products[0].totalReviews).toBeUndefined();
     });
 
-    it("should return empty list for empty input", () => {
-      const response = buildProductListResponse([]);
+    it("should return empty list for empty input", async () => {
+      const response = await buildProductListResponse([]);
 
       expect(response).toEqual({
         count: 0,
@@ -274,7 +360,7 @@ describe("recommendation utils", () => {
       });
     });
 
-    it("should handle products with different fields", () => {
+    it("should handle products with different fields", async () => {
       const mockProducts = [
         {
           _id: { toString: () => "507f1f77bcf86cd799439011" },
@@ -286,7 +372,7 @@ describe("recommendation utils", () => {
         },
       ];
 
-      const response = buildProductListResponse(mockProducts);
+      const response = await buildProductListResponse(mockProducts);
 
       expect(response.products).toHaveLength(1);
       expect(response.products[0]).toHaveProperty("id");
@@ -296,10 +382,14 @@ describe("recommendation utils", () => {
       expect(response.products[0]).toHaveProperty("category");
       expect(response.products[0]).toHaveProperty("stock");
       expect(response.products[0]).toHaveProperty("optionTypes");
+      expect(response.products[0]).toHaveProperty("averageRating");
+      expect(response.products[0]).toHaveProperty("totalReviews");
       expect(response.products[0].optionTypes).toEqual([]);
+      expect(response.products[0].averageRating).toBeUndefined();
+      expect(response.products[0].totalReviews).toBeUndefined();
     });
 
-    it("should correctly count products", () => {
+    it("should correctly count products", async () => {
       const mockProducts = Array(10)
         .fill(null)
         .map((_, i) => ({
@@ -311,11 +401,40 @@ describe("recommendation utils", () => {
           stock: 10 + i,
         }));
 
-      const response = buildProductListResponse(mockProducts);
+      const response = await buildProductListResponse(mockProducts);
 
       expect(response.count).toBe(10);
       expect(response.products).toHaveLength(10);
       expect(response.products[0].optionTypes).toEqual([]);
+      expect(response.products[0].averageRating).toBeUndefined();
+      expect(response.products[0].totalReviews).toBeUndefined();
+    });
+
+    it("should include ratings when available", async () => {
+      // Mock ratings data
+      const mockRatingsMap = new Map();
+      mockRatingsMap.set("507f1f77bcf86cd799439011", {
+        averageRating: 4.2,
+        totalReviews: 89,
+      });
+
+      (getProductsRatings as jest.Mock).mockResolvedValue(mockRatingsMap);
+
+      const mockProducts = [
+        {
+          _id: { toString: () => "507f1f77bcf86cd799439011" },
+          name: "Product 1",
+          price: 99.99,
+          img: "product1.jpg",
+          categoryId: { name: "Category 1" },
+          stock: 50,
+        },
+      ];
+
+      const response = await buildProductListResponse(mockProducts);
+
+      expect(response.products[0].averageRating).toBe(4.2);
+      expect(response.products[0].totalReviews).toBe(89);
     });
   });
 

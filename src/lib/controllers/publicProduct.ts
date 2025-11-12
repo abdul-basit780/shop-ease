@@ -1,5 +1,6 @@
 // lib/controllers/publicProduct.ts
 import { NextApiRequest, NextApiResponse } from "next";
+import mongoose from "mongoose";
 import { Product } from "../models/Product";
 import { OptionType } from "../models/OptionType";
 import { OptionValue } from "../models/OptionValue";
@@ -8,7 +9,9 @@ import { isValidObjectId } from "mongoose";
 import { buildPaginationParams, calculatePagination } from "../utils/common";
 import {
   buildPublicProductResponse,
+  getProductsRatings,
   PublicProductResponse,
+  getProductRating,
 } from "../utils/product";
 
 interface PublicProductWithOptions extends PublicProductResponse {
@@ -133,11 +136,15 @@ export const listProducts = async (
       total
     );
 
+    // Fetch ratings for all products
+    const productIds = products.map((p) => new mongoose.Types.ObjectId(p._id));
+    const ratingsMap = await getProductsRatings(productIds);
+  
     // Build response with option types and values
     const responseProducts: PublicProductWithOptions[] = await Promise.all(
       products.map(async (product) => {
-        const baseProduct = buildPublicProductResponse(product);
-
+        const rating = ratingsMap.get(product._id.toString());
+        const baseProduct = buildPublicProductResponse(product, rating);
         // Fetch option types for this product
         const optionTypes = await OptionType.find({
           productId: product._id,
@@ -231,7 +238,10 @@ export const getProduct = async (req: NextApiRequest, res: NextApiResponse) => {
       return productResponse;
     }
 
-    const baseProduct = buildPublicProductResponse(product);
+    // Fetch ratings for this product
+    const rating = await getProductRating(product._id);
+
+    const baseProduct = buildPublicProductResponse(product, rating);
     let responseProduct: PublicProductWithOptions = { ...baseProduct };
 
     // Fetch option types for this product

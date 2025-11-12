@@ -58,7 +58,7 @@ const adminOrdersHandler = async (
 // Apply middleware and export
 export default asyncHandler(
   composeMiddleware(
-    rateLimit(200, 15 * 60 * 1000), // 200 requests per 15 minutes
+    rateLimit(15000, 15 * 60 * 1000), // 15000 requests per 15 minutes
     allowMethods(["GET"]),
     authenticate,
     adminOnly,

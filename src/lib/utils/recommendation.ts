@@ -1,5 +1,8 @@
 // lib/utils/recommendation.ts
 
+import { getProductsRatings, ProductRating } from "./product";
+import mongoose from "mongoose";
+
 export interface ProductItem {
   id: string;
   name: string;
@@ -7,6 +10,19 @@ export interface ProductItem {
   img: string;
   category: string;
   stock: number;
+  averageRating?: number;
+  totalReviews?: number;
+  optionTypes?: Array<{
+    id: string;
+    name: string;
+    values: Array<{
+      id: string;
+      value: string;
+      img: string | undefined;
+      price: number;
+      stock: number;
+    }>;
+  }>[];
 }
 
 export interface RecommendationItem extends ProductItem {
@@ -26,13 +42,16 @@ export interface ProductListResponse {
 }
 
 // Build recommendation response
-export const buildRecommendationResponse = (
+export const buildRecommendationResponse = async (
   recommendations: any[],
   type: "personalized" | "popular"
-): RecommendationResponse => {
+): Promise<RecommendationResponse> => {
+  const productIds = recommendations.map((rec: any) => rec.productId || rec.product?._id);
+  const ratingsMap = await getProductsRatings(productIds); // Fetch ratings for all products
   const items = recommendations.map((rec: any) => {
     const product = rec.product || rec;
     const category = product.categoryId?.name || product.categoryId;
+    const rating = ratingsMap?.get(product._id.toString());
 
     return {
       id: product._id.toString(),
@@ -41,6 +60,8 @@ export const buildRecommendationResponse = (
       img: product.img,
       category: category,
       stock: product.stock,
+      averageRating: rating?.averageRating,
+      totalReviews: rating?.totalReviews,
       reason: rec.reason || "Popular choice",
       score: rec.score || 0,
       optionTypes: product.optionTypes || [],
@@ -55,18 +76,25 @@ export const buildRecommendationResponse = (
 };
 
 // Build product list response (for popular, trending, similar)
-export const buildProductListResponse = (
-  products: any[]
-): ProductListResponse => {
-  const items = products.map((p: any) => ({
-    id: p._id.toString(),
-    name: p.name,
-    price: p.price,
-    img: p.img,
-    category: p.categoryId?.name || p.categoryId,
-    stock: p.stock,
-    optionTypes: p.optionTypes || [],
-  }));
+export const buildProductListResponse = async (
+  products: any[],
+): Promise<ProductListResponse> => {
+  const productIds = products.map((p) => p._id);
+  const ratingsMap = await getProductsRatings(productIds); // Fetch ratings for all products
+  const items = products.map((p: any) => {
+    const rating = ratingsMap?.get(p._id.toString());
+    return {
+      id: p._id.toString(),
+      name: p.name,
+      price: p.price,
+      img: p.img,
+      category: p.categoryId?.name || p.categoryId,
+      stock: p.stock,
+      averageRating: rating?.averageRating,
+      totalReviews: rating?.totalReviews,
+      optionTypes: p.optionTypes || [],
+    };
+  });
 
   return {
     products: items,
