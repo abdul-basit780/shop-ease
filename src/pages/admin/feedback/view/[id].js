@@ -76,7 +76,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -84,7 +88,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -418,11 +422,12 @@ export default function FeedbackViewPage() {
   return (
     <AdminLayout title={`Feedback #${feedback._id?.slice(-8)}`} subtitle="View feedback details and respond">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
           <Button
             variant="outline"
             onClick={() => router.push('/admin/feedback')}
+            className="w-full sm:w-auto"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Feedback
@@ -436,11 +441,12 @@ export default function FeedbackViewPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center">
           <Button
             variant="outline"
             onClick={fetchFeedback}
             isLoading={loading}
+            className="w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -449,6 +455,7 @@ export default function FeedbackViewPage() {
             variant="danger"
             onClick={handleDelete}
             isLoading={deleting}
+            className="w-full sm:w-auto"
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
@@ -462,7 +469,7 @@ export default function FeedbackViewPage() {
           {/* Feedback Details */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Feedback Details</h3>
                 <div className="flex items-center space-x-2">
                   <FeedbackTypeBadge type={feedback.type} />
@@ -553,22 +560,22 @@ export default function FeedbackViewPage() {
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Type</span>
                   <FeedbackTypeBadge type={feedback.type} />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Status</span>
                   <FeedbackStatusBadge status={feedback.status} />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-sm text-gray-600">Submitted</span>
                   <span className="text-sm font-medium">
                     {formatDate(feedback.createdAt)}
                   </span>
                 </div>
                 {feedback.updatedAt && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-sm text-gray-600">Last Updated</span>
                     <span className="text-sm font-medium">
                       {formatDate(feedback.updatedAt)}

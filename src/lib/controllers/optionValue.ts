@@ -168,23 +168,6 @@ export const store = async (
       return response;
     }
 
-    // Handle image file
-    const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;
-
-    if (!imageFile) {
-      response.message = "Option value image is required";
-      response.statusCode = 400;
-      return response;
-    }
-
-    const imageErrors = validateImageFile(imageFile);
-    if (imageErrors.length > 0) {
-      await fs.unlink(imageFile.filepath).catch(() => {});
-      response.message = imageErrors.join(", ");
-      response.statusCode = 400;
-      return response;
-    }
-
     // Check if option type exists
     const optionType = await OptionType.findOne({
       _id: requestData.optionTypeId,
@@ -192,7 +175,6 @@ export const store = async (
     });
 
     if (!optionType) {
-      await fs.unlink(imageFile.filepath).catch(() => {});
       response.message = "Option type not found";
       response.statusCode = 404;
       return response;
@@ -206,21 +188,32 @@ export const store = async (
     });
 
     if (existing) {
-      await fs.unlink(imageFile.filepath).catch(() => {});
       response.message = "Option value already exists for this type";
       response.statusCode = 409;
       return response;
     }
 
-    // Upload image to ImageKit
-    let imageUrl: string;
-    try {
-      imageUrl = await uploadToImageKit(imageFile);
-    } catch (error) {
-      console.error("ImageKit upload error:", error);
-      response.message = "Failed to upload image";
-      response.statusCode = 500;
-      return response;
+    // Handle image file
+    const imageFile = Array.isArray(files.image) ? files.image[0] : files.image;
+    let imageUrl: string | undefined;
+
+    if (imageFile) {
+      const imageErrors = validateImageFile(imageFile);
+      if (imageErrors.length > 0) {
+        await fs.unlink(imageFile.filepath).catch(() => {});
+        response.message = imageErrors.join(", ");
+        response.statusCode = 400;
+        return response;
+      }
+
+      try {
+        imageUrl = await uploadToImageKit(imageFile);
+      } catch (error) {
+        console.error("ImageKit upload error:", error);
+        response.message = "Failed to upload image";
+        response.statusCode = 500;
+        return response;
+      }
     }
 
     const newOptionValue = await OptionValue.create({
@@ -440,9 +433,12 @@ export const update = async (
       try {
         newImageUrl = await uploadToImageKit(imageFile);
 
-        deleteFromImageKit(existing.img).catch((err) =>
-          console.error("Failed to delete old image:", err)
-        );
+        // Only delete old image if it exists
+        if (existing.img) {
+          deleteFromImageKit(existing.img).catch((err) =>
+            console.error("Failed to delete old image:", err)
+          );
+        }
       } catch (error) {
         console.error("ImageKit upload error:", error);
         response.message = "Failed to upload image";
@@ -562,8 +558,10 @@ export const permanentDestroy = async (
       return response;
     }
 
-    // Delete the image from ImageKit
-    await deleteFromImageKit(optionValue.img);
+    // Delete the image from ImageKit if it exists
+    if (optionValue.img) {
+      await deleteFromImageKit(optionValue.img);
+    }
 
     // Permanently delete the option value
     await OptionValue.findByIdAndDelete(id);

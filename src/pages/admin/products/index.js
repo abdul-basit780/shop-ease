@@ -78,7 +78,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -86,7 +90,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -248,21 +252,21 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected, 
     <Card className={`hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${
       isSelected ? 'ring-2 ring-primary-500 bg-primary-50' : ''
     }`}>
-      <div className="relative">
-        <div className="aspect-w-16 aspect-h-9 bg-gray-200 rounded-t-2xl overflow-hidden">
-          {product.img ? (
-            <img
-              src={product.img}
-              alt={product.name}
-              className="w-full h-48 object-cover"
-            />
-          ) : (
-            <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <Package className="h-12 w-12 text-gray-400" />
-            </div>
-          )}
-        </div>
-        <div className="absolute top-3 left-3">
+        <div className="relative">
+          <div className="w-full h-[300px] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center">
+            {product.img ? (
+              <img
+                src={product.img}
+                alt={product.name}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <Package className="h-12 w-12 text-gray-400" />
+              </div>
+            )}
+          </div>
+        <div className="absolute top-3 left-3 z-10">
           <input
             type="checkbox"
             checked={isSelected}
@@ -270,14 +274,14 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected, 
             className="w-5 h-5 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
           />
         </div>
-        <div className="absolute top-3 right-3">
-          <div className="bg-white rounded-full p-2 shadow-lg">
-            <button className="text-gray-400 hover:text-gray-600">
-              <MoreVertical className="h-4 w-4" />
-            </button>
+          <div className="absolute top-3 right-3 z-10">
+            <div className="bg-white rounded-full p-2 shadow-lg">
+              <button className="text-gray-400 hover:text-gray-600">
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       
       <CardBody>
         <div className="mb-4">
@@ -288,7 +292,7 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected, 
             {product.description}
           </p>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-xl font-bold text-gray-900">
               ${product.price}
             </span>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -301,8 +305,8 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onSelect, isSelected, 
               {product.stock} in stock
             </span>
           </div>
-          <div className="flex items-center text-sm text-gray-500">
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+          <div className="flex items-center text-xs text-gray-500">
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
               {product.categoryName || product.category}
               {product.parentCategoryName && (
                 <span className="text-blue-600 ml-1">
@@ -1130,7 +1134,7 @@ export default function ProductsPage() {
       ) : (
         <>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-fade-in-up animation-delay-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-fade-in-up animation-delay-200">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -1145,7 +1149,8 @@ export default function ProductsPage() {
               ))}
             </div>
           ) : (
-            <Card className="mb-8">
+            <>
+            <Card className="mb-8 hidden md:block">
               <CardBody>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -1278,6 +1283,102 @@ export default function ProductsPage() {
                 </div>
               </CardBody>
             </Card>
+            <div className="md:hidden space-y-4 mb-8">
+              {filteredProducts.map((product) => (
+                <Card key={product.id} className={selectedProducts.includes(product.id) ? 'ring-2 ring-primary-500' : ''}>
+                  <CardBody className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedProducts.includes(product.id)}
+                          onChange={() => handleProductSelect(product.id)}
+                          className="mt-1 w-5 h-5 text-primary-600 bg-white border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <div className="flex items-center gap-3">
+                          <div className="h-16 w-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                            {product.img ? (
+                              <img src={product.img} alt={product.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-gray-400">
+                                <Package className="h-6 w-6" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-base font-semibold text-gray-900">{product.name}</p>
+                            <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          product.stock > 10
+                            ? 'bg-green-100 text-green-800'
+                            : product.stock > 0
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm text-gray-600">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-400">Price</p>
+                        <p className="text-base font-semibold text-gray-900">${product.price}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-400">Stock</p>
+                        <p className="text-base font-semibold text-gray-900">{product.stock}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-xs uppercase tracking-wide text-gray-400">Category</p>
+                        <p className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                          <Tag className="h-3 w-3" />
+                          {product.categoryName || product.category}
+                        </p>
+                        {product.parentCategoryName && (
+                          <p className="mt-1 text-xs text-gray-500">under {product.parentCategoryName}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleView(product)}
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleEdit(product)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleDelete(product)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+            </>
           )}
 
           {/* Pagination */}

@@ -7,7 +7,6 @@ import {
   Search, 
   Filter, 
   Eye, 
-  MoreVertical,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -79,7 +78,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -87,7 +90,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -270,26 +273,19 @@ const CustomerCard = ({ customer, onView, onToggleStatus }) => {
   return (
     <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold text-lg">
-                {customer.name?.charAt(0) || 'U'}
-              </span>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {customer.name || 'Unknown Customer'}
-              </h3>
-              <p className="text-sm text-gray-500">
-                {customer.email || 'No email'}
-              </p>
-            </div>
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+            <span className="text-white font-semibold text-lg">
+              {customer.name?.charAt(0) || 'U'}
+            </span>
           </div>
-          <div className="relative">
-            <button className="text-gray-400 hover:text-gray-600">
-              <MoreVertical className="h-5 w-5" />
-            </button>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {customer.name || 'Unknown Customer'}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {customer.email || 'No email'}
+            </p>
           </div>
         </div>
         
@@ -308,24 +304,24 @@ const CustomerCard = ({ customer, onView, onToggleStatus }) => {
           )}
         </div>
         
-        <div className="flex items-center justify-between mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <CustomerStatusBadge isActive={customer.isActive} />
-          <div className="text-right">
-            <div className="text-sm font-medium text-gray-900">
-              {customer.gender || 'Not specified'}
-            </div>
-            <div className="text-sm text-gray-500">
-              ID: {customer.id?.slice(-8) || 'Unknown'}
-            </div>
+          <div className="text-sm text-gray-500">
+            <span className="font-medium text-gray-900 mr-1">ID:</span>
+            {customer.id?.slice(-8) || 'Unknown'}
+          </div>
+          <div className="text-sm text-gray-500">
+            <span className="font-medium text-gray-900 mr-1">Gender:</span>
+            {customer.gender || 'Not specified'}
           </div>
         </div>
         
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onView(customer)}
-            className="flex-1"
+            className="flex-1 min-w-[6rem]"
           >
             <Eye className="h-4 w-4" />
             View
@@ -334,7 +330,7 @@ const CustomerCard = ({ customer, onView, onToggleStatus }) => {
             variant="outline"
             size="sm"
             onClick={() => onToggleStatus(customer)}
-            className="flex-1"
+            className="flex-1 min-w-[6rem]"
             style={{ 
               backgroundColor: customer.isActive ? '#EF4444' : '#10B981',
               color: 'white',
@@ -565,16 +561,17 @@ export default function CustomersPage() {
   return (
     <AdminLayout title="Customers" subtitle="Manage your customer base and relationships">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Customer Management</h2>
           <p className="text-gray-600">View and manage your customer accounts</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
           <Button
             variant="outline"
             onClick={handleRefresh}
             isLoading={refreshing}
+            className="w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -582,6 +579,7 @@ export default function CustomersPage() {
           <Button
             variant="outline"
             onClick={handleExport}
+            className="w-full sm:w-auto"
           >
             <Download className="h-4 w-4" />
             Export
@@ -668,7 +666,7 @@ export default function CustomersPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Status Filter */}
               <select
                 value={statusFilter}
@@ -681,7 +679,7 @@ export default function CustomersPage() {
               </select>
 
               {/* View Mode Toggle */}
-              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1 w-fit">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`p-2 rounded-md transition-colors ${
@@ -738,7 +736,8 @@ export default function CustomersPage() {
               ))}
             </div>
           ) : (
-            <Card className="mb-8">
+            <>
+            <Card className="mb-8 hidden md:block">
               <CardBody>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -802,11 +801,12 @@ export default function CustomersPage() {
                             {customer.dob ? customer.dob.split('T')[0] : 'Not specified'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex space-x-2">
+                            <div className="flex flex-wrap gap-2 justify-end">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleView(customer)}
+                                className="w-full sm:w-auto"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -819,6 +819,7 @@ export default function CustomersPage() {
                                   color: 'white',
                                   borderColor: customer.isActive ? '#EF4444' : '#10B981'
                                 }}
+                                className="w-full sm:w-auto"
                               >
                                 {customer.isActive ? (
                                   <ToggleLeft className="h-4 w-4" />
@@ -835,15 +836,93 @@ export default function CustomersPage() {
                 </div>
               </CardBody>
             </Card>
+            <div className="space-y-4 md:hidden mb-8">
+              {customers.map((customer) => (
+                <Card key={`${customer.id}-mobile`}>
+                  <CardBody className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white font-semibold text-lg">
+                          {customer.name?.charAt(0) || 'U'}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {customer.name || 'Unknown Customer'}
+                        </h3>
+                        <p className="text-sm text-gray-500 break-all">
+                          {customer.email || 'No email'}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          ID: {customer.id?.slice(-8) || 'Unknown'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                      {customer.phone && (
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="h-4 w-4" />
+                          {customer.phone}
+                        </span>
+                      )}
+                      {customer.dob && (
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {customer.dob.split('T')[0]}
+                        </span>
+                      )}
+                      <CustomerStatusBadge isActive={customer.isActive} />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleView(customer)}
+                        className="flex-1 min-w-[6rem]"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleStatus(customer)}
+                        className="flex-1 min-w-[6rem]"
+                        style={{
+                          backgroundColor: customer.isActive ? '#EF4444' : '#10B981',
+                          color: 'white',
+                          borderColor: customer.isActive ? '#EF4444' : '#10B981'
+                        }}
+                      >
+                        {customer.isActive ? (
+                          <>
+                            <ToggleLeft className="h-4 w-4" />
+                            Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <ToggleRight className="h-4 w-4" />
+                            Activate
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+            </>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-gray-700">
                 Showing page {currentPage} of {totalPages}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

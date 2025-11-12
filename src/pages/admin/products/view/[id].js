@@ -338,10 +338,10 @@ export default function ProductView() {
   return (
     <AdminLayout title="Product Details" subtitle={`Viewing ${product.name}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/products">
-            <Button variant="outline" size="sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:space-x-4">
+          <Link href="/admin/products" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4" />
               Back to Products
             </Button>
@@ -351,20 +351,20 @@ export default function ProductView() {
             <p className="text-gray-600">Product ID: {product.id}</p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Link href={`/admin/products/options/${product.id}`}>
-            <Button variant="outline">
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center sm:space-x-3">
+          <Link href={`/admin/products/options/${product.id}`} className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Settings className="h-4 w-4 mr-2" />
               Manage Options
             </Button>
           </Link>
-          <Link href={`/admin/products/edit/${product.id}`}>
-            <Button variant="outline">
+          <Link href={`/admin/products/edit/${product.id}`} className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto">
               <Edit className="h-4 w-4 mr-2" />
               Edit Product
             </Button>
           </Link>
-          <Button variant="danger" onClick={handleDelete}>
+          <Button variant="danger" onClick={handleDelete} className="flex-1 sm:flex-initial w-full sm:w-auto">
             <Trash2 className="h-4 w-4 mr-2" />
             Delete Product
           </Button>
@@ -381,22 +381,21 @@ export default function ProductView() {
                 <h3 className="text-lg font-semibold text-gray-900">Product Image</h3>
               </CardHeader>
               <CardBody>
-                {product.img ? (
-                  <div className="aspect-w-16 aspect-h-9">
-                    <img
-                      src={product.img}
-                      alt={product.name}
-                      className="w-full h-64 object-cover rounded-lg"
-                    />
+                <div className="max-w-[320px] mx-auto">
+                  <div className="h-[300px] bg-gray-100 rounded-2xl overflow-hidden flex items-center justify-center">
+                    {product.img ? (
+                      <img
+                        src={product.img}
+                        alt={product.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                        <ImageIcon className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500">No image available</p>
-                    </div>
-                  </div>
-                )}
+                </div>
               </CardBody>
             </Card>
 
@@ -440,7 +439,7 @@ export default function ProductView() {
                 <h3 className="text-lg font-semibold text-gray-900">Status</h3>
               </CardHeader>
               <CardBody>
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-500" />
                   <span className="text-green-700 font-medium">Active</span>
                 </div>
@@ -485,15 +484,15 @@ export default function ProductView() {
                 <h3 className="text-lg font-semibold text-gray-900">Product Information</h3>
               </CardHeader>
               <CardBody className="space-y-3">
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
                   <span className="text-gray-600">Product ID:</span>
                   <span className="font-mono text-sm">{product.id}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
                   <span className="text-gray-600">Created:</span>
                   <span className="text-sm">{new Date(product.createdAt).toLocaleDateString()}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
                   <span className="text-gray-600">Updated:</span>
                   <span className="text-sm">{new Date(product.updatedAt).toLocaleDateString()}</span>
                 </div>

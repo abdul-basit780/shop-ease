@@ -9,7 +9,7 @@ export interface OptionValueResponse {
   optionTypeName?: string;
   productId?: string;
   value: string;
-  img: string;
+  img?: string;
   price: number;
   stock: number;
   deletedAt: Date | null;
@@ -51,7 +51,7 @@ export const buildOptionValueResponse = (
     optionTypeName: optionValue.optionTypeId?.name || undefined,
     productId: optionValue.optionTypeId?.productId?.toString() || undefined,
     value: optionValue.value,
-    img: optionValue.img,
+    img: optionValue.img || undefined,
     price: optionValue.price,
     stock: optionValue.stock,
     deletedAt: optionValue.deletedAt,
@@ -166,7 +166,7 @@ export const validateImageFile = (file: any): string[] => {
   const errors: string[] = [];
 
   if (!file) {
-    return errors; // Image is optional for updates
+    return errors; // Image is optional
   }
 
   const MAX_SIZE = 5 * 1024 * 1024; // 5MB

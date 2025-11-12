@@ -7,7 +7,6 @@ import {
   Search, 
   Filter, 
   Eye, 
-  MoreVertical,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -77,7 +76,11 @@ const AdminLayout = ({ children, title, subtitle }) => {
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center space-x-3">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 transition-colors hover:text-primary-600"
+            aria-label="Go to ShopEase storefront"
+          >
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-lg">SE</span>
             </div>
@@ -85,7 +88,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               <h1 className="text-xl font-bold text-gray-900">ShopEase</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -272,7 +275,7 @@ const FeedbackCard = ({ feedback, onView, onDelete }) => {
   return (
     <Card className="hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <CardBody>
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
               <span className="text-white font-semibold text-sm">
@@ -478,16 +481,17 @@ export default function FeedbackPage() {
   return (
     <AdminLayout title="Feedback" subtitle="Manage customer feedback and reviews">
       {/* Header Actions */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Customer Feedback</h2>
           <p className="text-gray-600">Review and manage customer feedback</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
           <Button
             variant="outline"
             onClick={handleRefresh}
             isLoading={refreshing}
+            className="w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -495,6 +499,7 @@ export default function FeedbackPage() {
           <Button
             variant="outline"
             onClick={handleExport}
+            className="w-full sm:w-auto"
           >
             <Download className="h-4 w-4" />
             Export
@@ -577,7 +582,7 @@ export default function FeedbackPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Rating Filter */}
               <select
                 value={ratingFilter}
@@ -593,7 +598,7 @@ export default function FeedbackPage() {
               </select>
 
               {/* View Mode Toggle */}
-              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1 w-fit">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`p-2 rounded-md transition-colors ${
@@ -650,7 +655,8 @@ export default function FeedbackPage() {
               ))}
             </div>
           ) : (
-            <Card className="mb-8">
+            <>
+            <Card className="mb-8 hidden md:block">
               <CardBody>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -715,11 +721,12 @@ export default function FeedbackPage() {
                             {formatDate(feedback.createdAt)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex items-center justify-end space-x-2">
+                            <div className="flex flex-wrap gap-2 justify-end">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleView(feedback)}
+                                className="w-full sm:w-auto"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -727,6 +734,7 @@ export default function FeedbackPage() {
                                 variant="danger"
                                 size="sm"
                                 onClick={() => handleDelete(feedback)}
+                                className="w-full sm:w-auto"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -739,15 +747,70 @@ export default function FeedbackPage() {
                 </div>
               </CardBody>
             </Card>
+            <div className="space-y-4 md:hidden mb-8">
+              {feedbacks.map((feedback) => (
+                <Card key={`${feedback._id}-mobile`}>
+                  <CardBody className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {feedback.customerId?.name?.charAt(0) || 'U'}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          {feedback.customerId?.name || 'Anonymous'}
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                          {new Date(feedback.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <RatingStars rating={feedback.rating} />
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900">
+                        {feedback.productName || 'Product Review'}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {feedback.comment || 'No comment provided'}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleView(feedback)}
+                        className="flex-1 min-w-[6rem]"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDelete(feedback)}
+                        className="flex-1 min-w-[6rem]"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+            </>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-gray-700">
                 Showing page {currentPage} of {totalPages}
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
