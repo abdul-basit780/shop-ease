@@ -12,6 +12,7 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [wishlistLoading, setWishlistLoading] = useState({});
 
   // Use context for wishlist
   const { wishlist, addToWishlist, isInWishlist } = useCartWishlist();
@@ -102,6 +103,8 @@ export default function Products() {
       return;
     }
     
+    setWishlistLoading(prev => ({ ...prev, [product.id]: true }));
+    
     try {
       const result = await addToWishlist(product.id);
       
@@ -142,6 +145,8 @@ export default function Products() {
           color: '#fff',
         },
       });
+    } finally {
+      setWishlistLoading(prev => ({ ...prev, [product.id]: false }));
     }
   };
 
@@ -210,6 +215,7 @@ export default function Products() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map((product, idx) => {
               const inWishlist = isInWishlist(product.id);
+              const isWishlistLoading = wishlistLoading[product.id];
               const minPrice = getMinimumPrice(product);
               const hasOptions = product.optionTypes && product.optionTypes.length > 0;
               
@@ -228,7 +234,7 @@ export default function Products() {
                         <img
                           src={product.img}
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          className="w-full h-full object-cover md:object-cover group-hover:scale-110 transition-transform duration-700"
                           onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextElementSibling.style.display = 'flex';
@@ -269,14 +275,19 @@ export default function Products() {
 
                       <button
                         onClick={(e) => handleAddToWishlist(e, product)}
+                        disabled={inWishlist || isWishlistLoading}
                         className={`absolute top-3 right-3 p-2.5 backdrop-blur-sm rounded-full hover:scale-110 transition-all shadow-lg z-10 ${
                           inWishlist 
                             ? 'bg-red-500 text-white' 
                             : 'bg-white/95 text-gray-600 hover:text-red-500 hover:bg-white'
-                        }`}
+                        } disabled:opacity-50`}
                         title={inWishlist ? 'In wishlist' : 'Add to wishlist'}
                       >
-                        <Heart className={`h-5 w-5 ${inWishlist ? 'fill-current' : ''}`} />
+                        {isWishlistLoading ? (
+                          <div className="animate-spin h-5 w-5 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        ) : (
+                          <Heart className={`h-5 w-5 ${inWishlist ? 'fill-current' : ''}`} />
+                        )}
                       </button>
                     </div>
 
@@ -294,15 +305,27 @@ export default function Products() {
                       </p>
 
                       <div className="flex items-center mb-4">
-                        <div className="flex items-center">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3 w-3 ${i < 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="ml-2 text-xs text-gray-600">(24)</span>
+                        {product.averageRating > 0 ? (
+                          <>
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${
+                                    i < Math.round(product.averageRating)
+                                      ? 'fill-yellow-400 text-yellow-400' 
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="ml-2 text-xs text-gray-600">
+                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0})
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-500">No reviews yet</span>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between">

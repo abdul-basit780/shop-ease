@@ -1,88 +1,146 @@
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  TrendingUp,
   Sparkles,
   ShoppingBag,
-  Zap,
   Star,
-  Heart,
-  Gift,
   Truck,
-  Shield,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import shopping from "@/assets/shopping.jpg";
 import Image from "next/image";
 
 function Banner() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading time for smooth transition
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="w-full overflow-hidden">
+        {/* Banner Shimmer */}
+        <div className="relative bg-gradient-to-br from-blue-500 via-purple-500 to-purple-600 h-[500px] md:h-[600px] animate-pulse">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+            <div className="w-full max-w-2xl space-y-6">
+              <div className="h-8 bg-white/20 rounded-lg w-48 animate-pulse"></div>
+              <div className="h-16 bg-white/30 rounded-lg w-full animate-pulse"></div>
+              <div className="h-6 bg-white/20 rounded-lg w-3/4 animate-pulse"></div>
+              <div className="flex gap-4">
+                <div className="h-12 bg-white/30 rounded-xl w-40 animate-pulse"></div>
+                <div className="h-12 bg-white/20 rounded-xl w-40 animate-pulse"></div>
+              </div>
+              {/* Stats Shimmer */}
+              <div className="grid grid-cols-3 gap-4 md:gap-6 mt-8">
+                <div className="text-center space-y-2">
+                  <div className="h-8 bg-white/20 rounded w-16 mx-auto animate-pulse"></div>
+                  <div className="h-4 bg-white/20 rounded w-20 mx-auto animate-pulse"></div>
+                </div>
+                <div className="text-center space-y-2">
+                  <div className="h-8 bg-white/20 rounded w-16 mx-auto animate-pulse"></div>
+                  <div className="h-4 bg-white/20 rounded w-20 mx-auto animate-pulse"></div>
+                </div>
+                <div className="text-center space-y-2">
+                  <div className="h-8 bg-white/20 rounded w-16 mx-auto animate-pulse"></div>
+                  <div className="h-4 bg-white/20 rounded w-20 mx-auto animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Wave Bottom */}
+          <div className="absolute bottom-0 left-0 right-0 w-full">
+            <svg
+              viewBox="0 0 1440 120"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-full h-auto"
+              preserveAspectRatio="none"
+            >
+              <path
+                d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
+                fill="white"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="w-full overflow-hidden">
       {/* Hero Section with Mega Animation */}
-      <section className="relative bg-gradient-to-br from-primary-600 via-purple-500 to-secondary-500 text-white overflow-hidden min-h-[600px] flex items-center">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute w-96 h-96 bg-white opacity-10 rounded-full blur-3xl -top-48 -left-48 animate-float"></div>
-          <div className="absolute w-96 h-96 bg-white opacity-10 rounded-full blur-3xl top-1/3 right-10 animate-float animation-delay-500"></div>
-          <div className="absolute w-96 h-96 bg-white opacity-10 rounded-full blur-3xl -bottom-48 -right-48 animate-float animation-delay-1000"></div>
+      <section className="relative bg-gradient-to-br from-primary-600 via-purple-500 to-secondary-500 text-white overflow-hidden min-h-[500px] md:min-h-[600px] flex items-center w-full">
+        {/* Animated Background Elements - Hidden on mobile to prevent overflow */}
+        <div className="absolute inset-0 overflow-hidden hidden md:block">
+          <div className="absolute w-64 h-64 md:w-96 md:h-96 bg-white opacity-10 rounded-full blur-3xl -top-32 -left-32 md:-top-48 md:-left-48 animate-float"></div>
+          <div className="absolute w-64 h-64 md:w-96 md:h-96 bg-white opacity-10 rounded-full blur-3xl top-1/3 -right-16 md:right-10 animate-float animation-delay-500"></div>
+          <div className="absolute w-64 h-64 md:w-96 md:h-96 bg-white opacity-10 rounded-full blur-3xl -bottom-32 -right-32 md:-bottom-48 md:-right-48 animate-float animation-delay-1000"></div>
 
           {/* Floating Shapes */}
           <div className="absolute top-20 left-[10%] animate-float animation-delay-300">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl rotate-45 backdrop-blur-sm"></div>
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-white/20 rounded-2xl rotate-45 backdrop-blur-sm"></div>
           </div>
           <div className="absolute top-40 right-[15%] animate-float animation-delay-700">
-            <div className="w-12 h-12 bg-white/20 rounded-full backdrop-blur-sm"></div>
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-full backdrop-blur-sm"></div>
           </div>
           <div className="absolute bottom-32 left-[20%] animate-float animation-delay-1000">
-            <div className="w-20 h-20 bg-white/20 rounded-3xl rotate-12 backdrop-blur-sm"></div>
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-3xl rotate-12 backdrop-blur-sm"></div>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
             {/* Left Content */}
             <div className="text-center lg:text-left">
-              <div className="animate-fade-in-down">
-                <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-                  <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
-                  <span className="text-sm font-semibold">
+              <div className="page-loaded:animate-fade-in-down">
+                <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-2 md:px-4 md:py-2 rounded-full mb-4 md:mb-6">
+                  <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-yellow-300 animate-pulse" />
+                  <span className="text-xs md:text-sm font-semibold">
                     AI-Powered Shopping
                   </span>
                 </div>
 
-                <h1 className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
-                  <span className=" inline-block animate-gradient bg-clip-text text-transparent bg-gradient-to-r from-white via-primary-200 to-white bg-[length:200%_auto]">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold mb-4 md:mb-6 leading-tight">
+                  <span className="inline-block animate-gradient bg-clip-text text-transparent bg-gradient-to-r from-white via-primary-200 to-white bg-[length:200%_auto]">
                     Discover Products
                   </span>
                   <br />
-                  <span className="inline-block mt-2 text-primary-100 animate-fade-in-up animation-delay-300">
+                  <span className="inline-block mt-2 text-primary-100 page-loaded:animate-fade-in-up animation-delay-300">
                     Made Just For You
                   </span>
                   <span className="inline-block ml-2 animate-bounce">✨</span>
                 </h1>
               </div>
 
-              <p className="text-xl md:text-2xl text-primary-100 mb-10 max-w-2xl animate-fade-in-up animation-delay-500">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-primary-100 mb-8 md:mb-10 max-w-2xl mx-auto lg:mx-0 page-loaded:animate-fade-in-up animation-delay-500">
                 Experience personalized shopping with AI-powered recommendations
                 tailored to your unique preferences
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-in-up animation-delay-700">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start page-loaded:animate-fade-in-up animation-delay-700">
                 <Link href="/customer/all-products">
                   <Button
                     size="lg"
-                    className="group bg-white text-primary-600 hover:bg-primary-50 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/50"
+                    className="group bg-white text-primary-600 hover:bg-primary-50 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/50 w-full sm:w-auto"
                   >
-                    <ShoppingBag className="h-5 w-5 group-hover:animate-bounce" />
+                    <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 group-hover:animate-bounce" />
                     <span className="mx-2">Start Shopping</span>
-                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                 <Link href="/customer/all-categories">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-2 border-white text-white hover:bg-white hover:text-primary-600 transform hover:scale-105 transition-all duration-300 backdrop-blur-sm bg-white/10"
+                    className="border-2 border-white text-white hover:bg-white hover:text-primary-600 transform hover:scale-105 transition-all duration-300 backdrop-blur-sm bg-white/10 w-full sm:w-auto"
                   >
                     Explore Categories
                   </Button>
@@ -90,32 +148,32 @@ function Banner() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-6 mt-12 animate-fade-in-up animation-delay-1000">
+              <div className="grid grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-12 page-loaded:animate-fade-in-up animation-delay-1000">
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-1">10K+</div>
-                  <div className="text-primary-200 text-sm">
+                  <div className="text-2xl md:text-3xl font-bold mb-1">10K+</div>
+                  <div className="text-primary-200 text-xs md:text-sm">
                     Happy Customers
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-1">5K+</div>
-                  <div className="text-primary-200 text-sm">Products</div>
+                  <div className="text-2xl md:text-3xl font-bold mb-1">5K+</div>
+                  <div className="text-primary-200 text-xs md:text-sm">Products</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-1">98%</div>
-                  <div className="text-primary-200 text-sm">Satisfaction</div>
+                  <div className="text-2xl md:text-3xl font-bold mb-1">98%</div>
+                  <div className="text-primary-200 text-xs md:text-sm">Satisfaction</div>
                 </div>
               </div>
             </div>
 
-            {/* Right Content - Featured Product Showcase */}
-            <div className="hidden lg:block animate-fade-in-up animation-delay-500">
-              <div className="relative">
+            {/* Right Content - Featured Product Showcase - Hidden on mobile to prevent width issues */}
+            <div className="hidden lg:block page-loaded:animate-fade-in-up animation-delay-500">
+              <div className="relative max-w-md mx-auto">
                 {/* Main Featured Card */}
                 <div className="relative bg-white/10 backdrop-blur-lg rounded-3xl p-6 border border-white/20 shadow-2xl transform hover:scale-105 transition-all duration-500">
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-yellow-400 rounded-full flex items-center justify-center animate-pulse shadow-xl z-20">
-                    <div className="text-center flex">
-                      <div className="text-2xl font-bold text-gray-900">
+                  <div className="absolute -top-4 -right-4 w-20 h-20 md:w-24 md:h-24 bg-yellow-400 rounded-full flex items-center justify-center animate-pulse shadow-xl z-20">
+                    <div className="text-center">
+                      <div className="text-xl md:text-2xl font-bold text-gray-900">
                         50%
                       </div>
                       <div className="text-xs font-semibold text-gray-900">
@@ -124,7 +182,7 @@ function Banner() {
                     </div>
                   </div>
 
-                  <div className="bg-white/90 rounded-2xl py-2 mb-4 h-64 relative overflow-hidden">
+                  <div className="bg-white/90 rounded-2xl py-2 mb-4 h-48 md:h-64 relative overflow-hidden">
                     <Image
                       src={shopping}
                       alt="Shopping"
@@ -135,7 +193,7 @@ function Banner() {
                     />
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-2">
+                  <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                     Premium Collection
                   </h3>
                   <p className="text-primary-100 text-sm mb-4">
@@ -144,7 +202,7 @@ function Banner() {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-2xl font-bold text-white">
+                      <div className="text-xl md:text-2xl font-bold text-white">
                         $99.99
                       </div>
                       <div className="text-sm text-primary-200 line-through">
@@ -161,13 +219,13 @@ function Banner() {
                 </div>
 
                 {/* Floating Mini Cards */}
-                <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl p-4 shadow-xl animate-float animation-delay-300">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <Truck className="h-6 w-6 text-green-600" />
+                <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl p-3 md:p-4 shadow-xl animate-float animation-delay-300 max-w-[200px]">
+                  <div className="flex items-center space-x-2 md:space-x-3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Truck className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-gray-900">
+                      <div className="text-xs md:text-sm font-bold text-gray-900">
                         Free Shipping
                       </div>
                       <div className="text-xs text-gray-600">
@@ -177,13 +235,13 @@ function Banner() {
                   </div>
                 </div>
 
-                <div className="absolute -top-4 -left-8 bg-white rounded-2xl p-4 shadow-xl animate-float">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                      <Star className="h-6 w-6 text-yellow-600 fill-yellow-600" />
+                <div className="absolute -top-4 -left-8 bg-white rounded-2xl p-3 md:p-4 shadow-xl animate-float max-w-[180px]">
+                  <div className="flex items-center space-x-2 md:space-x-3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Star className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 fill-yellow-600" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-gray-900">
+                      <div className="text-xs md:text-sm font-bold text-gray-900">
                         4.9 Rating
                       </div>
                       <div className="text-xs text-gray-600">
@@ -197,12 +255,14 @@ function Banner() {
           </div>
         </div>
 
-        {/* Wave Bottom */}
-        <div className="absolute bottom-0 left-0 right-0">
+        {/* Wave Bottom - Optimized for mobile */}
+        <div className="absolute bottom-0 left-0 right-0 w-full">
           <svg
             viewBox="0 0 1440 120"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-auto"
+            preserveAspectRatio="none"
           >
             <path
               d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"

@@ -240,16 +240,28 @@ export default function TrendingProducts() {
                       </h3>
 
                       {/* Rating */}
-                      <div className="flex items-center mb-4">
-                        <div className="flex items-center">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3 w-3 ${i < 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="ml-2 text-xs text-gray-600">(42)</span>
+                     <div className="flex items-center mb-4">
+                        {product.averageRating > 0 ? (
+                          <>
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${
+                                    i < Math.round(product.averageRating)
+                                      ? 'fill-yellow-400 text-yellow-400' 
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="ml-2 text-xs text-gray-600">
+                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0})
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-500">No reviews yet</span>
+                        )}
                       </div>
 
                       {/* Price and Cart */}

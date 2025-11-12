@@ -12,6 +12,7 @@ import {
   UserCircle,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
 } from "lucide-react";
 import { authService } from "@/lib/auth-service";
 import { apiClient } from "@/lib/api-client";
@@ -27,6 +28,7 @@ export const Navbar = () => {
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [categories, setCategories] = useState([]);
   const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
 
   // Use context for cart and wishlist counts
   const { cartCount, wishlistCount } = useCartWishlist();
@@ -487,124 +489,164 @@ export const Navbar = () => {
               </form>
 
               <div className="space-y-1">
-                <Link
-                  href="/customer/all-products"
-                  className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Products
-                </Link>
-
-                {/* Mobile Categories */}
-                <div className="py-2">
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wide px-4 mb-2">
-                    Categories
-                  </div>
-                  <div className="space-y-1">
-                    {categories.map((category) => (
-                      <div key={category.id} className="mb-1">
-                        <Link
-                          href={`/customer/all-products?categoryId=${category.id}`}
-                          className="py-2.5 px-4 text-gray-700 font-medium capitalize hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors block"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          {category.name}
-                        </Link>
-                        {category.children && category.children.length > 0 && (
-                          <div className="ml-4 space-y-1">
-                            {category.children.map((subcategory) => (
-                              <Link
-                                key={subcategory.id}
-                                href={`/customer/all-products?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
-                                className="block py-2 px-4 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors capitalize"
-                                onClick={() => setMobileMenuOpen(false)}
-                              >
-                                • {subcategory.name}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
+                {/* User-related items first (if logged in) */}
                 {user ? (
                   <>
-                    <Link
-                      href="/customer/wishlist"
-                      className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <span>Wishlist</span>
-                      {wishlistCount > 0 && (
-                        <span className="bg-red-500 text-white text-xs rounded-full px-2.5 py-1 font-bold">
-                          {wishlistCount}
-                        </span>
-                      )}
-                    </Link>
                     <Link
                       href="/customer/cart"
                       className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <span>Cart</span>
+                      <div className="flex items-center space-x-3">
+                        <ShoppingCart className="h-5 w-5" />
+                        <span>Cart</span>
+                      </div>
                       {cartCount > 0 && (
                         <span className="bg-blue-500 text-white text-xs rounded-full px-2.5 py-1 font-bold">
                           {cartCount}
                         </span>
                       )}
                     </Link>
+
                     <Link
-                      href="/customer/profile"
-                      className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                      href="/customer/wishlist"
+                      className="flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      My Profile
+                      <div className="flex items-center space-x-3">
+                        <Heart className="h-5 w-5" />
+                        <span>Wishlist</span>
+                      </div>
+                      {wishlistCount > 0 && (
+                        <span className="bg-red-500 text-white text-xs rounded-full px-2.5 py-1 font-bold">
+                          {wishlistCount}
+                        </span>
+                      )}
                     </Link>
+
                     <Link
                       href="/customer/orders"
-                      className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                      className="flex items-center space-x-3 py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      My Orders
+                      <Package className="h-5 w-5" />
+                      <span>My Orders</span>
                     </Link>
+
+                    <Link
+                      href="/customer/profile"
+                      className="flex items-center space-x-3 py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <UserCircle className="h-5 w-5" />
+                      <span>My Profile</span>
+                    </Link>
+
                     {user?.role === "admin" && (
                       <Link
                         href="/admin"
-                        className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                        className="flex items-center space-x-3 py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        Admin Dashboard
+                        <Package className="h-5 w-5" />
+                        <span>Admin Dashboard</span>
                       </Link>
                     )}
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-200 my-2"></div>
+                  </>
+                ) : (
+                  <>
+                    {/* Login/Signup for non-logged in users at top */}
+                    <div className="space-y-2 mb-2 pb-2 border-b border-gray-200">
+                      <Link
+                        href="/auth/login"
+                        className="block py-3 px-4 text-center text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-semibold transition-colors border border-gray-200"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        href="/auth/register"
+                        className="block py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Sign Up
+                      </Link>
+                    </div>
+                  </>
+                )}
+
+                {/* Products Link */}
+                <Link
+                  href="/customer/all-products"
+                  className="block py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  All Products
+                </Link>
+
+                {/* Collapsible Categories */}
+                <div className="py-2">
+                  <button
+                    onClick={() => setMobileCategoriesOpen(!mobileCategoriesOpen)}
+                    className="w-full flex items-center justify-between py-3 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-medium transition-colors"
+                  >
+                    <span>Categories</span>
+                    {mobileCategoriesOpen ? (
+                      <ChevronUp className="h-5 w-5" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5" />
+                    )}
+                  </button>
+
+                  {mobileCategoriesOpen && (
+                    <div className="mt-1 space-y-1 pl-4">
+                      {categories.map((category) => (
+                        <div key={category.id} className="mb-1">
+                          <Link
+                            href={`/customer/all-products?categoryId=${category.id}`}
+                            className="py-2.5 px-4 text-gray-700 font-medium capitalize hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors block"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            {category.name}
+                          </Link>
+                          {category.children && category.children.length > 0 && (
+                            <div className="ml-4 space-y-1">
+                              {category.children.map((subcategory) => (
+                                <Link
+                                  key={subcategory.id}
+                                  href={`/customer/all-products?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                  className="block py-2 px-4 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors capitalize"
+                                  onClick={() => setMobileMenuOpen(false)}
+                                >
+                                  • {subcategory.name}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Logout button at bottom for logged in users */}
+                {user && (
+                  <>
+                    <div className="border-t border-gray-200 my-2"></div>
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
                         handleLogout();
                       }}
-                      className="w-full text-left py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
+                      className="w-full flex items-center space-x-3 py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
                     >
-                      Logout
+                      <LogOut className="h-5 w-5" />
+                      <span>Logout</span>
                     </button>
                   </>
-                ) : (
-                  <div className="space-y-2 pt-2">
-                    <Link
-                      href="/auth/login"
-                      className="block py-3 px-4 text-center text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg font-semibold transition-colors border border-gray-200"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      href="/auth/register"
-                      className="block py-3 px-4 text-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Sign Up
-                    </Link>
-                  </div>
                 )}
               </div>
             </div>
