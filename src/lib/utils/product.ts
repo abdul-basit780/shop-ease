@@ -1,6 +1,8 @@
 // lib/utils/product.ts
 import { IProduct } from "../models/Product";
 import { isValidObjectId } from "mongoose";
+import mongoose from "mongoose";
+
 
 export interface ProductResponse {
   id: string;
@@ -11,6 +13,8 @@ export interface ProductResponse {
   description: string;
   categoryId: string;
   categoryName?: string;
+  averageRating?: number;
+  totalReviews?: number;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -25,6 +29,8 @@ export interface PublicProductResponse {
   description: string;
   categoryId: string;
   categoryName?: string;
+  averageRating?: number;
+  totalReviews?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,9 +44,80 @@ export interface ProductRequest {
   img?: string;
 }
 
+export interface ProductRating {
+  productId: string;
+  averageRating: number;
+  totalReviews: number;
+}
+
+
+// Helper function to get ratings for multiple products
+export const getProductsRatings = async (
+  productIds: mongoose.Types.ObjectId[]
+): Promise<Map<string, ProductRating>> => {
+  const { Feedback } = require("../models/Feedback");
+
+  const ratings = await Feedback.aggregate([
+    { $match: { productId: { $in: productIds } } },
+    {
+      $group: {
+        _id: "$productId",
+        avgRating: { $avg: "$rating" },
+        totalReviews: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const ratingsMap = new Map<string, ProductRating>();
+
+  ratings.forEach((rating: any) => {
+    ratingsMap.set(rating._id.toString(), {
+      productId: rating._id.toString(),
+      averageRating: Math.round(rating.avgRating * 10) / 10,
+      totalReviews: rating.totalReviews,
+    });
+  });
+
+  return ratingsMap;
+};
+
+// Helper function to get rating for a single product
+export const getProductRating = async (
+  productId: mongoose.Types.ObjectId | string
+): Promise<ProductRating | null> => {
+  const { Feedback } = require("../models/Feedback");
+
+  const objectId =
+    typeof productId === "string"
+      ? new mongoose.Types.ObjectId(productId)
+      : productId;
+
+  const ratings = await Feedback.aggregate([
+    { $match: { productId: objectId } },
+    {
+      $group: {
+        _id: "$productId",
+        avgRating: { $avg: "$rating" },
+        totalReviews: { $sum: 1 },
+      },
+    },
+  ]);
+
+  if (ratings.length === 0) {
+    return null;
+  }
+
+  return {
+    productId: ratings[0]._id.toString(),
+    averageRating: Math.round(ratings[0].avgRating * 10) / 10,
+    totalReviews: ratings[0].totalReviews,
+  };
+};
+
 // Helper function to build product response (admin - includes deletedAt)
 export const buildProductResponse = (
-  product: IProduct | any
+  product: IProduct | any,
+  rating?: ProductRating | null
 ): ProductResponse => {
   return {
     id: product._id.toString(),
@@ -52,6 +129,8 @@ export const buildProductResponse = (
     categoryId:
       product.categoryId?._id?.toString() || product.categoryId?.toString(),
     categoryName: product.categoryId?.name || undefined,
+    averageRating: rating?.averageRating,
+    totalReviews: rating?.totalReviews,
     deletedAt: product.deletedAt,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
@@ -60,7 +139,8 @@ export const buildProductResponse = (
 
 // Helper function to build public product response (excludes deletedAt)
 export const buildPublicProductResponse = (
-  product: IProduct | any
+  product: IProduct | any,
+  rating?: ProductRating | null
 ): PublicProductResponse => {
   return {
     id: product._id.toString(),
@@ -72,6 +152,8 @@ export const buildPublicProductResponse = (
     categoryId:
       product.categoryId?._id?.toString() || product.categoryId?.toString(),
     categoryName: product.categoryId?.name || undefined,
+    averageRating: rating?.averageRating,
+    totalReviews: rating?.totalReviews,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };

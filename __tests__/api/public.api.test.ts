@@ -4,16 +4,21 @@ import { listCategories, getCategory } from '../../src/lib/controllers/publicCat
 import { getTrendingProducts, getPopular, getSimilar } from '../../src/lib/controllers/publicRecommendation';
 import { Product } from '../../src/lib/models/Product';
 import { Category } from '../../src/lib/models/Category';
-import {OptionType} from "@/lib/models/OptionType";
+import { OptionType } from "@/lib/models/OptionType";
+import { OptionValue } from "@/lib/models/OptionValue";
+import * as productUtils from '../../src/lib/utils/product';
 
 // Mock dependencies
 jest.mock('../../src/lib/models/Product');
 jest.mock('../../src/lib/models/Category');
+jest.mock('../../src/lib/models/OptionType');
+jest.mock('../../src/lib/models/OptionValue');
 
-jest.mock('../../src/lib/models/OptionType', () => ({
-  OptionType: {
-    find: jest.fn()
-  }
+// Mock the product utils module
+jest.mock('../../src/lib/utils/product', () => ({
+  getProductsRatings: jest.fn(),
+  getProductRating: jest.fn(),
+  buildPublicProductResponse: jest.fn(),
 }));
 
 describe('Public API Tests', () => {
@@ -22,6 +27,34 @@ describe('Public API Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Default mock implementation returns empty Map (no ratings)
+    (productUtils.getProductsRatings as jest.Mock).mockResolvedValue(new Map());
+    (productUtils.getProductRating as jest.Mock).mockResolvedValue(undefined);
+    
+    // Mock buildPublicProductResponse to return a properly formatted product
+    (productUtils.buildPublicProductResponse as jest.Mock).mockImplementation((product, rating) => ({
+      id: product._id.toString(),
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      category: product.categoryId?.name || product.categoryId,
+      images: product.images || [],
+      averageRating: rating?.averageRating,
+      totalReviews: rating?.totalReviews,
+    }));
+    
+    // Mock OptionType.find
+    (OptionType.find as jest.Mock).mockReturnValue({
+      sort: jest.fn().mockResolvedValue([])
+    });
+    
+    // Mock OptionValue.find
+    (OptionValue.find as jest.Mock).mockReturnValue({
+      sort: jest.fn().mockResolvedValue([])
+    });
+    
     mockReq = {
       body: {},
       query: {},
@@ -77,7 +110,6 @@ describe('Public API Tests', () => {
         });
 
         (Product.countDocuments as jest.Mock).mockResolvedValue(2);
-        (OptionType.find as jest.Mock).mockReturnValue({sort: jest.fn().mockReturnValue([])});
 
         const result = await listProducts(mockReq as NextApiRequest, mockRes as NextApiResponse);
 

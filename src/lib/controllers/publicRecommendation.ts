@@ -42,7 +42,7 @@ export const getPopularProducts = async (
 
     const products = await RecommendationService.getPopularProducts(limit);
 
-    response.data = buildProductListResponse(products);
+    response.data = await buildProductListResponse(products);
     response.success = true;
     response.message = RECOMMENDATION_MESSAGES.POPULAR_RETRIEVED;
     response.statusCode = 200;
@@ -81,7 +81,7 @@ export const getTrendingProducts = async (
 
     const products = await RecommendationService.getTrendingProducts(limit);
 
-    response.data = buildProductListResponse(products);
+    response.data = await buildProductListResponse(products);
     response.success = true;
     response.message = RECOMMENDATION_MESSAGES.TRENDING_RETRIEVED;
     response.statusCode = 200;
@@ -135,15 +135,11 @@ export const getSimilarProducts = async (
       return response;
     }
 
-    // Find similar products based on category and price
-    const priceMargin = product.price * 0.3;
+
+    // Find similar products based on category
     const similarProducts = await Product.find({
       _id: { $ne: id },
       categoryId: product.categoryId._id || product.categoryId,
-      price: {
-        $gte: product.price - priceMargin,
-        $lte: product.price + priceMargin,
-      },
       deletedAt: null,
       stock: { $gt: 0 },
     })
@@ -151,7 +147,7 @@ export const getSimilarProducts = async (
       .limit(limit)
       .lean();
 
-    response.data = buildProductListResponse(similarProducts);
+    response.data = await buildProductListResponse(similarProducts);
     response.success = true;
     response.message = RECOMMENDATION_MESSAGES.SIMILAR_RETRIEVED;
     response.statusCode = 200;
