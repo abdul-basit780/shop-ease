@@ -1,6 +1,7 @@
 // lib/templates/emailTemplates.ts
 import { OrderStatus } from "../models/enums";
 import { OrderData } from "../services/EmailService";
+import { ContactRequest } from "../utils/contact";
 
 // Simple email wrapper
 const wrap = (title: string, content: string): string => `
@@ -196,5 +197,20 @@ export const emailTemplates = {
     `
     ),
     text: `Order #${data.orderId} updated to: ${data.status}`,
+  }),
+
+  contactForm: (data: ContactRequest) => ({
+    subject: "New Contact Form Submission",
+    html: wrap(
+      "New Contact Form Submission",
+      `
+      <h2>New Contact Form Submission</h2>
+      <p>Name: ${data.name}</p>
+      <p>Email: ${data.email}</p>
+      <p>Subject: ${data.subject}</p>
+      <p>Message: ${data.message}</p>
+    `
+    ),
+    text: `New contact form submission from ${data.name}`,
   }),
 };
