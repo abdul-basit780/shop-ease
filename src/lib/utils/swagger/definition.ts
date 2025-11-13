@@ -110,5 +110,13 @@ export const swaggerDefinition = {
       name: "Public - Navbar",
       description: "Public Navbar operations (all users)",
     },
+    {
+      name: "Public - Feedback",
+      description: "Public Feedback operations (all users)",
+    },
+    {
+      name: "Public - Contact",
+      description: "Public Contact operations (all users)",
+    },
   ],
 };

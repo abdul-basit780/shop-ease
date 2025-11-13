@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { emailTemplates } from "../templates/emailTemplates";
 import { OrderStatus } from "../models/enums";
 import { Resend } from "resend";
+import { ContactRequest } from "../utils/contact";
 
 export interface OrderData {
   customerName: string;
@@ -42,7 +43,7 @@ class EmailService {
 
   // Private method to send email
   private async send(
-    to: string,
+    to: string | string[],
     subject: string,
     html: string,
     text?: string
@@ -56,9 +57,13 @@ class EmailService {
       //   text,
       // });
 
+      if(!Array.isArray(to)) {
+        to = [to];
+      }
+
       const { data, error } = await this.resend.emails.send({
         from: `${this.fromName} <${this.fromEmail}>`,
-        to: [to],
+        to: to,
         subject,
         html,
         text,
@@ -143,6 +148,17 @@ class EmailService {
   ): Promise<boolean> {
     const template = emailTemplates.orderStatusUpdate(data);
     return this.send(email, template.subject, template.html, template.text);
+  }
+
+  // Contact form
+  async sendContactForm(data: ContactRequest & { emails: string[] }): Promise<boolean> {
+    const template = emailTemplates.contactForm(data);
+    return this.send(
+      data.emails,
+      template.subject,
+      template.html,
+      template.text
+    );
   }
 
   // Test connection

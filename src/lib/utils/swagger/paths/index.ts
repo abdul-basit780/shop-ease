@@ -18,6 +18,7 @@ import { recommendationPaths } from "./recommendation";
 import { publicRecommendationPaths } from "./publicRecommendation";
 import { navbarPaths } from "./navbar";
 import { optionPaths } from "./option";
+import { contactPaths } from "./contact";
 
 export const paths = {
   ...authPaths,
@@ -40,4 +41,5 @@ export const paths = {
   ...publicRecommendationPaths,
   ...navbarPaths,
   ...optionPaths,
+  ...contactPaths,
 };
