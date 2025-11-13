@@ -222,13 +222,13 @@ export default function Products() {
               return (
                 <div 
                   key={product.id} 
-                  className={`group ${getAnimationClass(idx)}`}
+                  className={`group h-full ${getAnimationClass(idx)}`}
                   style={{ 
                     animationDelay: `${idx * 150}ms`,
                     animationFillMode: 'both'
                   }}
                 >
-                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100">
+                   <div className="relative h-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 flex flex-col">
                     <div className="relative h-64 bg-gray-100 overflow-hidden">
                       {product.img ? (
                         <img
