@@ -22,7 +22,6 @@ export default function PopularProducts() {
     try {
       setIsLoading(true);
       const response = await apiClient.get('/api/public/recommendations/popular');
-      console.log(response)
       
       if (response.success && response.data?.products) {
         setProducts(response.data.products.slice(0, 8)); // Show first 8 products
@@ -159,10 +158,10 @@ export default function PopularProducts() {
                 <div 
                   key={product.id} 
                   onClick={() => router.push(`/customer/product/${product.id}`)}
-                  className="group animate-scale-in cursor-pointer" 
+                  className="group h-full animate-scale-in cursor-pointer" 
                   style={{ animationDelay: `${idx * 100}ms` }}
                 >
-                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100">
+                  <div className="relative h-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 flex flex-col">
                     {/* Rank Badge */}
                     <div className="absolute top-3 left-3 z-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
                       {idx + 1}
@@ -228,7 +227,7 @@ export default function PopularProducts() {
                     </div>
 
                     {/* Product Info */}
-                    <div className="p-5">
+                    <div className="p-5 flex-1 flex flex-col">
                       {/* Category */}
                       <p className="text-xs font-semibold text-blue-600 mb-1 uppercase tracking-wide">
                         {product.category}
@@ -256,7 +255,7 @@ export default function PopularProducts() {
                               ))}
                             </div>
                             <span className="ml-2 text-xs text-gray-600">
-                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0})
+                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0} reviews)
                             </span>
                           </>
                         ) : (
@@ -265,7 +264,7 @@ export default function PopularProducts() {
                       </div>
 
                       {/* Price and Cart */}
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mt-auto">
                         <div>
                           <span className="text-2xl font-bold text-blue-600">
                             ${effectivePrice.toFixed(2)}

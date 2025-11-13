@@ -93,6 +93,18 @@ export default function RecommendationsModal({
                       </div>
                     )}
 
+                    {/* Rating Badge - Top Right */}
+                    {rec.averageRating > 0 && (
+                      <div className="absolute top-2 right-2">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-white/95 backdrop-blur-sm rounded-full shadow-lg">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-bold text-gray-900">
+                            {rec.averageRating.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Stock Badge */}
                     {rec.stock < 5 && rec.stock > 0 && (
                       <div className="absolute bottom-2 right-2">
