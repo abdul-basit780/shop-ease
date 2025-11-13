@@ -27,7 +27,6 @@ export default function PopularProducts() {
         setProducts(response.data.products.slice(0, 8)); // Show first 8 products
       }
     } catch (error) {
-      console.error('Error fetching popular products:', error);
       toast.error('Failed to load popular products');
     } finally {
       setIsLoading(false);

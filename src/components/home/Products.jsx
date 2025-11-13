@@ -222,13 +222,13 @@ export default function Products() {
               return (
                 <div 
                   key={product.id} 
-                   className={`group h-full ${getAnimationClass(idx)}`}
+                  className={`group ${getAnimationClass(idx)}`}
                   style={{ 
                     animationDelay: `${idx * 150}ms`,
                     animationFillMode: 'both'
                   }}
                 >
-                  <div className="relative h-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 flex flex-col">
+                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100">
                     <div className="relative h-64 bg-gray-100 overflow-hidden">
                       {product.img ? (
                         <img
@@ -320,7 +320,7 @@ export default function Products() {
                               ))}
                             </div>
                             <span className="ml-2 text-xs text-gray-600">
-                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0} reviews)
+                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0})
                             </span>
                           </>
                         ) : (

@@ -27,7 +27,6 @@ export default function TrendingProducts() {
         setProducts(response.data.products.slice(0, 8));
       }
     } catch (error) {
-      console.error('Error fetching trending products:', error);
       toast.error('Failed to load trending products');
     } finally {
       setIsLoading(false);
