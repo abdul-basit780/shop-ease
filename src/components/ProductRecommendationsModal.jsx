@@ -20,7 +20,6 @@ export default function RecommendationsModal({
       onProductClick(productId);
     }
   };
-  console.log(recommendations);
 
   const handleViewCart = () => {
     onClose();
@@ -90,6 +89,18 @@ export default function RecommendationsModal({
                         <span className="inline-block px-2 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-semibold rounded-full shadow-lg">
                           {rec.reason}
                         </span>
+                      </div>
+                    )}
+
+                    {/* Rating Badge - Top Right */}
+                    {rec.averageRating > 0 && (
+                      <div className="absolute top-2 right-2">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-white/95 backdrop-blur-sm rounded-full shadow-lg">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-bold text-gray-900">
+                            {rec.averageRating.toFixed(1)}
+                          </span>
+                        </div>
                       </div>
                     )}
 

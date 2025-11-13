@@ -1,8 +1,8 @@
-// pages/contact.js
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send, MessageCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { apiClient } from '@/lib/api-client';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -17,15 +17,56 @@ export default function Contact() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast.success('Message sent successfully! We\'ll get back to you soon.', {
+    try {
+      const response = await apiClient.post('/api/public/contact', formData);
+      
+      if (response.success) {
+        toast.success('Message sent successfully! We\'ll get back to you soon.', {
+          duration: 4000,
+          icon: '✉️',
+          style: {
+            borderRadius: '12px',
+            background: '#10b981',
+            color: '#fff',
+          },
+        });
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        // Handle validation errors
+        if (response.errors && Array.isArray(response.errors)) {
+          response.errors.forEach(error => {
+            toast.error(error, {
+              duration: 4000,
+              style: {
+                borderRadius: '12px',
+                background: '#ef4444',
+                color: '#fff',
+              },
+            });
+          });
+        } else {
+          toast.error(response.message || response.error || 'Failed to send message. Please try again.', {
+            duration: 4000,
+            style: {
+              borderRadius: '12px',
+              background: '#ef4444',
+              color: '#fff',
+            },
+          });
+        }
+      }
+    } catch (error) {
+      toast.error('An error occurred. Please try again later.', {
         duration: 4000,
-        icon: '✉️'
+        style: {
+          borderRadius: '12px',
+          background: '#ef4444',
+          color: '#fff',
+        },
       });
-      setFormData({ name: '', email: '', subject: '', message: '' });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   const handleChange = (e) => {

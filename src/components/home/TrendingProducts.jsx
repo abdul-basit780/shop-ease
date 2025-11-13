@@ -27,7 +27,6 @@ export default function TrendingProducts() {
         setProducts(response.data.products.slice(0, 8));
       }
     } catch (error) {
-      console.error('Error fetching trending products:', error);
       toast.error('Failed to load trending products');
     } finally {
       setIsLoading(false);
@@ -158,10 +157,10 @@ export default function TrendingProducts() {
                 <div 
                   key={product.id} 
                   onClick={() => router.push(`/customer/product/${product.id}`)}
-                  className="group animate-scale-in cursor-pointer" 
+                  className="group h-full animate-scale-in cursor-pointer" 
                   style={{ animationDelay: `${idx * 100}ms` }}
                 >
-                  <div className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100">
+                  <div className="relative h-full bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 flex flex-col">
                     {/* Trending Badge */}
                     <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-orange-500 to-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center space-x-1 animate-bounce">
                       <Flame className="h-3 w-3" />
@@ -228,7 +227,7 @@ export default function TrendingProducts() {
                     </div>
 
                     {/* Product Info */}
-                    <div className="p-5">
+                    <div className="p-5 flex-1 flex flex-col">
                       {/* Category */}
                       <p className="text-xs font-semibold text-orange-600 mb-1 uppercase tracking-wide">
                         {product.category}
@@ -256,7 +255,7 @@ export default function TrendingProducts() {
                               ))}
                             </div>
                             <span className="ml-2 text-xs text-gray-600">
-                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0})
+                              {product.averageRating.toFixed(1)} ({product.totalReviews || 0} reviews)
                             </span>
                           </>
                         ) : (
@@ -265,7 +264,7 @@ export default function TrendingProducts() {
                       </div>
 
                       {/* Price and Cart */}
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mt-auto">
                         <div>
                           <span className="text-2xl font-bold text-orange-600">
                             ${effectivePrice.toFixed(2)}
