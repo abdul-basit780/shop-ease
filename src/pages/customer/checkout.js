@@ -30,6 +30,12 @@ function StripeCheckoutForm({ cart, address, onPaymentSuccess, onPaymentError, o
   const taxAmount = cart.totalAmount * 0.15;
   const finalTotal = cart.totalAmount + shippingCost + taxAmount;
 
+   useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      setError('Payment system is not configured. Please contact support.');
+    }
+  }, []);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setProcessing(true);
