@@ -225,6 +225,15 @@ export default function CheckoutPage() {
 
   // Get cart from context
   const { cart, isLoadingCart, fetchCart } = useCartWishlist();
+  
+useEffect(() => {
+  const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  console.log('Stripe Key Loaded:', stripeKey ? 'Yes' : 'No');
+  console.log('Key Type:', stripeKey?.startsWith('pk_live_') ? 'LIVE' : 
+              stripeKey?.startsWith('pk_test_') ? 'TEST' : 'INVALID');
+  console.log('Protocol:', window.location.protocol);
+  console.log('Hostname:', window.location.hostname);
+}, []);
 
   useEffect(() => {
     if (hasCheckedAuth.current) return;
